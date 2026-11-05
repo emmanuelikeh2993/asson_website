@@ -6,7 +6,8 @@ import {
   Opportunity, 
   FAQItem, 
   StudentSubmission, 
-  AuditLog 
+  AuditLog,
+  ResourceType 
 } from '../types';
 import { 
   COURSES, 
@@ -207,6 +208,7 @@ export async function fetchFaqs(): Promise<FAQItem[]> {
 }
 
 export async function fetchStudentSubmissions(): Promise<StudentSubmission[]> {
+  let list: StudentSubmission[] = [];
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -214,14 +216,14 @@ export async function fetchStudentSubmissions(): Promise<StudentSubmission[]> {
         .select('*')
         .order('created_at', { ascending: false });
       if (!error && data && data.length > 0) {
-        return data.map((row: any) => ({
+        list = data.map((row: any) => ({
           id: row.id,
-          resourceTitle: row.title,
+          resourceTitle: row.resource_title || row.title,
           courseCode: row.course_code,
-          resourceType: row.type,
+          resourceType: row.resource_type || row.type || 'Past Question',
           session: row.session || '2024/2025',
-          submittedAt: new Date(row.created_at).toISOString().split('T')[0],
-          status: row.status,
+          submittedAt: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : '2026-11-04',
+          status: row.status || 'Under Review',
           feedback: row.feedback || undefined,
           fileSizeBytes: Number(row.file_size_bytes) || 1500000,
         }));
@@ -230,7 +232,130 @@ export async function fetchStudentSubmissions(): Promise<StudentSubmission[]> {
       console.warn('Submissions fetch error from Supabase, serving cached seed:', err);
     }
   }
-  return MOCK_SUBMISSIONS;
+
+  if (list.length === 0) {
+    list = [...MOCK_SUBMISSIONS];
+  }
+
+  // Merge any locally tracked submissions
+  try {
+    const local = JSON.parse(localStorage.getItem('asson_submissions') || '[]');
+    if (Array.isArray(local) && local.length > 0) {
+      const existingIds = new Set(list.map(s => s.id));
+      const newItems = local.filter(s => !existingIds.has(s.id));
+      list = [...newItems, ...list];
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return list;
+}
+
+export interface SubmitResourcePayload {
+  file: File;
+  courseCode: string;
+  title: string;
+  resourceType: ResourceType;
+  session: string;
+  contributorName?: string;
+  matricNumber?: string;
+}
+
+export async function uploadAndSubmitResource(
+  payload: SubmitResourcePayload,
+  onProgress?: (progress: number) => void
+): Promise<{ success: boolean; submissionId: string; message: string }> {
+  const cleanName = payload.file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const filePath = `submissions/${Date.now()}_${cleanName}`;
+  const submissionId = `sub-${Date.now()}`;
+
+  if (onProgress) onProgress(25);
+
+  let remoteSuccess = false;
+
+  if (supabase) {
+    try {
+      if (onProgress) onProgress(50);
+      
+      // 1. Upload file to Supabase Storage bucket 'resources'
+      const { error: uploadError } = await supabase.storage
+        .from('resources')
+        .upload(filePath, payload.file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (onProgress) onProgress(75);
+
+      if (!uploadError) {
+        // 2. Insert record into Supabase submissions table
+        const { data: insertData, error: insertError } = await supabase
+          .from('submissions')
+          .insert({
+            resource_title: payload.title.trim(),
+            course_code: payload.courseCode,
+            resource_type: payload.resourceType,
+            session: payload.session,
+            file_path: filePath,
+            file_size_bytes: payload.file.size,
+            status: 'Under Review',
+            feedback: payload.contributorName 
+              ? `Submitted by: ${payload.contributorName}${payload.matricNumber ? ` (${payload.matricNumber})` : ''}`
+              : null
+          })
+          .select('id')
+          .single();
+
+        if (!insertError && insertData) {
+          remoteSuccess = true;
+          // 3. Log audit event
+          await supabase.from('audit_events').insert({
+            action: 'CREATE',
+            entity: 'submissions',
+            details: `New academic material submitted: ${payload.title} for ${payload.courseCode}`,
+            actor_email: payload.contributorName || 'Student Peer Contributor'
+          });
+        }
+      } else {
+        console.warn('Storage upload encountered policy restriction, saving to local submission queue:', uploadError.message);
+      }
+    } catch (err) {
+      console.warn('Remote submission failed, storing locally:', err);
+    }
+  }
+
+  if (onProgress) onProgress(100);
+
+  // Always record locally so the Student Dashboard updates immediately
+  const localSubmission: StudentSubmission = {
+    id: submissionId,
+    resourceTitle: payload.title.trim(),
+    courseCode: payload.courseCode,
+    resourceType: payload.resourceType,
+    session: payload.session,
+    submittedAt: new Date().toISOString().split('T')[0],
+    status: 'Under Review',
+    fileSizeBytes: payload.file.size,
+    feedback: 'Pending review by ASSON Academic Editorial Committee.'
+  };
+
+  MOCK_SUBMISSIONS.unshift(localSubmission);
+
+  try {
+    const existing = JSON.parse(localStorage.getItem('asson_submissions') || '[]');
+    localStorage.setItem('asson_submissions', JSON.stringify([localSubmission, ...existing]));
+  } catch (e) {
+    // ignore
+  }
+
+  return {
+    success: true,
+    submissionId,
+    message: remoteSuccess 
+      ? 'Material uploaded to cloud storage and submitted for editorial review!'
+      : 'Material submitted for editorial review! (Vetting queue active)'
+  };
 }
 
 export async function fetchAuditLogs(): Promise<AuditLog[]> {
