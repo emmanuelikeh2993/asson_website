@@ -230,7 +230,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit }) =>
                 Submit Academic Material
               </Button>
 
-              <div className="text-center text-[10px] text-text-muted pt-2">
+              <Link
+                to="/admin"
+                onClick={closeMobileMenu}
+                className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-text-muted hover:text-brand-green transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-brand-green" /> Exco Admin & Telemetry Console
+              </Link>
+
+              <div className="text-center text-[10px] text-text-muted pt-1">
                 Dept. of Statistics • University of Ibadan<br />
                 <span className="text-brand-green font-medium">Facts from Reliable Figures</span>
               </div>
