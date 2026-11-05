@@ -4,13 +4,13 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { DownloadCard } from '../components/features/resources/DownloadCard';
 import { MOCK_RESOURCES, MOCK_NOTICES, COURSES } from '../lib/mockData';
-import { 
-  Search, 
-  BookOpen, 
-  FileText, 
-  GraduationCap, 
-  ArrowRight, 
-  CheckCircle2, 
+import {
+  Search,
+  BookOpen,
+  FileText,
+  GraduationCap,
+  ArrowRight,
+  CheckCircle2,
   Sparkles,
   Download,
   Folder,
