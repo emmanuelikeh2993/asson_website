@@ -392,6 +392,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
           setIsDrivePreviewOpen(false);
           setSelectedResource(null);
         }}
+        onOpenSubmit={onOpenSubmit}
         onReport={(res) => setReportTarget(res)}
       />
 

@@ -117,3 +117,4 @@ export const LandingFaqSection: React.FC = () => {
     </section>
   );
 };
+

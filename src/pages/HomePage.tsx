@@ -410,6 +410,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
         isOpen={!!previewResource}
         resource={previewResource}
         onClose={() => setPreviewResource(null)}
+        onOpenSubmit={onOpenSubmit}
         onReport={(r) => {
           toast.info('Issue Logged', `Reported issue for ${r.title}`);
         }}
