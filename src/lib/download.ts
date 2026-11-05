@@ -53,8 +53,8 @@ export function triggerResourceDownload(
   if (resource.downloadUrl && resource.downloadUrl !== '#' && !resource.downloadUrl.includes('cvhjohbknghlmspoaenr')) {
     verifiedFileUrl = resource.downloadUrl;
   }
-  // 2. Real user-uploaded file in submissions/ folder
-  else if (resource.filePath && (resource.filePath.startsWith('submissions/') || resource.filePath === 'test.pdf')) {
+  // 2. Real physical file in storage (uploaded papers or submissions)
+  else if (resource.filePath && (resource.filePath.startsWith('submissions/') || resource.filePath.startsWith('papers/') || resource.filePath === 'test.pdf')) {
     const sanitizedPath = resource.filePath.replace(/^resources\//, '');
     verifiedFileUrl = `${supabaseUrl}/storage/v1/object/public/resources/${sanitizedPath}`;
   }

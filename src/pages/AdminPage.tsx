@@ -22,11 +22,16 @@ import {
   Filter, 
   Download,
   AlertCircle,
+  PlusCircle,
   X
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 
-export const AdminPage: React.FC = () => {
+interface AdminPageProps {
+  onOpenSubmit?: () => void;
+}
+
+export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem('asson_admin_authenticated') === 'true';
   });
@@ -324,13 +329,25 @@ export const AdminPage: React.FC = () => {
       {/* TAB 2: Moderation & Vetting Pipeline */}
       {activeTab === 'moderation' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm sm:text-base font-extrabold text-text-main tracking-tight">
-              Peer Submissions Queue ({submissions.length} Total Submissions)
-            </h3>
-            <span className="text-xs text-text-muted">
-              Approve verified materials for instant inclusion in library.
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm sm:text-base font-extrabold text-text-main tracking-tight">
+                Peer Submissions Queue ({submissions.length} Total Submissions)
+              </h3>
+              <p className="text-xs text-text-muted mt-0.5">
+                Approve verified materials for instant inclusion in library catalog.
+              </p>
+            </div>
+            {onOpenSubmit && (
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={onOpenSubmit}
+                className="text-xs h-8.5 font-bold shadow-xs self-start sm:self-auto shrink-0"
+              >
+                <PlusCircle className="w-3.5 h-3.5 mr-1.5" /> Upload Past Question to Storage
+              </Button>
+            )}
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-border-light bg-surface-card shadow-card">

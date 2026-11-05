@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-route
 import { Navbar } from './components/layout/Navbar';
 import { MobileNav } from './components/layout/MobileNav';
 import { Footer } from './components/layout/Footer';
+import { InstallPwaPrompt } from './components/layout/InstallPwaPrompt';
 import { CommandPalette } from './components/features/resources/CommandPalette';
 import { SubmitResourceModal } from './components/features/resources/SubmitResourceModal';
 import { HomePage } from './pages/HomePage';
@@ -55,6 +56,9 @@ export function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-surface-bg text-text-main selection:bg-brand-light selection:text-brand-deep">
+      {/* Install PWA Prompt Banner for Mobile Devices */}
+      <InstallPwaPrompt />
+
       {/* Top Navbar with ASSON & UI Crest */}
       <Navbar
         onOpenSearch={() => setIsSearchOpen(true)}
@@ -100,7 +104,14 @@ export function AppContent() {
               />
             } 
           />
-          <Route path="/admin" element={<AdminPage />} />
+          <Route 
+            path="/admin" 
+            element={
+              <AdminPage 
+                onOpenSubmit={() => setIsSubmitOpen(true)} 
+              />
+            } 
+          />
           <Route 
             path="*" 
             element={

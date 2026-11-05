@@ -1,22 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
-import { 
-  AcademicResource, 
-  Course, 
-  Notice, 
-  Opportunity, 
-  FAQItem, 
-  StudentSubmission, 
+import {
+  AcademicResource,
+  Course,
+  Notice,
+  Opportunity,
+  FAQItem,
+  StudentSubmission,
   AuditLog,
-  ResourceType 
+  ResourceType
 } from '../types';
-import { 
-  COURSES, 
-  MOCK_RESOURCES, 
-  MOCK_NOTICES, 
-  MOCK_OPPORTUNITIES, 
-  MOCK_FAQS, 
-  MOCK_SUBMISSIONS, 
-  MOCK_AUDIT_LOGS 
+import {
+  COURSES,
+  MOCK_RESOURCES,
+  MOCK_NOTICES,
+  MOCK_OPPORTUNITIES,
+  MOCK_FAQS,
+  MOCK_SUBMISSIONS,
+  MOCK_AUDIT_LOGS
 } from './mockData';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cvhjohbknghlmspoaenr.supabase.co';
@@ -28,13 +28,13 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
  * and the newer Supabase publishable keys (starting with 'sb_publishable_' or 'sb_').
  */
 export const isSupabaseConfigured = Boolean(
-  supabaseUrl && 
-  supabaseAnonKey && 
+  supabaseUrl &&
+  supabaseAnonKey &&
   (supabaseAnonKey.startsWith('ey') || supabaseAnonKey.startsWith('sb_publishable_') || supabaseAnonKey.startsWith('sb_'))
 );
 
-export const supabase = isSupabaseConfigured 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
 // ====================================================================
@@ -285,7 +285,7 @@ export async function uploadAndSubmitResource(
   if (supabase) {
     try {
       if (onProgress) onProgress(50);
-      
+
       // 1. Upload file to Supabase Storage bucket 'resources'
       const { error: uploadError } = await supabase.storage
         .from('resources')
@@ -308,7 +308,7 @@ export async function uploadAndSubmitResource(
             file_path: filePath,
             file_size_bytes: payload.file.size,
             status: 'Under Review',
-            feedback: payload.contributorName 
+            feedback: payload.contributorName
               ? `Submitted by: ${payload.contributorName}${payload.matricNumber ? ` (${payload.matricNumber})` : ''}`
               : null
           })
@@ -360,7 +360,7 @@ export async function uploadAndSubmitResource(
   return {
     success: true,
     submissionId,
-    message: remoteSuccess 
+    message: remoteSuccess
       ? 'Material uploaded to cloud storage and submitted for editorial review!'
       : 'Material submitted for editorial review! (Vetting queue active)'
   };
@@ -390,7 +390,7 @@ export async function approveSubmissionInDb(
       // 2. Publish to resources table so paper immediately appears in public catalog
       const courseNum = submission.courseCode.match(/\d+/)?.[0] || '200';
       const level = courseNum.startsWith('1') ? '100' : courseNum.startsWith('2') ? '200' : courseNum.startsWith('3') ? '300' : '400';
-      
+
       await supabase.from('resources').insert({
         title: submission.resourceTitle,
         course_code: submission.courseCode,
