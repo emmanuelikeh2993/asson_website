@@ -29,6 +29,7 @@ export interface AcademicResource {
   fileType: 'PDF' | 'DOCX' | 'ZIP';
   fileSizeBytes: number;
   downloadUrl: string;
+  filePath?: string;
   verificationStatus: VerificationStatus;
   lastCheckedDate: string;
   contributorName?: string;

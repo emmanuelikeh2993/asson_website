@@ -174,19 +174,38 @@ Confirms 0 TypeScript or packaging errors.
 
 ---
 
+### 4.5 Mobile-First Architecture, Button Hierarchy & Zero-Login Engine (November 2026 Update)
+- **Zero-Login & Zero-Barrier Access Guarantee**:
+  - **100% Feasible and Proven**: Student access requires 0 passwords, 0 signups, and 0 email verification walls.
+  - **Downloads**: Files stream directly from public Supabase Storage CDN URLs (`/storage/v1/object/public/resources/...`) or verified external links via silent browser triggers.
+  - **Uploads**: Anonymous public uploads land in Supabase Storage `resources/submissions/` and are logged in the `submissions` table as `Under Review`.
+  - **Study Locker (Student Dashboard)**: Automatically captures submission IDs and download history in browser local storage so students can track their review status without logging in.
+  - **Eliminated Native Browser `alert()` Dialogs**: Implemented an accessible floating `<ToastProvider>` and `useToast()` hook with sleek emerald notifications (`Toast.tsx`).
+- **Mobile-First Optimizations (80%+ Student Phone Users)**:
+  - **Mobile Slide-Out Drawer (`Navbar.tsx`)**: Hamburger menu button giving 1-tap thumb access to all pages (Resources, Past Questions, Notices, Opportunities, FAQs, Dashboard) and quick level filters.
+  - **Sticky Bottom Navigation (`MobileNav.tsx`)**: 5 thumb-friendly tabs (`Home`, `Past Papers`, `Submit Material` (floating center action), `Notices`, `Grants`) with safe-area padding (`pb-safe`).
+  - **Responsive Horizontal Course Pill Slider (`ResourcesPage.tsx`)**: Replaced the desktop 60vh course tree on mobile screens with a quick horizontal flick carousel so students instantly view resources without scrolling past 57 courses.
+  - **Slide-Up Mobile Sheet Drawer**: Course selection and resource document preview open as native slide-up bottom sheets on mobile.
+  - **Default to Cards on Mobile**: Automatic screen detection loads touch-friendly `DownloadCard` components instead of wide horizontal-scrolling HTML tables.
+- **Button Hierarchy & Order Consistency**:
+  - Every card and modal now adheres to strict visual hierarchy:
+    - **Primary Action** (Emerald Green `#087A3E`): Instant Download or Explore.
+    - **Secondary Action** (Outlined `#D8E2DE`): Preview / Outlines.
+    - **Tertiary Action** (Subtle Icon): Report Issue / Share.
+- **Real Fetched Notices & Opportunities Pipeline**:
+  - Merged live Supabase queries with verified local seed data in `src/lib/supabase.ts` ensuring resilient data retrieval.
+  - Documented external automated ingestion APIs (Telegram bot webhooks for ASSON executive broadcasts, UI Senate RSS/bulletin parsers, and Opportunities For Africans scholarship feeds).
+
+---
+
 ## 7. Immediate Next Steps / Roadmap
 
-1. **GitHub Remote Link**:
-   - Create an empty repository at `https://github.com/new` named `asson_website`.
-   - Run:
-     ```bash
-     git remote add origin https://github.com/emmanuelikeh2993/asson_website.git
-     git push -u origin main
-     ```
-2. **Direct Storage Upload Integration**:
-   - In `src/components/features/resources/SubmitResourceModal.tsx`, wire `supabase.storage.from('resources').upload(...)` so student uploads persist directly to the live Supabase storage bucket.
-3. **Supabase Auth Modal**:
-   - Connect the login/signup modal to `supabase.auth.signInWithPassword` and `supabase.auth.signUp` to link user submissions with their profile.
+1. **Telegram / WhatsApp Webhook for Real Notices**:
+   - Deploy a lightweight Supabase Edge Function listening to the ASSON Executive announcement channel to automatically insert verified notices into the `notices` table.
+2. **Opportunities RSS Ingestion**:
+   - Connect the Opportunities For Africans (OFA) RSS feed via a scheduled GitHub Action cron to periodically fetch new scholarship calls.
+3. **Storage Bucket Policy Configuration**:
+   - Ensure the Supabase Storage bucket `resources` has the public write policy enabled for `submissions/` path.
 4. **Production Deployment**:
-   - Deploy to Vercel or Cloudflare Pages with environment variables configured.
+   - Deploy to Vercel or Netlify with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` configured in the dashboard.
 

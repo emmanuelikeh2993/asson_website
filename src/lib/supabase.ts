@@ -155,6 +155,7 @@ export async function fetchResources(): Promise<AcademicResource[]> {
 }
 
 export async function fetchNotices(): Promise<Notice[]> {
+  let list: Notice[] = [...MOCK_NOTICES];
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -163,16 +164,20 @@ export async function fetchNotices(): Promise<Notice[]> {
         .eq('is_expired', false)
         .order('published_date', { ascending: false });
       if (!error && data && data.length > 0) {
-        return data.map(mapDbNoticeToModel);
+        const remote = data.map(mapDbNoticeToModel);
+        const remoteTitles = new Set(remote.map(r => r.title.toLowerCase().trim()));
+        const uniqueLocal = MOCK_NOTICES.filter(m => !remoteTitles.has(m.title.toLowerCase().trim()));
+        list = [...remote, ...uniqueLocal];
       }
     } catch (err) {
       console.warn('Notices fetch error from Supabase, serving cached seed:', err);
     }
   }
-  return MOCK_NOTICES;
+  return list;
 }
 
 export async function fetchOpportunities(): Promise<Opportunity[]> {
+  let list: Opportunity[] = [...MOCK_OPPORTUNITIES];
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -181,13 +186,16 @@ export async function fetchOpportunities(): Promise<Opportunity[]> {
         .eq('is_expired', false)
         .order('created_at', { ascending: false });
       if (!error && data && data.length > 0) {
-        return data.map(mapDbOpportunityToModel);
+        const remote = data.map(mapDbOpportunityToModel);
+        const remoteTitles = new Set(remote.map(r => r.title.toLowerCase().trim()));
+        const uniqueLocal = MOCK_OPPORTUNITIES.filter(m => !remoteTitles.has(m.title.toLowerCase().trim()));
+        list = [...remote, ...uniqueLocal];
       }
     } catch (err) {
       console.warn('Opportunities fetch error from Supabase, serving cached seed:', err);
     }
   }
-  return MOCK_OPPORTUNITIES;
+  return list;
 }
 
 export async function fetchFaqs(): Promise<FAQItem[]> {

@@ -9,11 +9,13 @@ import {
   Flag, 
   Calendar, 
   User, 
-  CheckCircle2, 
   Share2, 
-  BookOpen 
+  BookOpen, 
+  CheckCircle2 
 } from 'lucide-react';
 import { formatFileSize, formatDate } from '../../../lib/utils';
+import { triggerResourceDownload } from '../../../lib/download';
+import { useToast } from '../../ui/Toast';
 
 interface ResourcePreviewDrawerProps {
   resource: AcademicResource | null;
@@ -26,6 +28,8 @@ export const ResourcePreviewDrawer: React.FC<ResourcePreviewDrawerProps> = ({
   onClose,
   onReport,
 }) => {
+  const toast = useToast();
+
   if (!resource) return null;
 
   const handleShare = () => {
@@ -37,12 +41,14 @@ export const ResourcePreviewDrawer: React.FC<ResourcePreviewDrawerProps> = ({
       }).catch(() => {});
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert('Resource link copied to clipboard!');
+      toast.info('Link Copied', 'Material link copied to clipboard');
     }
   };
 
   const handleDownload = () => {
-    alert(`Downloading ${resource.title} (${formatFileSize(resource.fileSizeBytes)})`);
+    triggerResourceDownload(resource, (title, message) => {
+      toast.success(title, message);
+    });
   };
 
   return (
@@ -50,26 +56,27 @@ export const ResourcePreviewDrawer: React.FC<ResourcePreviewDrawerProps> = ({
       <div>
         {/* Top Header */}
         <div className="flex items-center justify-between pb-3 border-b border-border-light mb-4">
-          <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-            Document Details
+          <span className="text-xs font-bold uppercase tracking-wider text-text-muted">
+            Document Overview
           </span>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-text-muted hover:bg-surface-bg hover:text-text-main transition-colors"
+            className="p-1.5 rounded-lg text-text-muted hover:bg-surface-bg hover:text-text-main transition-colors"
+            aria-label="Close drawer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Thumbnail Preview Area (inspired by Image 04) */}
+        {/* Thumbnail Preview Area */}
         <div className="w-full h-44 rounded-xl bg-gradient-to-br from-surface-bg to-emerald-50/50 border border-border-light flex flex-col items-center justify-center p-4 mb-4 text-center relative overflow-hidden group">
-          <div className="w-12 h-16 rounded bg-white shadow-sm border border-border-light flex flex-col items-center justify-center p-1 mb-2">
+          <div className="w-12 h-16 rounded-lg bg-white shadow-sm border border-border-light flex flex-col items-center justify-center p-1 mb-2 group-hover:scale-105 transition-transform">
             <span className="text-[9px] font-bold text-brand-red bg-red-50 px-1 rounded uppercase">
               {resource.fileType}
             </span>
             <FileText className="w-6 h-6 text-brand-green mt-1" />
           </div>
-          <span className="text-xs font-medium text-text-main line-clamp-1 max-w-[200px]">
+          <span className="text-xs font-bold text-text-main line-clamp-1 max-w-[200px]">
             {resource.courseCode}
           </span>
           <span className="text-[11px] text-text-muted">
@@ -86,38 +93,38 @@ export const ResourcePreviewDrawer: React.FC<ResourcePreviewDrawerProps> = ({
         </div>
 
         {/* Document Title & Meta */}
-        <h3 className="text-sm font-semibold text-text-main mb-1.5 leading-snug">
+        <h3 className="text-sm font-bold text-text-main mb-1.5 leading-snug">
           {resource.title}
         </h3>
-        <p className="text-xs text-brand-deep font-medium mb-4 flex items-center gap-1.5">
-          <BookOpen className="w-3.5 h-3.5 text-brand-green" />
-          {resource.courseTitle}
+        <p className="text-xs text-brand-deep font-semibold mb-4 flex items-center gap-1.5">
+          <BookOpen className="w-3.5 h-3.5 text-brand-green shrink-0" />
+          <span className="line-clamp-1">{resource.courseTitle}</span>
         </p>
 
         {/* Detailed Metadata Grid */}
-        <div className="space-y-2.5 text-xs text-text-main pt-3 border-t border-border-light/60">
-          <div className="flex justify-between items-center py-1">
+        <div className="space-y-2 text-xs text-text-main pt-3 border-t border-border-light/60">
+          <div className="flex justify-between items-center py-0.5">
             <span className="text-text-muted">Academic Level:</span>
-            <span className="font-medium">{resource.level} Level</span>
+            <span className="font-bold text-brand-deep">{resource.level} Level</span>
           </div>
-          <div className="flex justify-between items-center py-1">
+          <div className="flex justify-between items-center py-0.5">
             <span className="text-text-muted">Semester:</span>
-            <span className="font-medium">{resource.semester === 1 ? 'First' : 'Second'} Semester</span>
+            <span className="font-medium">{resource.semester === 1 ? 'First Semester' : 'Second Semester'}</span>
           </div>
-          <div className="flex justify-between items-center py-1">
-            <span className="text-text-muted">Academic Session:</span>
+          <div className="flex justify-between items-center py-0.5">
+            <span className="text-text-muted">Session:</span>
             <span className="font-medium">{resource.session}</span>
           </div>
-          <div className="flex justify-between items-center py-1">
+          <div className="flex justify-between items-center py-0.5">
             <span className="text-text-muted">File Size:</span>
-            <span className="font-medium">{formatFileSize(resource.fileSizeBytes)}</span>
+            <span className="font-semibold">{formatFileSize(resource.fileSizeBytes)}</span>
           </div>
-          <div className="flex justify-between items-center py-1">
-            <span className="text-text-muted">Verified Date:</span>
+          <div className="flex justify-between items-center py-0.5">
+            <span className="text-text-muted">Editorial Check:</span>
             <span className="font-medium">{formatDate(resource.lastCheckedDate)}</span>
           </div>
           {resource.contributorName && (
-            <div className="flex justify-between items-center py-1">
+            <div className="flex justify-between items-center py-0.5">
               <span className="text-text-muted">Contributor:</span>
               <span className="font-medium text-text-main flex items-center gap-1">
                 <User className="w-3 h-3 text-text-subtle" />
@@ -128,40 +135,41 @@ export const ResourcePreviewDrawer: React.FC<ResourcePreviewDrawerProps> = ({
         </div>
 
         {resource.description && (
-          <div className="mt-4 p-3 rounded-lg bg-surface-bg border border-border-light/60 text-xs text-text-muted leading-relaxed">
+          <div className="mt-4 p-3 rounded-xl bg-surface-bg border border-border-light/60 text-xs text-text-muted leading-relaxed">
             {resource.description}
           </div>
         )}
       </div>
 
-      {/* Action Footer */}
-      <div className="mt-6 pt-4 border-t border-border-light flex flex-col gap-2">
+      {/* Action Footer - Ordered: Primary (Download) top, Secondary (Share / Report) bottom */}
+      <div className="mt-6 pt-4 border-t border-border-light flex flex-col gap-2.5">
         <Button
           variant="primary"
           size="md"
           onClick={handleDownload}
-          className="w-full justify-center shadow-md font-medium"
+          className="w-full justify-center shadow-md font-bold text-xs h-10"
         >
           <Download className="w-4 h-4 mr-2" />
-          Download {resource.fileType}
+          Instant Download ({resource.fileType})
         </Button>
+
         <div className="grid grid-cols-2 gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={handleShare}
-            className="text-xs"
+            className="text-xs h-9 font-medium"
           >
-            <Share2 className="w-3.5 h-3.5 mr-1" />
-            Share
+            <Share2 className="w-3.5 h-3.5 mr-1.5" />
+            Share Link
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => onReport(resource)}
-            className="text-xs text-brand-red hover:bg-red-50 hover:border-red-200"
+            className="text-xs h-9 font-medium text-brand-red hover:bg-red-50 hover:border-red-200"
           >
-            <Flag className="w-3.5 h-3.5 mr-1" />
+            <Flag className="w-3.5 h-3.5 mr-1.5" />
             Report Issue
           </Button>
         </div>
@@ -169,4 +177,3 @@ export const ResourcePreviewDrawer: React.FC<ResourcePreviewDrawerProps> = ({
     </aside>
   );
 };
-

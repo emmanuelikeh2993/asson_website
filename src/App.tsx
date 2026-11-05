@@ -15,11 +15,13 @@ import { DashboardPage } from './pages/DashboardPage';
 import { AdminPage } from './pages/AdminPage';
 import { MOCK_RESOURCES, COURSES } from './lib/mockData';
 import { AcademicResource } from './types';
+import { ToastProvider, useToast } from './components/ui/Toast';
 
 export function AppContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const navigate = useNavigate();
+  const toast = useToast();
 
   // Global keydown listener for Command Palette (Ctrl+K or /)
   useEffect(() => {
@@ -132,7 +134,10 @@ export function AppContent() {
         isOpen={isSubmitOpen}
         onClose={() => setIsSubmitOpen(false)}
         onSuccess={(title) => {
-          alert(`Success! "${title}" has been submitted to the ASSON editorial queue.`);
+          toast.success(
+            'Material Submitted Successfully!',
+            `"${title}" is logged under review. Reference saved to your Student Dashboard.`
+          );
         }}
       />
     </div>
@@ -142,8 +147,9 @@ export function AppContent() {
 export default function App() {
   return (
     <Router>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </Router>
   );
 }
-
