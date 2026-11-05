@@ -15,7 +15,7 @@ import {
   ShieldCheck,
   ArrowRight
 } from 'lucide-react';
-import { formatFileSize } from '../../../lib/utils';
+import { formatFileSize, cn } from '../../../lib/utils';
 import { Link } from 'react-router-dom';
 
 interface SubmitResourceModalProps {
@@ -40,6 +40,8 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [hasPermission, setHasPermission] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const resourceTypes: ResourceType[] = [
     'Past Question',
@@ -96,6 +98,10 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
       setError('Please provide a descriptive title for this academic material.');
       return;
     }
+    if (!hasPermission) {
+      setError('Please check the permission box below to authorize ASSON UI to host this academic material.');
+      return;
+    }
 
     setIsUploading(true);
     setError(null);
@@ -127,17 +133,65 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
 
   const handleModalClose = () => {
     if (isUploading) return;
+    if ((file || title.trim() || contributorName.trim()) && !submittedId && !showExitConfirm) {
+      setShowExitConfirm(true);
+      return;
+    }
+    forceExit();
+  };
+
+  const forceExit = () => {
     setFile(null);
     setTitle('');
     setError(null);
     setUploadProgress(0);
     setSubmittedId(null);
+    setHasPermission(false);
+    setShowExitConfirm(false);
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleModalClose} title="Submit Academic Material" maxWidth="lg">
-      {submittedId ? (
+    <Modal 
+      isOpen={isOpen} 
+      onClose={handleModalClose} 
+      title={showExitConfirm ? "Discard Upload?" : submittedId ? "Submission Confirmed" : "Submit Academic Material"} 
+      maxWidth="lg"
+    >
+      {showExitConfirm ? (
+        /* Discard Changes / Exit Confirmation Screen */
+        <div className="py-6 px-3 text-center space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
+            <AlertCircle className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-text-main">
+              Discard Upload and Exit?
+            </h3>
+            <p className="text-xs text-text-muted mt-1 max-w-sm mx-auto leading-relaxed">
+              You have unsaved changes. Exiting now will clear your attached file and typed details without uploading.
+            </p>
+          </div>
+          <div className="pt-2 flex items-center justify-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowExitConfirm(false)}
+              className="text-xs font-semibold h-9 px-4"
+            >
+              Keep Editing
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={forceExit}
+              className="bg-brand-red hover:bg-red-700 text-white text-xs font-bold h-9 px-4 shadow-xs"
+            >
+              Discard & Exit
+            </Button>
+          </div>
+        </div>
+      ) : submittedId ? (
         /* Success Confirmation View */
         <div className="py-6 px-2 text-center space-y-5">
           <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-brand-green flex items-center justify-center mx-auto shadow-inner">
@@ -181,13 +235,13 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               to="/dashboard"
-              onClick={handleModalClose}
+              onClick={forceExit}
               className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-xl bg-brand-green text-white hover:bg-brand-deep transition-colors shadow-sm"
             >
               View in Student Dashboard <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
             </Link>
-            <Button variant="ghost" onClick={handleModalClose} className="w-full sm:w-auto text-xs">
-              Close
+            <Button variant="ghost" onClick={forceExit} className="w-full sm:w-auto text-xs">
+              Close Window
             </Button>
           </div>
         </div>
@@ -364,6 +418,67 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
             </div>
           )}
 
+          {/* Permission to Upload & Academic Verification Checkbox */}
+          <div className={cn(
+            "p-3.5 sm:p-4 rounded-xl border transition-all duration-200 select-none",
+            hasPermission 
+              ? "bg-emerald-50/80 border-brand-green/50 shadow-xs" 
+              : "bg-surface-bg border-border-light hover:border-gray-300"
+          )}>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasPermission}
+                onChange={(e) => {
+                  setHasPermission(e.target.checked);
+                  if (error) setError(null);
+                }}
+                className="mt-0.5 rounded border-border-light text-brand-green focus:ring-brand-green h-4 w-4 shrink-0 cursor-pointer accent-brand-green"
+              />
+              <div className="text-xs space-y-1">
+                <div className="font-bold text-text-main flex items-center gap-1.5">
+                  <ShieldCheck className={cn("w-4 h-4", hasPermission ? "text-brand-green" : "text-text-muted")} />
+                  <span>Permission to Upload & Academic Rights Confirmation *</span>
+                </div>
+                <p className="text-[11px] text-text-muted leading-relaxed">
+                  I confirm that this document is genuine, legible, and directly belongs to the official University of Ibadan curriculum. I authorize ASSON UI to host, index, and distribute this material to students for study and revision purposes.
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {/* Requirements Checklist Indicators */}
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-medium pt-1">
+            <span className="text-text-muted text-[11px] mr-1">Checklist:</span>
+            <span className={cn(
+              "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] transition-colors",
+              file 
+                ? "bg-emerald-50 text-brand-green border-emerald-200" 
+                : "bg-gray-50 text-text-muted border-gray-200"
+            )}>
+              {file ? <CheckCircle2 className="w-3 h-3 text-brand-green" /> : <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />}
+              Document Attached
+            </span>
+            <span className={cn(
+              "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] transition-colors",
+              title.trim() 
+                ? "bg-emerald-50 text-brand-green border-emerald-200" 
+                : "bg-gray-50 text-text-muted border-gray-200"
+            )}>
+              {title.trim() ? <CheckCircle2 className="w-3 h-3 text-brand-green" /> : <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />}
+              Title Provided
+            </span>
+            <span className={cn(
+              "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] transition-colors",
+              hasPermission 
+                ? "bg-emerald-50 text-brand-green border-emerald-200" 
+                : "bg-gray-50 text-text-muted border-gray-200"
+            )}>
+              {hasPermission ? <CheckCircle2 className="w-3 h-3 text-brand-green" /> : <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />}
+              Permission Granted
+            </span>
+          </div>
+
           {error && (
             <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-brand-red flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -371,13 +486,31 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
             </div>
           )}
 
-          {/* Submit Actions */}
-          <div className="pt-3 border-t border-border-light flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={handleModalClose} disabled={isUploading}>
-              Cancel
+          {/* Submit & Cancel Actions */}
+          <div className="pt-3 border-t border-border-light flex flex-col-reverse sm:flex-row items-center justify-between gap-2.5">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleModalClose} 
+              disabled={isUploading}
+              className="w-full sm:w-auto text-xs font-semibold hover:bg-red-50 hover:text-brand-red hover:border-red-200 transition-colors"
+            >
+              <X className="w-3.5 h-3.5 mr-1.5" />
+              Cancel & Exit
             </Button>
-            <Button type="submit" variant="primary" isLoading={isUploading} disabled={!file || !title.trim()}>
-              Submit for Review
+
+            <Button 
+              type="submit" 
+              variant="primary" 
+              isLoading={isUploading} 
+              disabled={!file || !title.trim() || !hasPermission}
+              className={cn(
+                "w-full sm:w-auto text-xs font-bold px-5 h-9 transition-all shadow-xs",
+                (!file || !title.trim() || !hasPermission) && "opacity-55 cursor-not-allowed bg-gray-300 text-gray-600 hover:bg-gray-300"
+              )}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+              {(!file || !title.trim() || !hasPermission) ? 'Complete Checklist to Confirm' : 'Confirm & Upload Material'}
             </Button>
           </div>
         </form>

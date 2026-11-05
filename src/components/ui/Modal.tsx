@@ -42,34 +42,37 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal Dialog */}
+      {/* Modal Dialog with Sticky Header & Scrollable Body */}
       <div 
         className={cn(
-          "relative w-full rounded-2xl bg-surface-card p-6 shadow-modal border border-border-light z-10 animate-in fade-in zoom-in-95 duration-150",
+          "relative w-full max-h-[92vh] flex flex-col rounded-2xl bg-surface-card shadow-modal border border-border-light z-10 animate-in fade-in zoom-in-95 duration-150 overflow-hidden",
           maxWidthStyles[maxWidth]
         )}
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between pb-3 border-b border-border-light mb-4">
-          {title && <h3 className="text-base font-semibold text-text-main">{title}</h3>}
+        <div className="sticky top-0 bg-surface-card z-30 flex items-center justify-between px-5 py-4 border-b border-border-light shrink-0">
+          {title && <h3 className="text-base font-bold text-text-main">{title}</h3>}
           <button
+            type="button"
             onClick={onClose}
-            className="rounded-lg p-1 text-text-muted hover:bg-surface-bg hover:text-text-main transition-colors ml-auto"
+            className="rounded-xl px-2.5 py-1 text-text-muted hover:bg-surface-bg hover:text-text-main transition-colors ml-auto border border-border-light shadow-2xs flex items-center gap-1.5 cursor-pointer text-xs font-medium"
             aria-label="Close modal"
+            title="Close (Esc)"
           >
-            <X className="w-5 h-5" />
+            <span className="text-[11px] font-semibold text-text-muted">Close</span>
+            <X className="w-4 h-4 text-text-muted" />
           </button>
         </div>
-        <div>{children}</div>
+        <div className="overflow-y-auto p-5 sm:p-6 flex-1">{children}</div>
       </div>
     </div>
   );
