@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  Search, 
-  PlusCircle, 
-  Menu, 
-  X, 
-  BookOpen, 
-  FileText, 
-  Bell, 
-  GraduationCap, 
-  HelpCircle, 
-  User, 
+import {
+  Search,
+  PlusCircle,
+  Menu,
+  X,
+  BookOpen,
+  FileText,
+  Bell,
+  GraduationCap,
+  HelpCircle,
+  User,
   Sparkles,
   ArrowRight
 } from 'lucide-react';
@@ -94,11 +94,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit }) =>
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`text-xs font-semibold px-3 py-2 rounded-lg transition-all ${
-                    isActive
-                      ? 'text-brand-green bg-brand-light font-bold shadow-xs'
-                      : 'text-text-main hover:text-brand-green hover:bg-surface-bg'
-                  }`}
+                  className={`text-xs font-semibold px-3 py-2 rounded-lg transition-all ${isActive
+                    ? 'text-brand-green bg-brand-light font-bold shadow-xs'
+                    : 'text-text-main hover:text-brand-green hover:bg-surface-bg'
+                    }`}
                 >
                   {link.name}
                 </Link>
@@ -144,7 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit }) =>
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           {/* Backdrop overlay */}
-          <div 
+          <div
             onClick={closeMobileMenu}
             className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in"
           />
@@ -177,11 +176,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit }) =>
                       key={link.path}
                       to={link.path}
                       onClick={closeMobileMenu}
-                      className={`flex items-center justify-between p-3 rounded-xl text-xs font-semibold transition-colors ${
-                        isActive
-                          ? 'bg-brand-light text-brand-deep font-bold'
-                          : 'text-text-main hover:bg-surface-bg hover:text-brand-green'
-                      }`}
+                      className={`flex items-center justify-between p-3 rounded-xl text-xs font-semibold transition-colors ${isActive
+                        ? 'bg-brand-light text-brand-deep font-bold'
+                        : 'text-text-main hover:bg-surface-bg hover:text-brand-green'
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <span className={`p-1.5 rounded-lg ${isActive ? 'bg-brand-green text-white' : 'bg-surface-bg text-text-muted'}`}>

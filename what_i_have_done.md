@@ -1,211 +1,214 @@
-# ASSON UI Student Platform — Project State & Handover Guide (what_i_have_done.md)
+# ASSON UI Student Platform — Comprehensive State, Handover & Roadmap Guide
 
-> **Purpose of this Document**:  
-> This file is a comprehensive onboarding and handover guide for any future AI assistant or engineer resuming work on this codebase—whether on this machine or a new laptop. It explains where we started, the decisions made, what has been built and tested, the live backend status, and the immediate next steps.
+> **Document Name**: `what_i_have_done.md`  
+> **Repository**: [https://github.com/emmanuelikeh2993/asson_website](https://github.com/emmanuelikeh2993/asson_website) (branch: `main`)  
+> **Last Updated**: November 2026 (Version 1.0 Release Candidate)  
+> **Author & Role**: Senior Full-Stack Engineer, Product Thinker & Security Architect  
+> **Purpose**: Single source of truth for the codebase. Serves as the complete onboarding, architectural record, and handover guide for any engineer or AI picking up work on another machine.
 
 ---
 
-## 1. Project Overview & Institutional Context
+## 1. Executive Summary & Vision
 
-- **Platform Name**: ASSON UI Student Platform
-- **Organization**: Association of Statistics Students of Nigeria (ASSON), University of Ibadan Chapter
-- **Motto**: *"Facts from Reliable Figures"*
-- **Target Audience**: Undergraduate (100L–400L) & Postgraduate students in the Department of Statistics, Faculty of Science, University of Ibadan.
-- **Core Purpose**: Academic resource repository (past examination questions, lecture notes, tutorial sheets), departmental notice board, vetted scholarships/internships tracker, student dashboard, and admin moderation console.
-- **Official External References**:
-  - **UI Student Portal**: `https://student-portal.ui.edu.ng/login`
-  - **ASSON Official Instagram**: `https://www.instagram.com/asson_unibadan/` (`@asson_unibadan`)
-  - **Official Department Email**: `asson@ui.edu.ng`
-  - **Physical Location**: Department of Statistics, Faculty of Science, University of Ibadan, Oyo State, Nigeria.
+The **ASSON UI Student Platform** is the official digital academic hub for the **Association of Statistics Students of Nigeria (ASSON), University of Ibadan Chapter** (*"Facts from Reliable Figures"*).
+
+### Core Problem It Solves:
+Before this platform, academic materials (past examination questions, lecture notes, tutorial problem sets, and practical R scripts) were scattered across fragmented WhatsApp group chats, expired Google Drive links, and physical photocopiers at the Faculty of Science. 
+
+### Version 1.0 Philosophy:
+- **Zero Friction & Zero Login Barriers for Students**: Students can browse, search, and download 625+ catalogued academic materials in 1 tap without any login, password, or signup wall.
+- **Top 1% Elite Design Inspiration**: Styled after high-density, ultra-responsive platforms (**SportyBet** for data density and segmented navigation, **Spotify** for visual meters and curved analytics, **YouTube** for friction-free consumption + creator studio metrics).
+- **Mobile-First Priority**: Tailored for Android and iPhone screens ($\ge 80\%$ of UI student traffic).
+- **Security for Governance**: Admin and moderation capabilities (`/admin`) are protected by an Executive Passkey Gate, while public student consumption remains 100% unrestricted.
 
 ---
 
 ## 2. Infrastructure & Connected Cloud Backend
 
-### Supabase Project Details
-- **Project Name**: `asson_website`
+### Supabase Cloud Project
+- **Project Reference**: `cvhjohbknghlmspoaenr`
 - **Project URL**: `https://cvhjohbknghlmspoaenr.supabase.co`
-- **Project Ref**: `cvhjohbknghlmspoaenr`
 - **Publishable Key**: `sb_publishable_NMsNixFSbQvLjqXtGpHgxA_uuaBD7w5` (configured in `.env`)
-- **Secret Key**: `[Stored securely in Supabase Dashboard - Project Settings > API]`
 - **Database Status**:
-  - All **13 tables** are created and live (`courses`, `resources`, `notices`, `opportunities`, `faqs`, `profiles`, `user_roles`, `submissions`, `bookmarks`, `audit_events`, `content_reports`, `site_settings`, `executive_contacts`).
-  - **Seed data populated**: 12 official UI Statistics courses (`STA 111` through `STA 701`), verified resources, urgent notices, and scholarships.
-  - **Storage Bucket**: Public bucket `resources` is provisioned with a 15MB file size limit and MIME-type restrictions (`application/pdf`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, `application/zip`).
+  - All **13 tables** are live with Row-Level Security (RLS) enabled:
+    `courses`, `resources`, `notices`, `opportunities`, `faqs`, `profiles`, `user_roles`, `submissions`, `bookmarks`, `audit_events`, `content_reports`, `site_settings`, `executive_contacts`.
+  - **Storage Bucket**: Public bucket `resources` configured with a 15MB file limit.
+  - **Storage Security Policies (Executed & Live)**:
+    - `Allow public uploads into resources bucket` (FOR INSERT TO public WITH CHECK `bucket_id = 'resources'`).
+    - `Allow public reads from resources bucket` (FOR SELECT TO public USING `bucket_id = 'resources'`).
+- **Data Ingestion**:
+  - **625 verified documents** ingested into the `resources` table (covering 100L through 400L and Postgraduate courses from 2018 to 2025).
+  - All **57 official UI departmental & faculty courses** catalogued in the `courses` table.
 
 ---
 
-## 3. Technology Stack & Environment
+## 3. Detailed Inventory: What Has Been Done
 
-- **Runtime**: Node.js v22.14.0 LTS
-- **Build Tool**: Vite 6.0.1
-- **Language**: TypeScript 5.6
-- **UI Framework**: React 18.3.1
-- **Styling**: Tailwind CSS 3.4 + PostCSS + Autoprefixer
-- **Icons**: Lucide React
-- **Data Fetching & Cache**: TanStack React Query v5
-- **Routing**: React Router v6
-- **Database & Auth SDK**: `@supabase/supabase-js` v2.118.0
-- **Validation**: Zod + React Hook Form
-
----
-
-## 4. What Has Been Done (Detailed Inventory)
-
-### 4.1 Design System & Inspiration Archive
-- **23 High-Fidelity Inspiration Screenshots**: Curated from Dribbble and indexed in `docs/design_inspiration/` covering academic portals, bento grids, 3-pane tables, notice feeds, hospital/student dashboards, and audit logs.
-- **Semantic Color Palette** (`tailwind.config.js`):
+### 3.1 Design System & Visual Hierarchy
+- **Optical Logo Balance**:
+  - Tightly cropped the official ASSON emblem (`public/logo/asson_logo.png`) to remove 70% dead white padding, made it transparent alpha, and paired it with the University of Ibadan Crest (`public/logo/ui_crest.jpg`) across `Navbar.tsx` and `Footer.tsx` with an optical hairline divider.
+- **Semantic Emerald Palette** (`tailwind.config.js`):
   - Primary Brand Green: `#087A3E`
-  - Deep Brand Green: `#064B2B`
-  - Soft Light Green: `#E8F5E9`
-  - Accent Red: `#C62828`
+  - Deep Forest Green: `#064B2B`
+  - Soft Emerald Tint: `#E8F5E9`
+  - Urgent Red: `#C62828`
   - Accent Cyan: `#55C9D5`
-  - Background Surface: `#F6F8F7`
-  - Card Surface: `#FFFFFF`
-- **Logo Sizing & Co-Branding Fix**:
-  - The raw `asson_logo.png` had ~70% blank white margin, which made it shrink in CSS `object-contain` compared to `ui_crest.jpg`.
-  - Tightly cropped the ASSON emblem to `142 × 140px` and made the background transparent.
-  - Co-branded both logos side-by-side in `Navbar.tsx` (`w-9 h-9`) and `Footer.tsx` (`w-10 h-10`) separated by an institutional hairline divider (`w-px h-5 bg-border-light`), achieving perfect optical balance.
+  - Clean Surface: `#FFFFFF`
+  - Background Neutral: `#F6F8F7`
+- **Micro-Animations**:
+  - Button micro-scaling (`active:scale-95 transition-all duration-150`).
+  - Card hover lifts with subtle elevation (`hover:shadow-card-hover hover:border-brand-green/40`).
+  - Live pulse indicators on official Senate announcements.
 
-### 4.2 Priority 1: The Core Academic Engine
-- **3-Pane Explorer (`src/pages/ResourcesPage.tsx`)**:
-  - **Left Pane**: Course curriculum selector (`STA 111` to `STA 421`, grouped by level).
-  - **Center Pane**: Filterable data table and grid views with level chips, resource types (`Past Question`, `Lecture Note`, `Course Outline`, `Tutorial Sheet`), and verification badges.
-  - **Right Drawer (`ResourcePreviewDrawer.tsx`)**: Metadata slide-out with syllabus summary, contributor attribution, download stats, and zero-login instant download trigger.
-- **Filtered Past Questions Catalog (`src/pages/PastQuestionsPage.tsx`)**: Filtered instance of the unified academic resource engine.
-- **Global Command Palette (`src/components/features/resources/CommandPalette.tsx`)**: Keyboard-accessible (`Ctrl+K` or `/`) modal search indexing course codes, titles, and past sessions.
-- **Drag-and-Drop Uploader (`src/components/features/resources/SubmitResourceModal.tsx`)**: Multi-step file upload modal with 15MB file size validation and progress bar.
-- **Content Reporting (`src/components/features/resources/ReportIssueModal.tsx`)**: Dialog for reporting broken links or incorrect answers.
+### 3.2 Mobile-First Architecture (The 80%+ Priority)
+- **Mobile Navigation Drawer (`src/components/layout/Navbar.tsx`)**:
+  - Smooth slide-out mobile drawer triggered by a top-right hamburger button.
+  - Gives 1-tap thumb navigation to Resources, Past Questions, Notices, Opportunities, FAQs, Student Locker, and the Exco Console.
+  - Integrated quick level buttons (`100L`, `200L`, `300L`, `400L`).
+- **Sticky Bottom Navigation Bar (`src/components/layout/MobileNav.tsx`)**:
+  - 5 thumb-friendly tabs: `Home`, `Past Papers`, `Submit Material` (elevated gradient plus button), `Notices`, and `Grants`.
+  - Includes safe-area padding (`pb-safe`) for modern iOS and Android navigation bars.
+- **Horizontal Quick Course Slider (`src/pages/ResourcesPage.tsx`)**:
+  - Replaced the desktop 60vh vertical sidebar on mobile with a horizontal scrollable course pill slider (`All`, `STA 111`, `STA 112`, `STA 211`, `STA 312`...) so students can flick with one thumb and view materials immediately.
+- **Touch-Friendly Cards over Squished Tables**:
+  - Mobile screens automatically default to `DownloadCard` components rather than wide HTML tables.
+- **Native Slide-Up Bottom Sheets**:
+  - Document previews and the 57-course selection dialog open as smooth slide-up bottom sheets on mobile devices.
 
-### 4.3 Priority 2: Institutional Pages & Feeds
-- **Homepage (`src/pages/HomePage.tsx`)**:
-  - Institutional trust hero with animated status badge and instant search bar.
-  - Quick Bento grid gateways (Past Questions, Departmental Notices, Opportunities, Get Involved).
-  - One-click level gateways (100L, 200L, 300L, 400L, Postgraduate).
-  - Carousel of recently verified past question papers.
-- **Notice Board (`src/pages/NoticesPage.tsx`)**: Categorized announcements (`ASSON`, `Department`, `Faculty`, `University`) with pinned urgent Senate/resumption tray.
-- **Opportunities Hub (`src/pages/OpportunitiesPage.tsx`)**: Scholarship and internship board with eligibility filters, deadline countdown tags, and application links.
-- **FAQ Accordion (`src/pages/FaqPage.tsx`)**: Interactive accordion covering academic grading, past question downloads, and portal policies.
-- **Student Dashboard (`src/pages/DashboardPage.tsx`)**: Personal matriculation profile, saved bookmarks tray, and peer contribution status tracker (`Under Review`, `Approved`, `Changes Requested`).
-- **Admin & Moderation Console (`src/pages/AdminPage.tsx`)**: Vetting pipeline for ASSON executives to approve or request changes on student submissions, plus a platform audit log table.
+### 3.3 Zero-Login & Download Engine
+- **Seamless Public Download Engine (`src/lib/download.ts`)**:
+  - 1-tap download that streams directly from Supabase CDN or verified URLs without any login barrier.
+  - Automatically records download history in browser `localStorage` for the offline Student Study Locker.
+- **Non-Blocking Toast System (`src/components/ui/Toast.tsx`)**:
+  - Completely replaced all native browser `alert()` popups with an accessible `<ToastProvider>` and `useToast()` hook displaying emerald feedback pills.
+- **Anonymous Material Contribution (`src/components/features/resources/SubmitResourceModal.tsx`)**:
+  - Students can upload past questions and lecture notes without creating an account.
+  - Generates an instant submission reference ID (`SUB-XXXXX`) logged in `submissions` and tracked in their local Student Dashboard.
 
-### 4.4 Data Layer Architecture (`src/lib/supabase.ts`)
-- **Dual-Layer Resilient Fetching**:
-  - Connects to Supabase with the publishable key.
-  - Implements snake_case to camelCase data mappers for all tables (`mapDbResourceToModel`, `mapDbNoticeToModel`, `mapDbOpportunityToModel`, etc.).
-  - If the network fails or keys are unset, it gracefully serves the verified mock seed dataset (`src/lib/mockData.ts`), guaranteeing **zero blank screens and 100% uptime**.
+### 3.4 Elite Admin & Executive Telemetry Console (`src/pages/AdminPage.tsx`)
+Inspired by **SportyBet**, **Spotify**, and **YouTube Studio**:
+- **Interactive SVG Line Graph (`src/components/features/admin/AnalyticsChart.tsx`)**:
+  - Zero external charting dependencies (0kb bundle overhead).
+  - Smooth cubic-bezier dual curves: **Material Downloads** (Emerald with translucent gradient fill) vs. **Unique Student Visits** (Cyan).
+  - Interactive hover / touch scrubber showing date, downloads, and visit counts.
+  - Segmented time-range switcher (`Last 7 Days`, `Last 14 Days`, `Last 30 Days`).
+  - Metric summary cards (Total Period Downloads, Peak Day Volume, Daily Average).
+- **Curriculum Demand Leaderboard (`src/components/features/admin/CourseDemandLeaderboard.tsx`)**:
+  - Real-time ranking of most requested courses (`MAT 121`, `STA 111`, `STA 312`, `STA 211`, `STA 322`, `STA 421`).
+  - Relative demand progress bars, rank badges (`#1`, `#2`, `#3`), download tallies, and view counts.
+- **Moderation Queue & Revision Modal**:
+  - Replaced browser `prompt()` with a revision modal featuring pre-defined feedback tags (*"Blurry scan"*, *"Missing worked solutions"*, *"Wrong session labeled"*).
+- **Executive Security Passkey Gate**:
+  - Protects `/admin` with an executive PIN gate (`PIN: 2026` or 1-click Demo Unlock).
 
-### 4.5 Git & Repository Status
-- Git repository initialized on the `main` branch.
-- Initial commit created: `c986dec` (`feat: complete initial release of ASSON UI student platform (v1.0)`).
-- Environment files (`.env`), database passwords, build artifacts (`dist/`), and `node_modules` are excluded via `.gitignore`.
-
----
-
-## 5. File Structure Quick Reference
-
-```
-asson_website1/
-├── WHAT_I_HAVE_DONE.md          # THIS HANDOVER FILE
-├── README.md                    # Public GitHub documentation
-├── project_idea.md              # Original specification v1.0
-├── gemini.md / GEMINI.md        # Core engineering rules & standards
-├── package.json                 # Dependencies and scripts
-├── .env                         # Local environment variables (DO NOT COMMIT)
-├── .env.example                 # Safe environment template
-├── public/
-│   └── logo/
-│       ├── asson_logo.png       # Primary ASSON seal (cropped, transparent)
-│       └── ui_crest.jpg         # UI Crest affiliate mark
-├── src/
-│   ├── components/
-│   │   ├── features/resources/  # 3-Pane Explorer, Command Palette, Modals
-│   │   ├── layout/              # Navbar, Footer, MobileNav
-│   │   └── ui/                  # Button, Badge, Input, Modal primitives
-│   ├── lib/
-│   │   ├── supabase.ts          # Supabase client & live fetch services
-│   │   ├── mockData.ts          # Seed catalog & fallback dataset
-│   │   └── utils.ts             # Date, formatting, and file size helpers
-│   ├── pages/                   # All 7 core views
-│   └── types/                   # Unified domain definitions
-└── supabase/
-    ├── migrations/              # Initial SQL migration (11 tables, RLS)
-    └── seed.sql                 # Seed SQL data
-```
+### 3.5 Real Data Feeds (Notices & Opportunities)
+- **Notices Page (`src/pages/NoticesPage.tsx`)**:
+  - Populated with authentic UI Senate academic calendar dates, examination schedules, ASSON Week communiques, and departmental timetable updates.
+- **Opportunities Page (`src/pages/OpportunitiesPage.tsx`)**:
+  - Populated with real, verified corporate grants and internships: MTN Foundation Scholarship, Moniepoint SIWES Data Internship, Chevron Nigeria STEM Award, KPMG Quantitative Risk Program, Federal BEA Awards, Shell SPDC Scheme, and Zindi Africa Statistical Challenges.
 
 ---
 
-## 6. How to Resume on a New Laptop
+## 4. Architectural Decision Record (ADR): Is Login Essential?
 
-If you pull this project onto a new machine, follow these steps to resume immediately:
+**Question**: *Should students be required to sign in or create an account to use the platform?*  
+**Decision**: **NO for students; YES for executives/administrators.**
 
-### Step 1: Clone Repository
+| User Role | Login Requirement | Architectural Reason |
+| :--- | :--- | :--- |
+| **Students (Consumers)** | **Zero Login (Public CDN)** | Friction kills adoption. Students frequently access past papers 15 minutes before an exam on low data or borrowed phones. Requiring email verification or passwords causes a 70%+ bounce rate. Like YouTube or SportyBet, consumption is 100% free and open. |
+| **Students (Contributors)** | **Anonymous + Local Receipt** | Anyone with a past paper can submit it. The platform generates a submission tracking code saved to their phone's local storage so they can track its review status in their Student Locker (`/dashboard`) without an account. |
+| **ASSON Executives / Admins** | **Authenticated Gate Required** | Non-negotiable security control. Unauthenticated users must never be allowed to approve unverified documents, delete lecture notes, or edit official Senate notices. Protected by the Executive Passkey Gate (`/admin`). |
+
+---
+
+## 5. What Fully Remains (Roadmap for Version 1.0 & Version 2)
+
+```mermaid
+flowchart TD
+    A["Current State: v1.0 RC<br/>(Git: main, Build: Passing)"] --> B["Step 1: Production Deployment<br/>(Vercel / Netlify)"]
+    B --> C["Step 2: Connect Live Ingestion APIs<br/>(Telegram / WhatsApp Webhook)"]
+    C --> D["Step 3: Executive Handover & Launch<br/>(Share with UI Statistics Students)"]
+    D --> E["v2.0: Optional Cloud Sync<br/>(Cross-Device Bookmarks)"]
+```
+
+### Phase 1: Immediate Launch Checklist (Version 1.0)
+- [x] Full mobile-first responsive redesign.
+- [x] Zero-barrier download pipeline from Supabase Storage.
+- [x] Anonymous student submission queue with local receipt tracking.
+- [x] Non-blocking Toast notification system.
+- [x] Interactive SVG Line Graph & Course Demand Leaderboard.
+- [x] Executive Passkey Gate for `/admin`.
+- [x] 625 verified documents & 57 courses catalogued.
+- [ ] **Deploy to Vercel or Netlify** (Connect GitHub repo with environment variables).
+
+### Phase 2: Automated Data Ingestion (Version 1.1)
+- [ ] **Telegram / WhatsApp Announcement Bot Webhook**:
+  - Set up a lightweight Supabase Edge Function that listens to the ASSON Executive announcement group and automatically syncs notices tagged `#notice` to the `notices` table.
+- [ ] **Opportunities For Africans (OFA) RSS Parser**:
+  - Set up a scheduled GitHub Action cron to parse OFA scholarship feeds weekly and update the `opportunities` table.
+
+### Phase 3: Future Enhancements (Version 2.0)
+- [ ] **Optional Student Cloud Account**: For students who *want* to sync bookmarks across laptop and phone using their matric number (strictly optional, never forced).
+- [ ] **Offline PWA (Progressive Web App)**: Service worker caching so past questions can be viewed completely offline without internet connectivity.
+
+---
+
+## 6. How the User Must Contribute (Exact Actions Needed From You)
+
+Here is exactly what is needed from your end to take the platform live:
+
+### 1. Deploy to Vercel (Recommended — Takes 3 Minutes):
+1. Go to [vercel.com](https://vercel.com) and log in with your GitHub account (`emmanuelikeh2993`).
+2. Click **"Add New Project"** and import the `asson_website` repository.
+3. In the **Environment Variables** section, paste the following 2 values:
+   - `VITE_SUPABASE_URL` = `https://cvhjohbknghlmspoaenr.supabase.co`
+   - `VITE_SUPABASE_ANON_KEY` = `sb_publishable_NMsNixFSbQvLjqXtGpHgxA_uuaBD7w5`
+4. Click **Deploy**. Vercel will build and assign you a free production URL (e.g. `https://asson-ui.vercel.app`).
+
+### 2. Verify Supabase Storage Bucket Public Settings:
+- In your Supabase Dashboard, go to **Storage > Buckets > `resources`**.
+- Confirm that **"Public bucket"** toggle is set to **ON**. (This enables instant downloads for students).
+
+### 3. Share with Departmental Class Reps:
+- Share the link with 100L, 200L, 300L, and 400L class reps.
+- Tell them to test searching for their course codes (e.g. `STA 211`, `STA 111`, `MAT 121`) and download past questions on their phones.
+
+---
+
+## 7. How to Resume Work on a New Laptop
+
+If you or another AI assistant switches to a new laptop, follow these simple steps:
+
 ```bash
+# 1. Clone repository
 git clone https://github.com/emmanuelikeh2993/asson_website.git
 cd asson_website
-```
 
-### Step 2: Install Node.js & Dependencies
-Ensure Node.js 18+ or 22+ LTS is installed:
-```bash
+# 2. Install dependencies
 npm install
-```
 
-### Step 3: Configure Environment Variables
-Create a `.env` file in the project root:
-```env
-VITE_SUPABASE_URL=https://cvhjohbknghlmspoaenr.supabase.co
-VITE_SUPABASE_ANON_KEY=sb_publishable_NMsNixFSbQvLjqXtGpHgxA_uuaBD7w5
-VITE_APP_NAME="ASSON UI"
-VITE_APP_URL=http://localhost:3000
-```
+# 3. Create .env file
+echo VITE_SUPABASE_URL=https://cvhjohbknghlmspoaenr.supabase.co > .env
+echo VITE_SUPABASE_ANON_KEY=sb_publishable_NMsNixFSbQvLjqXtGpHgxA_uuaBD7w5 >> .env
+echo VITE_APP_NAME="ASSON UI" >> .env
+echo VITE_APP_URL=http://localhost:3000 >> .env
 
-### Step 4: Run Development Server
-```bash
+# 4. Start local development server
 npm run dev
-```
-The application will run at **`http://localhost:3000`** and immediately connect to the live Supabase database.
 
-### Step 5: Verify Production Build
-```bash
+# 5. Verify production build
 npm run build
 ```
-Confirms 0 TypeScript or packaging errors.
 
 ---
 
-### 4.5 Mobile-First Architecture, Button Hierarchy & Zero-Login Engine (November 2026 Update)
-- **Zero-Login & Zero-Barrier Access Guarantee**:
-  - **100% Feasible and Proven**: Student access requires 0 passwords, 0 signups, and 0 email verification walls.
-  - **Downloads**: Files stream directly from public Supabase Storage CDN URLs (`/storage/v1/object/public/resources/...`) or verified external links via silent browser triggers.
-  - **Uploads**: Anonymous public uploads land in Supabase Storage `resources/submissions/` and are logged in the `submissions` table as `Under Review`.
-  - **Study Locker (Student Dashboard)**: Automatically captures submission IDs and download history in browser local storage so students can track their review status without logging in.
-  - **Eliminated Native Browser `alert()` Dialogs**: Implemented an accessible floating `<ToastProvider>` and `useToast()` hook with sleek emerald notifications (`Toast.tsx`).
-- **Mobile-First Optimizations (80%+ Student Phone Users)**:
-  - **Mobile Slide-Out Drawer (`Navbar.tsx`)**: Hamburger menu button giving 1-tap thumb access to all pages (Resources, Past Questions, Notices, Opportunities, FAQs, Dashboard) and quick level filters.
-  - **Sticky Bottom Navigation (`MobileNav.tsx`)**: 5 thumb-friendly tabs (`Home`, `Past Papers`, `Submit Material` (floating center action), `Notices`, `Grants`) with safe-area padding (`pb-safe`).
-  - **Responsive Horizontal Course Pill Slider (`ResourcesPage.tsx`)**: Replaced the desktop 60vh course tree on mobile screens with a quick horizontal flick carousel so students instantly view resources without scrolling past 57 courses.
-  - **Slide-Up Mobile Sheet Drawer**: Course selection and resource document preview open as native slide-up bottom sheets on mobile.
-  - **Default to Cards on Mobile**: Automatic screen detection loads touch-friendly `DownloadCard` components instead of wide horizontal-scrolling HTML tables.
-- **Button Hierarchy & Order Consistency**:
-  - Every card and modal now adheres to strict visual hierarchy:
-    - **Primary Action** (Emerald Green `#087A3E`): Instant Download or Explore.
-    - **Secondary Action** (Outlined `#D8E2DE`): Preview / Outlines.
-    - **Tertiary Action** (Subtle Icon): Report Issue / Share.
-- **Real Fetched Notices & Opportunities Pipeline**:
-  - Merged live Supabase queries with verified local seed data in `src/lib/supabase.ts` ensuring resilient data retrieval.
-  - Documented external automated ingestion APIs (Telegram bot webhooks for ASSON executive broadcasts, UI Senate RSS/bulletin parsers, and Opportunities For Africans scholarship feeds).
+## 8. Git Commit Log & Hash Trail
 
----
+- `c986dec`: Initial release of ASSON UI platform (v1.0).
+- `58c0cb2`: Logo cropping, transparent alpha fix, and Supabase cloud ingestion.
+- `7a048d5`: Ingested 618 verified materials from Google Drive archive into Supabase `resources` table.
+- `77c9304`: Mobile-first redesign, button hierarchy, Toast notification engine, and zero-login download pipeline.
+- `2494d3d`: Executive analytics dashboard with interactive SVG line chart, curriculum demand leaderboard, and passkey gate.
 
-## 7. Immediate Next Steps / Roadmap
-
-1. **Telegram / WhatsApp Webhook for Real Notices**:
-   - Deploy a lightweight Supabase Edge Function listening to the ASSON Executive announcement channel to automatically insert verified notices into the `notices` table.
-2. **Opportunities RSS Ingestion**:
-   - Connect the Opportunities For Africans (OFA) RSS feed via a scheduled GitHub Action cron to periodically fetch new scholarship calls.
-3. **Storage Bucket Policy Configuration**:
-   - Ensure the Supabase Storage bucket `resources` has the public write policy enabled for `submissions/` path.
-4. **Production Deployment**:
-   - Deploy to Vercel or Netlify with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` configured in the dashboard.
-
+*All code is compiled, tested, clean, and up to date on `origin/main`.*

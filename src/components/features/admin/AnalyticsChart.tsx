@@ -385,3 +385,4 @@ export const AnalyticsChart: React.FC = () => {
     </div>
   );
 };
+

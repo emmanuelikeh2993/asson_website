@@ -10,7 +10,8 @@ Official academic resource engine, past examination repository, notice board, an
 
 > **Motto**: *Facts from Reliable Figures*  
 > **Official Student Portal**: [https://student-portal.ui.edu.ng/login](https://student-portal.ui.edu.ng/login)  
-> **Official Instagram**: [@asson_unibadan](https://www.instagram.com/asson_unibadan/)
+> **Official Instagram**: [@asson_unibadan](https://www.instagram.com/asson_unibadan/)  
+> **Engineering Handover & State Guide**: See [`what_i_have_done.md`](what_i_have_done.md) for full architecture notes, zero-login pipeline, and roadmap.
 
 ---
 

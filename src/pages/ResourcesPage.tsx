@@ -10,15 +10,15 @@ import { ResourceFilters } from '../components/features/resources/ResourceFilter
 import { ReportIssueModal } from '../components/features/resources/ReportIssueModal';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { 
-  Search, 
-  LayoutGrid, 
-  List, 
-  BookOpen, 
-  FolderCheck, 
-  Sparkles, 
-  FilterX, 
-  PlusCircle, 
+import {
+  Search,
+  LayoutGrid,
+  List,
+  BookOpen,
+  FolderCheck,
+  Sparkles,
+  FilterX,
+  PlusCircle,
   Folder,
   SlidersHorizontal,
   X
@@ -50,11 +50,11 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
   const [selectedType, setSelectedType] = useState<ResourceType | 'All'>(initialType);
   const [selectedVerification, setSelectedVerification] = useState<VerificationStatus | 'All'>('All');
   const [selectedCourse, setSelectedCourse] = useState<string | 'All'>(courseParam || 'All');
-  
+
   // Mobile-friendly default: Cards on mobile screen, Table on desktop
   const isMobileInitial = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
   const [viewMode, setViewMode] = useState<'grid' | 'table'>(isMobileInitial ? 'grid' : 'table');
-  
+
   const [selectedResource, setSelectedResource] = useState<AcademicResource | null>(null);
   const [reportTarget, setReportTarget] = useState<AcademicResource | null>(null);
   const [isMobileCourseDrawerOpen, setIsMobileCourseDrawerOpen] = useState(false);
@@ -162,29 +162,27 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
           <div className="flex items-center rounded-xl border border-border-light bg-surface-card p-1 text-xs shadow-xs">
             <button
               onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors ${
-                viewMode === 'table'
-                  ? 'bg-brand-green text-white shadow-xs'
-                  : 'text-text-muted hover:text-text-main'
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors ${viewMode === 'table'
+                ? 'bg-brand-green text-white shadow-xs'
+                : 'text-text-muted hover:text-text-main'
+                }`}
             >
               <List className="w-3.5 h-3.5" /> Table
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors ${
-                viewMode === 'grid'
-                  ? 'bg-brand-green text-white shadow-xs'
-                  : 'text-text-muted hover:text-text-main'
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors ${viewMode === 'grid'
+                ? 'bg-brand-green text-white shadow-xs'
+                : 'text-text-muted hover:text-text-main'
+                }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" /> Cards
             </button>
           </div>
 
-          <Button 
-            size="sm" 
-            variant="primary" 
+          <Button
+            size="sm"
+            variant="primary"
             onClick={onOpenSubmit}
             className="text-xs h-9 font-bold shadow-xs hover:shadow"
           >
@@ -222,11 +220,10 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
         <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none text-xs">
           <button
             onClick={() => setSelectedCourse('All')}
-            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-colors shrink-0 ${
-              selectedCourse === 'All'
-                ? 'bg-brand-green text-white shadow-xs'
-                : 'bg-surface-card border border-border-light text-text-muted hover:text-text-main'
-            }`}
+            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-colors shrink-0 ${selectedCourse === 'All'
+              ? 'bg-brand-green text-white shadow-xs'
+              : 'bg-surface-card border border-border-light text-text-muted hover:text-text-main'
+              }`}
           >
             All Courses
           </button>
@@ -234,11 +231,10 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
             <button
               key={c.code}
               onClick={() => setSelectedCourse(c.code)}
-              className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors shrink-0 ${
-                selectedCourse === c.code
-                  ? 'bg-brand-green text-white shadow-xs'
-                  : 'bg-surface-card border border-border-light text-text-main hover:bg-emerald-50/50'
-              }`}
+              className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors shrink-0 ${selectedCourse === c.code
+                ? 'bg-brand-green text-white shadow-xs'
+                : 'bg-surface-card border border-border-light text-text-main hover:bg-emerald-50/50'
+                }`}
             >
               {c.code}
             </button>
@@ -268,11 +264,10 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
             <div className="space-y-1 max-h-[58vh] overflow-y-auto pr-1">
               <button
                 onClick={() => setSelectedCourse('All')}
-                className={`w-full text-left text-xs px-2.5 py-2 rounded-xl font-medium transition-colors flex items-center justify-between ${
-                  selectedCourse === 'All'
-                    ? 'bg-brand-light text-brand-deep font-bold'
-                    : 'text-text-muted hover:bg-surface-bg hover:text-text-main'
-                }`}
+                className={`w-full text-left text-xs px-2.5 py-2 rounded-xl font-medium transition-colors flex items-center justify-between ${selectedCourse === 'All'
+                  ? 'bg-brand-light text-brand-deep font-bold'
+                  : 'text-text-muted hover:bg-surface-bg hover:text-text-main'
+                  }`}
               >
                 <span>All Courses</span>
                 <span className="text-[10px] text-text-subtle font-semibold">{courses.length}</span>
@@ -282,11 +277,10 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
                 <button
                   key={course.code}
                   onClick={() => setSelectedCourse(course.code)}
-                  className={`w-full text-left text-xs px-2.5 py-2 rounded-xl font-medium transition-colors flex items-center justify-between ${
-                    selectedCourse === course.code
-                      ? 'bg-brand-light text-brand-deep font-bold'
-                      : 'text-text-muted hover:bg-surface-bg hover:text-text-main'
-                  }`}
+                  className={`w-full text-left text-xs px-2.5 py-2 rounded-xl font-medium transition-colors flex items-center justify-between ${selectedCourse === course.code
+                    ? 'bg-brand-light text-brand-deep font-bold'
+                    : 'text-text-muted hover:bg-surface-bg hover:text-text-main'
+                    }`}
                 >
                   <span className="truncate">{course.code}</span>
                   <span className="text-[10px] text-text-subtle font-mono">{course.level}L</span>
@@ -383,7 +377,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
       {/* Mobile Slide-Up Preview Modal */}
       {selectedResource && (
         <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
-          <div 
+          <div
             onClick={() => setSelectedResource(null)}
             className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
           />
@@ -400,7 +394,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
       {/* Mobile Course Selector Drawer */}
       {isMobileCourseDrawerOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
-          <div 
+          <div
             onClick={() => setIsMobileCourseDrawerOpen(false)}
             className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
           />
@@ -422,11 +416,10 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
                   setSelectedCourse('All');
                   setIsMobileCourseDrawerOpen(false);
                 }}
-                className={`p-3 rounded-xl text-left text-xs font-bold border transition-colors ${
-                  selectedCourse === 'All'
-                    ? 'bg-brand-green text-white border-brand-green'
-                    : 'bg-surface-card border-border-light text-text-main'
-                }`}
+                className={`p-3 rounded-xl text-left text-xs font-bold border transition-colors ${selectedCourse === 'All'
+                  ? 'bg-brand-green text-white border-brand-green'
+                  : 'bg-surface-card border-border-light text-text-main'
+                  }`}
               >
                 All Courses ({courses.length})
               </button>
@@ -437,11 +430,10 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
                     setSelectedCourse(c.code);
                     setIsMobileCourseDrawerOpen(false);
                   }}
-                  className={`p-3 rounded-xl text-left text-xs border transition-colors ${
-                    selectedCourse === c.code
-                      ? 'bg-brand-green text-white border-brand-green font-bold'
-                      : 'bg-surface-card border-border-light text-text-main hover:bg-emerald-50/50'
-                  }`}
+                  className={`p-3 rounded-xl text-left text-xs border transition-colors ${selectedCourse === c.code
+                    ? 'bg-brand-green text-white border-brand-green font-bold'
+                    : 'bg-surface-card border-border-light text-text-main hover:bg-emerald-50/50'
+                    }`}
                 >
                   <span className="font-bold block">{c.code}</span>
                   <span className="text-[10px] opacity-80 block truncate">{c.title}</span>
