@@ -23,7 +23,10 @@ import {
   Download,
   AlertCircle,
   PlusCircle,
-  X
+  X,
+  Eye,
+  FileText,
+  ExternalLink
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 
@@ -38,9 +41,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
   const [passcode, setPasscode] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'analytics' | 'moderation' | 'audit'>('analytics');
-  const [submissions, setSubmissions] = useState<StudentSubmission[]>(MOCK_SUBMISSIONS);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(MOCK_AUDIT_LOGS);
+  const [activeTab, setActiveTab] = useState<'moderation' | 'analytics' | 'audit'>('moderation');
+  const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [resourcesCount, setResourcesCount] = useState<number>(MOCK_RESOURCES.length);
   
   // Feedback modal state
@@ -51,10 +54,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
 
   useEffect(() => {
     fetchStudentSubmissions().then((data) => {
-      if (data && data.length > 0) setSubmissions(data);
+      setSubmissions(data || []);
     });
     fetchAuditLogs().then((data) => {
-      if (data && data.length > 0) setAuditLogs(data);
+      setAuditLogs(data || []);
     });
     fetchResources().then((data) => {
       if (data && data.length > 0) setResourcesCount(data.length);
@@ -279,6 +282,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
       {/* Navigation Tabs - Strict Segmented Control */}
       <div className="flex items-center gap-1 sm:gap-2 border-b border-border-light pb-2 overflow-x-auto scrollbar-none">
         <button
+          onClick={() => setActiveTab('moderation')}
+          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
+            activeTab === 'moderation'
+              ? 'bg-brand-green text-white shadow-xs'
+              : 'text-text-muted hover:text-text-main hover:bg-surface-bg'
+          }`}
+        >
+          <FileCheck className="w-4 h-4" />
+          Uploaded Materials & Submissions ({submissions.length})
+        </button>
+
+        <button
           onClick={() => setActiveTab('analytics')}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
             activeTab === 'analytics'
@@ -288,18 +303,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
         >
           <TrendingUp className="w-4 h-4" />
           Traffic & Engagement Analytics
-        </button>
-
-        <button
-          onClick={() => setActiveTab('moderation')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${
-            activeTab === 'moderation'
-              ? 'bg-brand-green text-white shadow-xs'
-              : 'text-text-muted hover:text-text-main hover:bg-surface-bg'
-          }`}
-        >
-          <FileCheck className="w-4 h-4" />
-          Vetting Pipeline ({pendingSubmissions.length})
         </button>
 
         <button
@@ -326,16 +329,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
         </div>
       )}
 
-      {/* TAB 2: Moderation & Vetting Pipeline */}
+      {/* TAB: Uploaded Materials & Submissions Queue */}
       {activeTab === 'moderation' && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-sm sm:text-base font-extrabold text-text-main tracking-tight">
-                Peer Submissions Queue ({submissions.length} Total Submissions)
+                Uploaded Academic Materials & Submissions ({submissions.length} Total)
               </h3>
               <p className="text-xs text-text-muted mt-0.5">
-                Approve verified materials for instant inclusion in library catalog.
+                All materials submitted by students and contributors, verified and catalogued.
               </p>
             </div>
             {onOpenSubmit && (
@@ -345,7 +348,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 onClick={onOpenSubmit}
                 className="text-xs h-8.5 font-bold shadow-xs self-start sm:self-auto shrink-0"
               >
-                <PlusCircle className="w-3.5 h-3.5 mr-1.5" /> Upload Past Question to Storage
+                <PlusCircle className="w-3.5 h-3.5 mr-1.5" /> Submit New Material
               </Button>
             )}
           </div>
@@ -357,71 +360,97 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   <tr className="border-b border-border-light bg-surface-bg font-bold text-text-muted">
                     <th className="py-3.5 px-4">Course</th>
                     <th className="py-3.5 px-4">Material Title</th>
-                    <th className="py-3.5 px-4">Type</th>
-                    <th className="py-3.5 px-4">Session</th>
+                    <th className="py-3.5 px-4">Contributor / Reference</th>
+                    <th className="py-3.5 px-4">Type & Session</th>
                     <th className="py-3.5 px-4">Status</th>
-                    <th className="py-3.5 px-4 text-right">Moderator Decision</th>
+                    <th className="py-3.5 px-4 text-right">Document Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-light/60">
-                  {submissions.map((sub) => (
-                    <tr key={sub.id} className="hover:bg-surface-bg/60 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-brand-deep">
-                        <Badge variant="course">{sub.courseCode}</Badge>
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-text-main max-w-xs truncate">
-                        {sub.resourceTitle}
-                      </td>
-                      <td className="py-3.5 px-4 text-text-muted">
-                        {sub.resourceType}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-text-muted font-medium">
-                        {sub.session}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <Badge 
-                          variant={
-                            sub.status === 'Approved' ? 'approved' :
-                            sub.status === 'Under Review' ? 'pending' : 'changes-requested'
-                          }
-                          withIcon
-                        >
-                          {sub.status}
-                        </Badge>
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {sub.status === 'Under Review' ? (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="primary"
-                                onClick={() => handleApprove(sub.id, sub.resourceTitle)}
-                                className="h-8 text-xs px-3 font-bold shadow-xs"
-                              >
-                                <CheckCircle className="w-3.5 h-3.5 mr-1" /> Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setFeedbackTarget(sub);
-                                  setFeedbackNote('');
-                                }}
-                                className="h-8 text-xs px-2.5 font-semibold text-amber-700 hover:bg-amber-50 hover:border-amber-200"
-                              >
-                                <XCircle className="w-3.5 h-3.5 mr-1" /> Request Changes
-                              </Button>
-                            </>
-                          ) : (
-                            <span className="text-[11px] text-text-subtle font-medium italic">
-                              {sub.status}
-                            </span>
-                          )}
-                        </div>
+                  {submissions.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-text-muted">
+                        <FileText className="w-8 h-8 text-text-subtle mx-auto mb-2 opacity-40" />
+                        <p className="font-semibold text-text-main text-xs">No Submissions Recorded Yet</p>
+                        <p className="text-[11px] text-text-muted mt-0.5 max-w-sm mx-auto">
+                          When students or course reps upload academic documents, they will appear here directly in real time.
+                        </p>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    submissions.map((sub) => {
+                      const pdfUrl = sub.filePath
+                        ? `https://cvhjohbknghlmspoaenr.supabase.co/storage/v1/object/public/resources/${sub.filePath.replace(/^resources\//, '')}`
+                        : null;
+
+                      return (
+                        <tr key={sub.id} className="hover:bg-surface-bg/60 transition-colors">
+                          <td className="py-3.5 px-4 font-bold text-brand-deep">
+                            <Badge variant="course">{sub.courseCode}</Badge>
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-text-main max-w-xs truncate">
+                            {sub.resourceTitle}
+                          </td>
+                          <td className="py-3.5 px-4 text-text-muted text-[11px]">
+                            {sub.feedback || 'Student Peer Contributor'}
+                          </td>
+                          <td className="py-3.5 px-4 text-text-muted font-medium">
+                            <span>{sub.resourceType}</span>
+                            <span className="text-[10px] text-text-subtle block font-mono">{sub.session}</span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <Badge 
+                              variant={
+                                sub.status === 'Approved' ? 'approved' :
+                                sub.status === 'Under Review' ? 'pending' : 'changes-requested'
+                              }
+                              withIcon
+                            >
+                              {sub.status === 'Approved' ? 'Live & Published' : sub.status}
+                            </Badge>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {pdfUrl && (
+                                <a
+                                  href={pdfUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-bg border border-border-light hover:bg-emerald-50 hover:text-brand-green text-[11px] font-semibold text-text-main transition-colors shrink-0"
+                                  title="Preview Uploaded PDF File"
+                                >
+                                  <Eye className="w-3.5 h-3.5" /> Preview PDF
+                                </a>
+                              )}
+                              {sub.status === 'Under Review' && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="primary"
+                                    onClick={() => handleApprove(sub.id, sub.resourceTitle)}
+                                    className="h-7 text-xs px-2.5 font-bold shadow-xs"
+                                  >
+                                    <CheckCircle className="w-3 h-3 mr-1" /> Approve
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setFeedbackTarget(sub);
+                                      setFeedbackNote('');
+                                    }}
+                                    className="h-7 text-xs px-2 font-semibold text-amber-700 hover:bg-amber-50"
+                                  >
+                                    <XCircle className="w-3 h-3 mr-1" /> Request Changes
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -454,7 +483,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-light/60">
-                  {auditLogs.map((log) => {
+                  {auditLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-10 text-center text-text-muted">
+                        <History className="w-8 h-8 text-text-subtle mx-auto mb-2 opacity-40" />
+                        <p className="font-semibold text-text-main text-xs">No Audit Logs Recorded Yet</p>
+                        <p className="text-[11px] text-text-muted mt-0.5">Platform administrative actions and publish events will appear here.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    auditLogs.map((log) => {
                     const actionBadge = 
                       log.action === 'PUBLISH' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
                       log.action === 'VERIFY' ? 'bg-blue-50 text-blue-800 border-blue-200' :
@@ -482,7 +520,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                         </td>
                       </tr>
                     );
-                  })}
+                  }))}
                 </tbody>
               </table>
             </div>

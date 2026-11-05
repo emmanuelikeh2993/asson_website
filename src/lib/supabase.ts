@@ -138,6 +138,7 @@ export async function fetchCourses(): Promise<Course[]> {
 }
 
 export async function fetchResources(): Promise<AcademicResource[]> {
+  let list: AcademicResource[] = [];
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -145,13 +146,81 @@ export async function fetchResources(): Promise<AcademicResource[]> {
         .select('*')
         .order('created_at', { ascending: false });
       if (!error && data && data.length > 0) {
-        return data.map(mapDbResourceToModel);
+        list = data.map(mapDbResourceToModel);
       }
     } catch (err) {
       console.warn('Resources fetch error from Supabase, serving cached seed:', err);
     }
   }
-  return MOCK_RESOURCES;
+
+  // Fallback to initial seeds if database is totally empty
+  if (list.length === 0) {
+    list = [...MOCK_RESOURCES];
+  }
+
+  // Merge any approved student submissions from submissions table if not already present
+  if (supabase) {
+    try {
+      const { data: approvedSubs } = await supabase
+        .from('submissions')
+        .select('*')
+        .eq('status', 'Approved');
+      if (approvedSubs && approvedSubs.length > 0) {
+        const existingTitles = new Set(list.map(r => r.title.toLowerCase().trim()));
+        approvedSubs.forEach((sub: any) => {
+          const subTitle = (sub.resource_title || sub.title || '').trim();
+          if (subTitle && !existingTitles.has(subTitle.toLowerCase())) {
+            const courseMeta = COURSES.find(c => c.code === sub.course_code) || {
+              level: '200',
+              semester: 1,
+              title: 'Departmental Course'
+            };
+            const fPath = sub.file_path || '';
+            const downloadUrl = fPath
+              ? `${supabaseUrl}/storage/v1/object/public/resources/${fPath.replace(/^resources\//, '')}`
+              : '#';
+
+            list.unshift({
+              id: sub.id,
+              title: subTitle,
+              courseCode: sub.course_code || 'STA UNK',
+              courseTitle: courseMeta.title,
+              level: courseMeta.level,
+              semester: courseMeta.semester as 1 | 2,
+              session: sub.session || '2024/2025',
+              type: sub.resource_type || 'Past Question',
+              fileType: fPath.endsWith('.docx') ? 'DOCX' : fPath.endsWith('.zip') ? 'ZIP' : 'PDF',
+              fileSizeBytes: Number(sub.file_size_bytes) || 2048000,
+              downloadUrl,
+              filePath: fPath,
+              verificationStatus: 'Verified',
+              lastCheckedDate: sub.created_at ? new Date(sub.created_at).toISOString().split('T')[0] : '2026-11-05',
+              contributorName: sub.feedback?.replace(/^Submitted by: /i, '').replace(/^Uploaded by: /i, '') || 'Student Peer Contributor',
+              description: `Uploaded academic material for ${sub.course_code}.`,
+              downloadsCount: 0
+            });
+            existingTitles.add(subTitle.toLowerCase());
+          }
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // Also merge any locally uploaded custom resources
+  try {
+    const local = JSON.parse(localStorage.getItem('asson_custom_resources') || '[]');
+    if (Array.isArray(local) && local.length > 0) {
+      const existingIds = new Set(list.map(r => r.id));
+      const newItems = local.filter((r: any) => !existingIds.has(r.id));
+      list = [...newItems, ...list];
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return list;
 }
 
 export async function fetchNotices(): Promise<Notice[]> {
@@ -231,9 +300,10 @@ export async function fetchStudentSubmissions(): Promise<StudentSubmission[]> {
           resourceType: row.resource_type || row.type || 'Past Question',
           session: row.session || '2024/2025',
           submittedAt: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : '2026-11-04',
-          status: row.status || 'Under Review',
+          status: row.status || 'Approved',
           feedback: row.feedback || undefined,
           fileSizeBytes: Number(row.file_size_bytes) || 1500000,
+          filePath: row.file_path || undefined,
         }));
       }
     } catch (err) {
@@ -250,7 +320,7 @@ export async function fetchStudentSubmissions(): Promise<StudentSubmission[]> {
     const local = JSON.parse(localStorage.getItem('asson_submissions') || '[]');
     if (Array.isArray(local) && local.length > 0) {
       const existingIds = new Set(list.map(s => s.id));
-      const newItems = local.filter(s => !existingIds.has(s.id));
+      const newItems = local.filter((s: any) => !existingIds.has(s.id));
       list = [...newItems, ...list];
     }
   } catch (e) {
@@ -297,7 +367,11 @@ export async function uploadAndSubmitResource(
       if (onProgress) onProgress(75);
 
       if (!uploadError) {
-        // 2. Insert record into Supabase submissions table
+        // 2. Insert record into Supabase submissions table with Approved status (Direct Publication)
+        const contributorInfo = payload.contributorName
+          ? `Uploaded by ${payload.contributorName}${payload.matricNumber ? ` (${payload.matricNumber})` : ''}`
+          : 'Student Peer Contributor';
+
         const { data: insertData, error: insertError } = await supabase
           .from('submissions')
           .insert({
@@ -307,10 +381,8 @@ export async function uploadAndSubmitResource(
             session: payload.session,
             file_path: filePath,
             file_size_bytes: payload.file.size,
-            status: 'Under Review',
-            feedback: payload.contributorName
-              ? `Submitted by: ${payload.contributorName}${payload.matricNumber ? ` (${payload.matricNumber})` : ''}`
-              : null
+            status: 'Approved',
+            feedback: `${contributorInfo} — Published directly to ASSON academic library.`
           })
           .select('id')
           .single();
@@ -319,9 +391,9 @@ export async function uploadAndSubmitResource(
           remoteSuccess = true;
           // 3. Log audit event
           await supabase.from('audit_events').insert({
-            action: 'CREATE',
-            entity: 'submissions',
-            details: `New academic material submitted: ${payload.title} for ${payload.courseCode}`,
+            action: 'PUBLISH',
+            entity: 'resources',
+            details: `Academic material uploaded and published: ${payload.title} for ${payload.courseCode}`,
             actor_email: payload.contributorName || 'Student Peer Contributor'
           });
         }
@@ -335,7 +407,41 @@ export async function uploadAndSubmitResource(
 
   if (onProgress) onProgress(100);
 
-  // Always record locally so the Student Dashboard updates immediately
+  // Direct local resource registration so it is immediately searchable & downloadable across all pages
+  const courseMeta = COURSES.find(c => c.code === payload.courseCode) || {
+    level: '200',
+    semester: 1,
+    title: 'Departmental Course'
+  };
+
+  const localResource: AcademicResource = {
+    id: submissionId,
+    title: payload.title.trim(),
+    courseCode: payload.courseCode,
+    courseTitle: courseMeta.title,
+    level: courseMeta.level,
+    semester: courseMeta.semester as 1 | 2,
+    session: payload.session,
+    type: payload.resourceType,
+    fileType: payload.file.name.endsWith('.docx') ? 'DOCX' : payload.file.name.endsWith('.zip') ? 'ZIP' : 'PDF',
+    fileSizeBytes: payload.file.size,
+    downloadUrl: `${supabaseUrl}/storage/v1/object/public/resources/${filePath}`,
+    filePath,
+    verificationStatus: 'Verified',
+    lastCheckedDate: new Date().toISOString().split('T')[0],
+    contributorName: payload.contributorName || 'Student Peer Contributor',
+    description: `Uploaded academic material for ${payload.courseCode} (${payload.session}).`,
+    downloadsCount: 0
+  };
+
+  try {
+    const existingRes = JSON.parse(localStorage.getItem('asson_custom_resources') || '[]');
+    localStorage.setItem('asson_custom_resources', JSON.stringify([localResource, ...existingRes]));
+  } catch (e) {
+    // ignore
+  }
+
+  // Record submission locally with Approved status
   const localSubmission: StudentSubmission = {
     id: submissionId,
     resourceTitle: payload.title.trim(),
@@ -343,9 +449,10 @@ export async function uploadAndSubmitResource(
     resourceType: payload.resourceType,
     session: payload.session,
     submittedAt: new Date().toISOString().split('T')[0],
-    status: 'Under Review',
+    status: 'Approved',
     fileSizeBytes: payload.file.size,
-    feedback: 'Pending review by ASSON Academic Editorial Committee.'
+    filePath,
+    feedback: 'Published directly to the ASSON UI academic library catalog.'
   };
 
   MOCK_SUBMISSIONS.unshift(localSubmission);
@@ -361,8 +468,8 @@ export async function uploadAndSubmitResource(
     success: true,
     submissionId,
     message: remoteSuccess
-      ? 'Material uploaded to cloud storage and submitted for editorial review!'
-      : 'Material submitted for editorial review! (Vetting queue active)'
+      ? 'Material uploaded and published directly to ASSON academic library!'
+      : 'Material saved and published to your academic library catalog!'
   };
 }
 

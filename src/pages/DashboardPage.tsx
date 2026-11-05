@@ -26,7 +26,7 @@ interface DashboardPageProps {
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenSubmit }) => {
-  const [submissions, setSubmissions] = useState<StudentSubmission[]>(MOCK_SUBMISSIONS);
+  const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
   const [bookmarks, setBookmarks] = useState<AcademicResource[]>(MOCK_RESOURCES.slice(0, 3));
   const [downloadHistory, setDownloadHistory] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'submissions' | 'bookmarks' | 'downloads'>('submissions');
@@ -34,9 +34,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenSubmit }) =>
 
   useEffect(() => {
     fetchStudentSubmissions().then((data) => {
-      if (data && data.length > 0) {
-        setSubmissions(data);
-      }
+      setSubmissions(data || []);
     });
     fetchResources().then((data) => {
       if (data && data.length > 0) {

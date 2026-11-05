@@ -201,13 +201,13 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
           <div>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-brand-green border border-emerald-200 mb-2">
               <Sparkles className="w-3.5 h-3.5" />
-              Submission Logged Successfully
+              Published Directly to Catalog
             </span>
             <h3 className="text-xl font-bold text-text-main tracking-tight">
-              Thank You for Your Academic Contribution!
+              Material Live in ASSON Library!
             </h3>
             <p className="text-xs text-text-muted max-w-md mx-auto mt-2 leading-relaxed">
-              Your upload <strong className="text-text-main font-semibold">"{title}"</strong> has been saved and queued for review by the ASSON Academic Editorial Committee.
+              Your upload <strong className="text-text-main font-semibold">"{title}"</strong> is now live and published in the ASSON UI academic library for all students to access, preview, and download.
             </p>
           </div>
 
@@ -222,8 +222,8 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
             </div>
             <div className="flex justify-between py-1 border-b border-border-light">
               <span className="text-text-muted">Status:</span>
-              <span className="font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                Under Review
+              <span className="font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                Live & Published
               </span>
             </div>
             <div className="flex justify-between py-1">
@@ -252,7 +252,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
           <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-brand-deep flex items-start gap-2">
             <ShieldCheck className="w-4 h-4 text-brand-green shrink-0 mt-0.5" />
             <span>
-              All student uploads are vetted by the ASSON Academic Editorial Committee before public listing to verify legibility and syllabus accuracy.
+              <strong>Read it please:</strong> All uploaded academic materials are published directly to the ASSON UI library for students. Please ensure the document is genuine, legible, and belongs to the official UI curriculum.
             </span>
           </div>
 

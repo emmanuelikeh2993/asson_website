@@ -150,15 +150,14 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
               </Button>
             </Link>
 
-            <Button
-              size="md"
-              variant="outline"
+            <button
+              type="button"
               onClick={onOpenSubmit}
-              className="w-full sm:w-auto justify-center border-white/30 text-white hover:bg-white/10 font-semibold text-xs sm:text-sm h-11 px-5"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-emerald-50 text-brand-deep font-bold text-xs sm:text-sm h-11 px-6 shadow-md border border-white/40 transition-all active:scale-[0.98] cursor-pointer"
             >
-              <PlusCircle className="w-4 h-4 mr-2" />
-              Submit Material (No Sign-in)
-            </Button>
+              <PlusCircle className="w-4 h-4 text-brand-green" />
+              <span>Submit Material</span>
+            </button>
           </div>
 
           {/* Quick Metrics Bar */}
@@ -183,12 +182,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
         </div>
       </section>
 
-      {/* 2. Urgent Announcement Banner (if any) */}
+      {/* 2. Announcement Banner */}
       {urgentNotice && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 sm:-mt-12 relative z-20">
           <div className="p-4 rounded-2xl bg-surface-card border border-red-200 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
-              <Badge variant="urgent" withIcon>IMPORTANT NOTICE</Badge>
+              <Badge variant="urgent" withIcon>Read it please.</Badge>
               <div>
                 <h4 className="text-xs sm:text-sm font-bold text-text-main">
                   {urgentNotice.title}
@@ -200,9 +199,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
             </div>
             <Link
               to="/notices"
-              className="text-xs font-bold text-brand-red hover:underline shrink-0 inline-flex items-center gap-1 min-h-[36px] items-center"
+              className="text-xs font-bold text-brand-red hover:underline shrink-0 inline-flex items-center gap-1 min-h-[36px]"
             >
-              Read Full Notice <ArrowRight className="w-3.5 h-3.5" />
+              Read it please. <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
@@ -343,7 +342,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
               Recently Verified Past Examination Papers
             </h3>
             <p className="text-xs text-text-muted">
-              Ready for immediate 1-tap download. No sign-up required.
+              Ready for immediate 1-tap download and revision.
             </p>
           </div>
           <Link to="/past-questions">
