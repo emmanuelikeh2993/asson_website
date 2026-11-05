@@ -6,6 +6,7 @@ import { AcademicResource, AcademicLevel, ResourceType, VerificationStatus, Cour
 import { ResourceTable } from '../components/features/resources/ResourceTable';
 import { DownloadCard } from '../components/features/resources/DownloadCard';
 import { ResourcePreviewDrawer } from '../components/features/resources/ResourcePreviewDrawer';
+import { DocumentPreviewModal } from '../components/features/resources/DocumentPreviewModal';
 import { ResourceFilters } from '../components/features/resources/ResourceFilters';
 import { ReportIssueModal } from '../components/features/resources/ReportIssueModal';
 import { Button } from '../components/ui/Button';
@@ -56,9 +57,15 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'table'>(isMobileInitial ? 'grid' : 'table');
 
   const [selectedResource, setSelectedResource] = useState<AcademicResource | null>(null);
+  const [isDrivePreviewOpen, setIsDrivePreviewOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState<AcademicResource | null>(null);
   const [isMobileCourseDrawerOpen, setIsMobileCourseDrawerOpen] = useState(false);
   const toast = useToast();
+
+  const handleOpenPreview = (res: AcademicResource) => {
+    setSelectedResource(res);
+    setIsDrivePreviewOpen(true);
+  };
 
   useEffect(() => {
     fetchResources().then((data) => {
@@ -66,7 +73,10 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
         setResources(data);
         if (idParam) {
           const match = data.find((r) => r.id === idParam);
-          if (match) setSelectedResource(match);
+          if (match) {
+            setSelectedResource(match);
+            setIsDrivePreviewOpen(true);
+          }
         }
       }
     });
@@ -345,7 +355,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
             <ResourceTable
               resources={filteredResources}
               selectedId={selectedResource?.id}
-              onSelect={(res) => setSelectedResource(res)}
+              onSelect={(res) => handleOpenPreview(res)}
               onReport={(res) => setReportTarget(res)}
             />
           ) : (
@@ -354,7 +364,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
                 <DownloadCard
                   key={res.id}
                   resource={res}
-                  onPreview={(r) => setSelectedResource(r)}
+                  onPreview={(r) => handleOpenPreview(r)}
                   onReport={(r) => setReportTarget(r)}
                 />
               ))}
@@ -363,7 +373,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
         </div>
 
         {/* Right Pane: Document Preview Drawer (Desktop View) */}
-        {selectedResource && (
+        {selectedResource && !isDrivePreviewOpen && (
           <div className="hidden lg:block">
             <ResourcePreviewDrawer
               resource={selectedResource}
@@ -374,22 +384,16 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
         )}
       </div>
 
-      {/* Mobile Slide-Up Preview Modal */}
-      {selectedResource && (
-        <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
-          <div
-            onClick={() => setSelectedResource(null)}
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
-          />
-          <div className="relative z-10 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-surface-card p-4 shadow-2xl animate-in slide-in-from-bottom duration-200">
-            <ResourcePreviewDrawer
-              resource={selectedResource}
-              onClose={() => setSelectedResource(null)}
-              onReport={(res) => setReportTarget(res)}
-            />
-          </div>
-        </div>
-      )}
+      {/* Full Google Drive-Style Document Preview Lightbox Modal */}
+      <DocumentPreviewModal
+        isOpen={isDrivePreviewOpen && !!selectedResource}
+        resource={selectedResource}
+        onClose={() => {
+          setIsDrivePreviewOpen(false);
+          setSelectedResource(null);
+        }}
+        onReport={(res) => setReportTarget(res)}
+      />
 
       {/* Mobile Course Selector Drawer */}
       {isMobileCourseDrawerOpen && (

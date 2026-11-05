@@ -22,6 +22,8 @@ import {
 import { AcademicResource, Notice } from '../types';
 import { fetchResources, fetchNotices } from '../lib/supabase';
 import { useToast } from '../components/ui/Toast';
+import { LandingFaqSection } from '../components/features/home/LandingFaqSection';
+import { DocumentPreviewModal } from '../components/features/resources/DocumentPreviewModal';
 
 interface HomePageProps {
   onOpenSearch: () => void;
@@ -31,6 +33,7 @@ interface HomePageProps {
 export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }) => {
   const [resources, setResources] = useState<AcademicResource[]>(MOCK_RESOURCES);
   const [notices, setNotices] = useState<Notice[]>(MOCK_NOTICES);
+  const [previewResource, setPreviewResource] = useState<AcademicResource | null>(null);
   const toast = useToast();
 
   useEffect(() => {
@@ -97,22 +100,41 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
             ))}
           </div>
 
-          {/* Search Bar Trigger */}
+          {/* Search Bar Trigger with Elite Keyboard Hint */}
           <div className="w-full max-w-xl mt-6">
             <button
               onClick={onOpenSearch}
               className="w-full flex items-center justify-between p-2 pl-4 bg-white text-text-main rounded-2xl shadow-xl hover:shadow-2xl transition-all group border border-white/40 active:scale-[0.99]"
             >
-              <div className="flex items-center gap-3">
-                <Search className="w-4 h-4 sm:w-5 sm:h-5 text-brand-green group-hover:scale-110 transition-transform" />
+              <div className="flex items-center gap-3 min-w-0">
+                <Search className="w-4 h-4 sm:w-5 sm:h-5 text-brand-green group-hover:scale-110 transition-transform shrink-0" />
                 <span className="text-xs sm:text-sm text-text-muted truncate">
-                  Search course code (e.g. STA 211), past papers, notes...
+                  Search course code (e.g. STA 231, STA 211), past papers...
                 </span>
               </div>
-              <span className="bg-brand-green text-white text-xs font-bold px-4 py-2 rounded-xl group-hover:bg-brand-deep transition-colors shrink-0">
-                Search
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <kbd className="hidden sm:inline-flex items-center px-2 py-1 rounded-md bg-neutral-100 border border-neutral-200 text-[10px] font-mono text-neutral-500 font-semibold shadow-2xs">
+                  ⌘K
+                </kbd>
+                <span className="bg-brand-green text-white text-xs font-bold px-4 py-2 rounded-xl group-hover:bg-brand-deep transition-colors">
+                  Search
+                </span>
+              </div>
             </button>
+
+            {/* Quick Popular Course Tags */}
+            <div className="flex items-center justify-center flex-wrap gap-1.5 mt-3 text-xs">
+              <span className="text-[11px] text-emerald-200/80 mr-1">Trending:</span>
+              {['STA 111', 'STA 211', 'STA 231', 'STA 312', 'MAT 121'].map((code) => (
+                <Link
+                  key={code}
+                  to={`/resources?course=${encodeURIComponent(code)}`}
+                  className="px-2.5 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-emerald-100 text-[11px] font-mono font-bold transition-colors border border-white/15"
+                >
+                  {code}
+                </Link>
+              ))}
+            </div>
           </div>
 
           {/* Strict Hero Button Hierarchy: Primary (Past Questions) vs Secondary (Submit) */}
@@ -337,7 +359,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
               key={res.id}
               resource={res}
               onPreview={(r) => {
-                window.location.href = `/resources?id=${r.id}`;
+                setPreviewResource(r);
               }}
               onReport={(r) => {
                 toast.info('Issue Logged', `Reported issue for ${r.title}`);
@@ -355,7 +377,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
         </div>
       </section>
 
-      {/* 6. Community Call to Action */}
+      {/* 6. Curated Frequently Asked Questions Section */}
+      <LandingFaqSection />
+
+      {/* 7. Community Call to Action */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="rounded-3xl bg-gradient-to-r from-brand-deep to-emerald-900 text-white p-6 sm:p-12 text-center relative overflow-hidden shadow-xl">
           <div className="max-w-2xl mx-auto space-y-4 relative z-10">
@@ -379,6 +404,16 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
           </div>
         </div>
       </section>
+
+      {/* 8. Google Drive-Style Document Preview Lightbox Modal */}
+      <DocumentPreviewModal
+        isOpen={!!previewResource}
+        resource={previewResource}
+        onClose={() => setPreviewResource(null)}
+        onReport={(r) => {
+          toast.info('Issue Logged', `Reported issue for ${r.title}`);
+        }}
+      />
     </div>
   );
 };
