@@ -52,7 +52,9 @@ function mapDbResourceToModel(row: any): AcademicResource {
     type: row.type || 'Past Question',
     fileType: (row.file_type as 'PDF' | 'DOCX' | 'ZIP') || 'PDF',
     fileSizeBytes: Number(row.file_size_bytes) || 2048000,
-    downloadUrl: row.file_path ? `${supabaseUrl}/storage/v1/object/public/${row.file_path}` : '#',
+    downloadUrl: row.file_path && row.file_path.startsWith('http')
+      ? row.file_path
+      : row.file_path ? `${supabaseUrl}/storage/v1/object/public/${row.file_path}` : '#',
     verificationStatus: row.verification_status || 'Verified',
     lastCheckedDate: row.last_checked_date ? new Date(row.last_checked_date).toISOString().split('T')[0] : '2026-10-24',
     contributorName: row.contributor_name || 'ASSON Academic Committee',
