@@ -145,7 +145,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit }) =>
           {/* Backdrop overlay */}
           <div
             onClick={closeMobileMenu}
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity animate-in fade-in"
           />
 
           {/* Slide-out drawer panel */}
@@ -159,7 +159,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit }) =>
                 </div>
                 <button
                   onClick={closeMobileMenu}
-                  className="p-1.5 text-text-muted hover:text-text-main hover:bg-surface-bg rounded-lg"
+                  className="p-1.5 text-text-muted hover:text-text-main hover:bg-surface-bg rounded-lg active:scale-95 transition-transform"
                   aria-label="Close menu"
                 >
                   <X className="w-5 h-5" />
@@ -176,7 +176,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit }) =>
                       key={link.path}
                       to={link.path}
                       onClick={closeMobileMenu}
-                      className={`flex items-center justify-between p-3 rounded-xl text-xs font-semibold transition-colors ${isActive
+                      className={`flex items-center justify-between p-3 rounded-xl text-xs font-semibold transition-all duration-150 active:scale-95 ${isActive
                         ? 'bg-brand-light text-brand-deep font-bold'
                         : 'text-text-main hover:bg-surface-bg hover:text-brand-green'
                         }`}
@@ -204,7 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit }) =>
                       key={lvl}
                       to={`/resources?level=${lvl}`}
                       onClick={closeMobileMenu}
-                      className="text-center py-2 px-1 text-xs font-bold rounded-lg bg-surface-card border border-border-light text-brand-deep hover:bg-brand-green hover:text-white transition-colors"
+                      className="text-center py-2 px-1 text-xs font-bold rounded-lg bg-surface-card border border-border-light text-brand-deep hover:bg-brand-green hover:text-white transition-all active:scale-90"
                     >
                       {lvl}L
                     </Link>

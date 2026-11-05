@@ -11,6 +11,8 @@ import { ResourceFilters } from '../components/features/resources/ResourceFilter
 import { ReportIssueModal } from '../components/features/resources/ReportIssueModal';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { useDebounce } from '../hooks/useDebounce';
+import { ResourceCardSkeleton, TableRowSkeleton } from '../components/ui/Skeleton';
 import {
   Search,
   LayoutGrid,
@@ -47,6 +49,8 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
   const [resources, setResources] = useState<AcademicResource[]>(MOCK_RESOURCES);
   const [courses, setCourses] = useState<Course[]>(COURSES);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 250);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedLevel, setSelectedLevel] = useState<AcademicLevel | 'All'>(levelParam || 'All');
   const [selectedType, setSelectedType] = useState<ResourceType | 'All'>(initialType);
   const [selectedVerification, setSelectedVerification] = useState<VerificationStatus | 'All'>('All');
@@ -68,18 +72,24 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
   };
 
   useEffect(() => {
-    fetchResources().then((data) => {
-      if (data && data.length > 0) {
-        setResources(data);
-        if (idParam) {
-          const match = data.find((r) => r.id === idParam);
-          if (match) {
-            setSelectedResource(match);
-            setIsDrivePreviewOpen(true);
+    setIsLoading(true);
+    fetchResources()
+      .then((data) => {
+        if (data && data.length > 0) {
+          setResources(data);
+          if (idParam) {
+            const match = data.find((r) => r.id === idParam);
+            if (match) {
+              setSelectedResource(match);
+              setIsDrivePreviewOpen(true);
+            }
           }
         }
-      }
-    });
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+
     fetchCourses().then((data) => {
       if (data && data.length > 0) {
         setCourses(data);
@@ -99,9 +109,9 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
     if (selectedType !== initialType) count++;
     if (selectedVerification !== 'All') count++;
     if (selectedCourse !== 'All') count++;
-    if (searchQuery.trim() !== '') count++;
+    if (debouncedSearch.trim() !== '') count++;
     return count;
-  }, [selectedLevel, selectedType, selectedVerification, selectedCourse, searchQuery, initialType]);
+  }, [selectedLevel, selectedType, selectedVerification, selectedCourse, debouncedSearch, initialType]);
 
   const handleResetFilters = () => {
     setSearchQuery('');
@@ -116,9 +126,9 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
   // Filtered resources
   const filteredResources = useMemo(() => {
     return resources.filter((res) => {
-      // Query filter
-      if (searchQuery.trim() !== '') {
-        const q = searchQuery.toLowerCase();
+      // Query filter (debounced)
+      if (debouncedSearch.trim() !== '') {
+        const q = debouncedSearch.toLowerCase().trim();
         const matchTitle = res.title.toLowerCase().includes(q);
         const matchCourse = res.courseCode.toLowerCase().includes(q);
         const matchCourseTitle = res.courseTitle.toLowerCase().includes(q);
@@ -135,7 +145,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
 
       return true;
     });
-  }, [resources, searchQuery, selectedLevel, selectedType, selectedVerification, selectedCourse]);
+  }, [resources, debouncedSearch, selectedLevel, selectedType, selectedVerification, selectedCourse]);
 
   // Group courses by level for sidebar
   const coursesForSelectedLevel = useMemo(() => {
@@ -200,6 +210,27 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
             Submit Material
           </Button>
         </div>
+      </div>
+
+      {/* Search Input Bar (Debounced with high-visibility focus ring) */}
+      <div className="relative mt-4">
+        <Search className="w-4 h-4 text-brand-green absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by course code (e.g. STA 211), title, or keywords..."
+          className="w-full rounded-xl border border-border-light bg-surface-card pl-10 pr-10 py-2.5 text-xs sm:text-sm text-text-main placeholder:text-text-subtle shadow-xs focus:ring-2 focus:ring-brand-green focus:border-brand-green focus:outline-none transition-all"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-main active:scale-90 transition-transform cursor-pointer"
+            title="Clear search"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Main Filter Bar */}
@@ -328,8 +359,31 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
             )}
           </div>
 
-          {/* Empty State */}
-          {filteredResources.length === 0 ? (
+          {/* Main Content Area: Loading Skeletons vs Empty State vs Grid/Table */}
+          {isLoading ? (
+            viewMode === 'table' ? (
+              <div className="overflow-hidden rounded-2xl border border-border-light bg-surface-card shadow-card">
+                <table className="w-full text-left border-collapse text-xs">
+                  <tbody className="divide-y divide-border-light/60">
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <ResourceCardSkeleton />
+                <ResourceCardSkeleton />
+                <ResourceCardSkeleton />
+                <ResourceCardSkeleton />
+                <ResourceCardSkeleton />
+                <ResourceCardSkeleton />
+              </div>
+            )
+          ) : filteredResources.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-dashed border-border-light bg-surface-card my-4">
               <div className="w-14 h-14 rounded-full bg-emerald-50 text-brand-green flex items-center justify-center mb-3">
                 <FolderCheck className="w-7 h-7" />

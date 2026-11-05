@@ -24,6 +24,7 @@ import { fetchResources, fetchNotices } from '../lib/supabase';
 import { useToast } from '../components/ui/Toast';
 import { LandingFaqSection } from '../components/features/home/LandingFaqSection';
 import { DocumentPreviewModal } from '../components/features/resources/DocumentPreviewModal';
+import { ResourceCardSkeleton } from '../components/ui/Skeleton';
 
 interface HomePageProps {
   onOpenSearch: () => void;
@@ -33,15 +34,21 @@ interface HomePageProps {
 export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }) => {
   const [resources, setResources] = useState<AcademicResource[]>(MOCK_RESOURCES);
   const [notices, setNotices] = useState<Notice[]>(MOCK_NOTICES);
+  const [isLoading, setIsLoading] = useState(true);
   const [previewResource, setPreviewResource] = useState<AcademicResource | null>(null);
   const toast = useToast();
 
   useEffect(() => {
-    fetchResources().then((data) => {
-      if (data && data.length > 0) setResources(data);
-    });
-    fetchNotices().then((data) => {
-      if (data && data.length > 0) setNotices(data);
+    setIsLoading(true);
+    Promise.all([
+      fetchResources().then((data) => {
+        if (data && data.length > 0) setResources(data);
+      }),
+      fetchNotices().then((data) => {
+        if (data && data.length > 0) setNotices(data);
+      })
+    ]).finally(() => {
+      setIsLoading(false);
     });
   }, []);
 
@@ -129,7 +136,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
                 <Link
                   key={code}
                   to={`/resources?course=${encodeURIComponent(code)}`}
-                  className="px-2.5 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-emerald-100 text-[11px] font-mono font-bold transition-colors border border-white/15"
+                  className="px-2.5 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-emerald-100 text-[11px] font-mono font-bold transition-all active:scale-90 border border-white/15"
                 >
                   {code}
                 </Link>
@@ -143,7 +150,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
               <Button
                 size="md"
                 variant="primary"
-                className="w-full sm:w-auto justify-center bg-emerald-500 hover:bg-emerald-400 text-white font-bold shadow-lg shadow-emerald-950/40 text-xs sm:text-sm h-11 px-6"
+                className="w-full sm:w-auto justify-center bg-emerald-500 hover:bg-emerald-400 text-white font-bold shadow-lg shadow-emerald-950/40 text-xs sm:text-sm h-11 px-6 active:scale-95 transition-transform"
               >
                 <FileText className="w-4 h-4 mr-2" />
                 Explore Past Questions (100L - 400L)
@@ -153,7 +160,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
             <button
               type="button"
               onClick={onOpenSubmit}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-emerald-50 text-brand-deep font-bold text-xs sm:text-sm h-11 px-6 shadow-md border border-white/40 transition-all active:scale-[0.98] cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-emerald-50 text-brand-deep font-bold text-xs sm:text-sm h-11 px-6 shadow-md border border-white/40 transition-all active:scale-95 cursor-pointer"
             >
               <PlusCircle className="w-4 h-4 text-brand-green" />
               <span>Submit Material</span>
@@ -353,18 +360,27 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {pastQuestions.map((res) => (
-            <DownloadCard
-              key={res.id}
-              resource={res}
-              onPreview={(r) => {
-                setPreviewResource(r);
-              }}
-              onReport={(r) => {
-                toast.info('Issue Logged', `Reported issue for ${r.title}`);
-              }}
-            />
-          ))}
+          {isLoading ? (
+            <>
+              <ResourceCardSkeleton />
+              <ResourceCardSkeleton />
+              <ResourceCardSkeleton />
+              <ResourceCardSkeleton />
+            </>
+          ) : (
+            pastQuestions.map((res) => (
+              <DownloadCard
+                key={res.id}
+                resource={res}
+                onPreview={(r) => {
+                  setPreviewResource(r);
+                }}
+                onReport={(r) => {
+                  toast.info('Issue Logged', `Reported issue for ${r.title}`);
+                }}
+              />
+            ))
+          )}
         </div>
 
         <div className="mt-4 text-center sm:hidden">

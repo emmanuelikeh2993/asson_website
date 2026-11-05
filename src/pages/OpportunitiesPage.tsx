@@ -81,7 +81,7 @@ export const OpportunitiesPage: React.FC = () => {
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all duration-150 active:scale-95 cursor-pointer ${
                 activeCategory === cat
                   ? 'bg-brand-green text-white shadow-xs'
                   : 'text-text-muted hover:text-text-main'

@@ -66,9 +66,9 @@ export const NoticesPage: React.FC = () => {
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors shrink-0 ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 duration-150 shrink-0 ${
               selectedCategory === cat
-                ? 'bg-brand-green text-white shadow-xs'
+                ? 'bg-brand-green text-white shadow-xs font-bold'
                 : 'bg-surface-card border border-border-light text-text-muted hover:text-text-main'
             }`}
           >

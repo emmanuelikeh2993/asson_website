@@ -46,9 +46,9 @@ export const ResourceFilters: React.FC<ResourceFiltersProps> = ({
           <button
             key={lvl}
             onClick={() => onLevelChange(lvl)}
-            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${
+            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-150 active:scale-95 cursor-pointer ${
               selectedLevel === lvl
-                ? 'bg-brand-green text-white shadow-sm'
+                ? 'bg-brand-green text-white shadow-sm font-bold'
                 : 'bg-surface-bg text-text-main hover:bg-emerald-50 hover:text-brand-deep border border-border-light/60'
             }`}
           >
@@ -64,9 +64,9 @@ export const ResourceFilters: React.FC<ResourceFiltersProps> = ({
           <button
             key={t}
             onClick={() => onTypeChange(t)}
-            className={`text-xs px-3 py-1 rounded-full font-medium transition-all ${
+            className={`text-xs px-3 py-1 rounded-full font-medium transition-all duration-150 active:scale-95 cursor-pointer ${
               selectedType === t
-                ? 'bg-brand-deep text-white shadow-sm'
+                ? 'bg-brand-deep text-white shadow-sm font-bold'
                 : 'bg-surface-bg text-text-muted hover:text-text-main hover:bg-gray-200/60 border border-border-light/60'
             }`}
           >

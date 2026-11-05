@@ -3,6 +3,7 @@ import { AcademicResource, Course } from '../../../types';
 import { Search, FileText, ArrowRight, X, BookOpen } from 'lucide-react';
 import { Badge } from '../../ui/Badge';
 import { formatFileSize } from '../../../lib/utils';
+import { useDebounce } from '../../../hooks/useDebounce';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onSelectCourse,
 }) => {
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebounce(query, 150);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -39,7 +41,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   if (!isOpen) return null;
 
-  const cleanQuery = query.toLowerCase().trim();
+  const cleanQuery = debouncedQuery.toLowerCase().trim();
 
   // Filter matched resources
   const matchedResources = cleanQuery === '' 
