@@ -1,10 +1,14 @@
-const CACHE_NAME = 'asson-ui-cache-v1';
+const CACHE_NAME = 'asson-ui-cache-v2';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/logo/asson_logo.png',
-  '/logo/ui_crest.jpg'
+  '/logo/ui_crest.jpg',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon-maskable-512.png',
+  '/apple-touch-icon.png'
 ];
 
 // Install Event: Precaches core shell

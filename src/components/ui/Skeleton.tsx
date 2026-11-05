@@ -51,3 +51,4 @@ export const TableRowSkeleton: React.FC = () => {
     </tr>
   );
 };
+
