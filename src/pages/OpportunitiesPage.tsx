@@ -17,6 +17,16 @@ import {
 import { formatDate } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 
+function getDomainFromUrl(url?: string): string {
+  if (!url) return 'Official Portal';
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.replace(/^www\./, '');
+  } catch {
+    return 'Official Portal';
+  }
+}
+
 export const OpportunitiesPage: React.FC = () => {
   const [opportunities, setOpportunities] = useState<Opportunity[]>(MOCK_OPPORTUNITIES);
   const [activeCategory, setActiveCategory] = useState<OpportunityCategory | 'All'>('All');
@@ -93,9 +103,14 @@ export const OpportunitiesPage: React.FC = () => {
             <div>
               {/* Provider & Verification Badge */}
               <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="text-xs font-bold text-brand-deep tracking-wider uppercase">
-                  {opp.provider}
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-brand-deep tracking-wider uppercase">
+                    {opp.provider}
+                  </span>
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-brand-green border border-emerald-100">
+                    {getDomainFromUrl(opp.applicationUrl)}
+                  </span>
+                </div>
                 <Badge variant={opp.isVerified ? 'verified' : 'neutral'} withIcon>
                   {opp.isVerified ? 'Verified Grant' : 'Unverified'}
                 </Badge>
@@ -147,13 +162,13 @@ export const OpportunitiesPage: React.FC = () => {
                 </button>
 
                 <a
-                  href={opp.applicationUrl}
+                  href={opp.applicationUrl || 'https://www.icanstudent.com/opportunities/'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-block"
                 >
                   <Button size="sm" variant="primary" className="text-xs h-9 font-bold shadow-xs hover:shadow">
-                    Apply Directly <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
+                    Apply on {getDomainFromUrl(opp.applicationUrl)} <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
                   </Button>
                 </a>
               </div>

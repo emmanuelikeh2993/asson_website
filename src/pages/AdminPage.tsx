@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MOCK_AUDIT_LOGS, MOCK_SUBMISSIONS, MOCK_RESOURCES } from '../lib/mockData';
-import { fetchAuditLogs, fetchStudentSubmissions, fetchResources } from '../lib/supabase';
+import { fetchAuditLogs, fetchStudentSubmissions, fetchResources, approveSubmissionInDb } from '../lib/supabase';
 import { AuditLog, StudentSubmission, AcademicResource } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -74,12 +74,16 @@ export const AdminPage: React.FC = () => {
     toast.info('Session Ended', 'Logged out of ASSON Admin Console');
   };
 
-  const handleApprove = (id: string, title: string) => {
+  const handleApprove = async (id: string, title: string) => {
+    const targetSub = submissions.find((s) => s.id === id);
     setSubmissions((prev) =>
       prev.map((sub) =>
         sub.id === id ? { ...sub, status: 'Approved' as const, feedback: 'Approved by ASSON Editorial Board.' } : sub
       )
     );
+    if (targetSub) {
+      await approveSubmissionInDb(id, { ...targetSub, status: 'Approved' });
+    }
     toast.success('Submission Approved', `"${title}" is published to the public library`);
   };
 

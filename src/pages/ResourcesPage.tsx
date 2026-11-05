@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MOCK_RESOURCES, COURSES } from '../lib/mockData';
-import { fetchResources, fetchCourses } from '../lib/supabase';
+import { fetchResources, fetchCourses, submitContentReport } from '../lib/supabase';
 import { AcademicResource, AcademicLevel, ResourceType, VerificationStatus, Course } from '../types';
 import { ResourceTable } from '../components/features/resources/ResourceTable';
 import { DownloadCard } from '../components/features/resources/DownloadCard';
@@ -450,6 +450,9 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
         resource={reportTarget}
         onClose={() => setReportTarget(null)}
         onSubmit={(data) => {
+          if (reportTarget) {
+            submitContentReport(reportTarget.id, data.issueType, data.description).catch(() => {});
+          }
           setReportTarget(null);
           toast.success('Issue Reported', 'Thank you. The ASSON academic editorial team has been notified.');
         }}

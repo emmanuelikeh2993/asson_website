@@ -366,6 +366,64 @@ export async function uploadAndSubmitResource(
   };
 }
 
+export async function approveSubmissionInDb(
+  submissionId: string,
+  submission: StudentSubmission
+): Promise<boolean> {
+  // Update local storage
+  try {
+    const local = JSON.parse(localStorage.getItem('asson_submissions') || '[]');
+    const updated = local.map((s: any) => s.id === submissionId ? { ...s, status: 'Approved', feedback: 'Approved by ASSON Editorial Board.' } : s);
+    localStorage.setItem('asson_submissions', JSON.stringify(updated));
+  } catch (e) {
+    // ignore
+  }
+
+  if (supabase) {
+    try {
+      // 1. Update submissions table
+      await supabase
+        .from('submissions')
+        .update({ status: 'Approved', feedback: 'Approved by ASSON Editorial Board.' })
+        .eq('id', submissionId);
+
+      // 2. Publish to resources table so paper immediately appears in public catalog
+      const courseNum = submission.courseCode.match(/\d+/)?.[0] || '200';
+      const level = courseNum.startsWith('1') ? '100' : courseNum.startsWith('2') ? '200' : courseNum.startsWith('3') ? '300' : '400';
+      
+      await supabase.from('resources').insert({
+        title: submission.resourceTitle,
+        course_code: submission.courseCode,
+        course_title: `${submission.courseCode} Academic Material`,
+        level,
+        semester: 1,
+        session: submission.session,
+        type: submission.resourceType,
+        file_type: 'PDF',
+        file_path: submission.filePath || `submissions/${submission.id}.pdf`,
+        file_size_bytes: submission.fileSizeBytes || 2500000,
+        verification_status: 'Verified',
+        contributor_name: 'Student Peer Contributor (Vetted)',
+        description: `Verified ${submission.resourceType} for ${submission.courseCode} (${submission.session}). Approved by ASSON Academic Editorial Committee.`,
+        downloads_count: 0
+      });
+
+      // 3. Log audit event
+      await supabase.from('audit_events').insert({
+        action: 'PUBLISH',
+        entity: 'submissions',
+        details: `Approved & published submission ${submission.id}: "${submission.resourceTitle}" (${submission.courseCode})`,
+        actor_email: 'ASSON Academic Director'
+      });
+
+      return true;
+    } catch (err) {
+      console.warn('Failed to update remote submission approval:', err);
+    }
+  }
+  return true;
+}
+
 export async function fetchAuditLogs(): Promise<AuditLog[]> {
   if (supabase) {
     try {
@@ -390,12 +448,50 @@ export async function fetchAuditLogs(): Promise<AuditLog[]> {
   return MOCK_AUDIT_LOGS;
 }
 
+export async function submitContentReport(
+  resourceId: string,
+  issueType: string,
+  description?: string
+): Promise<boolean> {
+  if (supabase) {
+    try {
+      await supabase.from('content_reports').insert({
+        resource_id: resourceId,
+        issue_type: issueType,
+        description: description || 'Reported by student user via portal',
+        status: 'Open'
+      });
+      return true;
+    } catch (err) {
+      console.warn('Failed to insert content report into Supabase:', err);
+    }
+  }
+  return true;
+}
+
 export async function incrementDownload(resourceId: string): Promise<void> {
   if (supabase) {
     try {
-      await supabase.rpc('increment_download_count', { resource_id: resourceId });
+      // 1. Try RPC increment if defined
+      const { error: rpcErr } = await supabase.rpc('increment_download_count', { resource_id: resourceId });
+      if (rpcErr) {
+        // Fallback: direct increment
+        const { data } = await supabase
+          .from('resources')
+          .select('downloads_count')
+          .eq('id', resourceId)
+          .single();
+        if (data) {
+          await supabase
+            .from('resources')
+            .update({ downloads_count: (data.downloads_count || 0) + 1 })
+            .eq('id', resourceId);
+        }
+      }
     } catch (err) {
-      console.warn('Could not increment download count on Supabase:', err);
+      // silently ignore download increment failures
     }
   }
 }
+
+export const incrementResourceDownloads = incrementDownload;

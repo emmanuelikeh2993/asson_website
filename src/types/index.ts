@@ -100,6 +100,7 @@ export interface StudentSubmission {
   status: SubmissionStatus;
   feedback?: string;
   fileSizeBytes: number;
+  filePath?: string;
 }
 
 export interface AuditLog {

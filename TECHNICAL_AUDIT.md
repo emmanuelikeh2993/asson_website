@@ -329,3 +329,4 @@ To cleanly transition to Version 2 without breaking Version 1:
 - **Maintain Zero-Barrier Public Reading**: Never place the Past Questions or Resource Explorer behind a mandatory login wall. Public, open retrieval is the core reason for the platform's high adoption.
 - **Preserve Fallback Dataset Architecture**: Keep `MOCK_RESOURCES` and `COURSES` in `src/lib/mockData.ts` in sync with the database. This guarantees the platform never displays blank screens during university network throttling.
 - **Retain Pure SVG Visualizations**: Avoid importing heavy JavaScript charting packages (Chart.js, Recharts). The existing pure SVG `AnalyticsChart.tsx` delivers zero-bundle-bloat performance suitable for low-bandwidth mobile connections.
+
