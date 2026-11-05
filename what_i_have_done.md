@@ -140,7 +140,7 @@ flowchart TD
 - [x] Interactive SVG Line Graph & Course Demand Leaderboard.
 - [x] Executive Passkey Gate for `/admin`.
 - [x] 625 verified documents & 57 courses catalogued.
-- [ ] **Deploy to Vercel or Netlify** (Connect GitHub repo with environment variables).
+- [x] **Live Production Deployment on Netlify**: [https://asson-ui.netlify.app](https://asson-ui.netlify.app) (Verified 200 OK across all routes).
 
 ### Phase 2: Automated Data Ingestion (Version 1.1)
 - [ ] **Telegram / WhatsApp Announcement Bot Webhook**:
