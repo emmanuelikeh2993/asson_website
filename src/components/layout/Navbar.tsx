@@ -116,15 +116,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit }) =>
               <Search className="w-5 h-5" />
             </button>
 
-            {/* Desktop Submit Resource CTA */}
+            {/* Submit Resource CTA: Visible & Compact on Mobile, Full on Desktop */}
             <Button
               size="sm"
               variant="primary"
               onClick={onOpenSubmit}
-              className="hidden sm:inline-flex text-xs h-9 shadow-sm hover:shadow"
+              className="text-xs h-8 sm:h-9 px-2.5 sm:px-3.5 shadow-sm hover:shadow active:scale-95 font-bold"
             >
-              <PlusCircle className="w-4 h-4 mr-1.5" />
-              Submit Material
+              <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Submit Material</span>
+              <span className="sm:hidden text-[11px]">Submit</span>
             </Button>
 
             {/* Mobile Hamburger Menu Button */}

@@ -143,7 +143,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
               </span>
             </div>
             <span className="text-xs font-bold text-amber-800 group-hover:underline shrink-0 flex items-center gap-1">
-              Read notice <ArrowRight className="w-3.5 h-3.5" />
+              Read it please <ArrowRight className="w-3.5 h-3.5" />
             </span>
           </Link>
         </div>
@@ -160,13 +160,23 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
               Verified examination questions across departmental and faculty courses.
             </p>
           </div>
-          <Link
-            to={selectedLevel === 'All' ? '/past-questions' : `/past-questions?level=${selectedLevel}`}
-            className="text-xs font-bold text-brand-green hover:underline flex items-center gap-1"
-          >
-            <span>View All Papers</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenSubmit}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-brand-green/30 bg-emerald-50 text-brand-green hover:bg-emerald-100 text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-2xs"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>Submit Material</span>
+            </button>
+            <Link
+              to={selectedLevel === 'All' ? '/past-questions' : `/past-questions?level=${selectedLevel}`}
+              className="text-xs font-bold text-text-muted hover:text-brand-green flex items-center gap-1 px-2 py-1.5"
+            >
+              <span className="hidden sm:inline">View All Papers</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
         {/* Papers Grid */}
