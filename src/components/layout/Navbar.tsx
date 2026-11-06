@@ -30,7 +30,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit }) =>
     { name: 'Past Questions', path: '/past-questions', icon: FileText },
     { name: 'Notices', path: '/notices', icon: Bell },
     { name: 'Opportunities', path: '/opportunities', icon: GraduationCap },
-    { name: 'FAQs', path: '/faqs', icon: HelpCircle },
+    { name: 'Get Help', path: '/help', icon: HelpCircle },
     { name: 'Dashboard', path: '/dashboard', icon: User },
   ];
 

@@ -11,7 +11,9 @@ Official academic resource engine, past examination repository, notice board, an
 > **Motto**: *Facts from Reliable Figures*  
 > **Official Student Portal**: [https://student-portal.ui.edu.ng/login](https://student-portal.ui.edu.ng/login)  
 > **Official Instagram**: [@asson_unibadan](https://www.instagram.com/asson_unibadan/)  
-> **Engineering Handover & State Guide**: See [`what_i_have_done.md`](what_i_have_done.md) for full architecture notes, zero-login pipeline, and roadmap.
+> **Live Production (Primary)**: [https://asson-ui.vercel.app](https://asson-ui.vercel.app)  
+> **Live Production (Mirror)**: [https://asson-ui.netlify.app](https://asson-ui.netlify.app)  
+> **Architecture & Governance Docs**: See [`docs/`](docs/) for the verified reality audit, security findings, hosting map, and V2 roadmap.
 
 ---
 
@@ -82,7 +84,8 @@ VITE_APP_URL=http://localhost:3000
 ### 4. Database Setup
 Execute the following SQL scripts in your Supabase SQL Editor:
 1. `supabase/migrations/20261104000000_initial_schema.sql` (Tables, RLS policies, enums, triggers)
-2. `supabase/seed.sql` (Curriculum courses `STA 111`–`STA 701`, verified past questions, notices)
+2. `supabase/migrations/20261106000000_v2_security_and_submissions.sql` (Anonymous submissions, Private Feedback, Help Directory)
+3. `supabase/seed.sql` (Curriculum courses `STA 111`–`STA 701`, verified past questions, notices)
 
 ### 5. Run Development Server
 ```bash

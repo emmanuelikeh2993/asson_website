@@ -101,6 +101,49 @@ export interface StudentSubmission {
   feedback?: string;
   fileSizeBytes: number;
   filePath?: string;
+  referenceCode?: string;
+}
+
+export type FeedbackCategory = 
+  | 'General Feedback' 
+  | 'Incorrect Information' 
+  | 'Broken Link / Missing Material' 
+  | 'Suggestion' 
+  | 'Welfare Concern' 
+  | 'Appreciation';
+
+export type FeedbackStatus = 'Received' | 'Under Review' | 'Referred' | 'Resolved' | 'Closed';
+
+export interface FeedbackSubmission {
+  id: string;
+  category: FeedbackCategory;
+  subject: string;
+  description: string;
+  affectedUrl?: string;
+  contactMethod?: string;
+  status: FeedbackStatus;
+  reviewerNotes?: string;
+  createdAt: string;
+}
+
+export type HelpCategory = 
+  | 'Academic Advisory' 
+  | 'Departmental Office' 
+  | 'Student Welfare' 
+  | 'Platform Technical Help';
+
+export interface HelpDirectoryItem {
+  id: string;
+  category: HelpCategory;
+  title: string;
+  officeOrPerson: string;
+  description: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  location?: string;
+  availability?: string;
+  lastVerifiedDate: string;
+  orderIndex: number;
 }
 
 export interface AuditLog {

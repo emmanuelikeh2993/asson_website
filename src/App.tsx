@@ -12,6 +12,7 @@ import { PastQuestionsPage } from './pages/PastQuestionsPage';
 import { NoticesPage } from './pages/NoticesPage';
 import { OpportunitiesPage } from './pages/OpportunitiesPage';
 import { FaqPage } from './pages/FaqPage';
+import { HelpPage } from './pages/HelpPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AdminPage } from './pages/AdminPage';
 import { MOCK_RESOURCES, COURSES } from './lib/mockData';
@@ -96,6 +97,7 @@ export function AppContent() {
           <Route path="/notices" element={<NoticesPage />} />
           <Route path="/opportunities" element={<OpportunitiesPage />} />
           <Route path="/faqs" element={<FaqPage />} />
+          <Route path="/help" element={<HelpPage />} />
           <Route 
             path="/dashboard" 
             element={

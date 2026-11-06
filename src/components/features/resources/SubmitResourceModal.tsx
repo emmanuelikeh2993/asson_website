@@ -123,7 +123,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
 
       setUploadProgress(100);
       setIsUploading(false);
-      setSubmittedId(res.submissionId);
+      setSubmittedId(res.referenceCode || res.submissionId);
       onSuccess(title);
     } catch (err: any) {
       setIsUploading(false);

@@ -66,6 +66,11 @@ export const Footer: React.FC = () => {
             </h5>
             <ul className="space-y-1.5">
               <li>
+                <Link to="/help" className="hover:text-brand-green font-semibold text-text-main transition-colors">
+                  Where to Get Help & Support
+                </Link>
+              </li>
+              <li>
                 <Link to="/faqs" className="hover:text-brand-green transition-colors">
                   Frequently Asked Questions
                 </Link>

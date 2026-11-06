@@ -425,6 +425,57 @@ export const MOCK_FAQS: FAQItem[] = [
   },
 ];
 
+export const MOCK_HELP_DIRECTORY = [
+  {
+    id: 'help-1',
+    category: 'Departmental Office' as const,
+    title: 'Departmental General Office',
+    officeOrPerson: 'Departmental Secretary & Admin Staff',
+    description: 'Official academic documentation, transcript requests, departmental clearance, departmental timetable queries, and general university student enquiries.',
+    contactEmail: 'statistics@ui.edu.ng',
+    location: 'Department of Statistics Building, Faculty of Science, University of Ibadan',
+    availability: 'Monday – Friday, 8:00 AM – 4:00 PM',
+    lastVerifiedDate: '2026-11-01',
+    orderIndex: 1,
+  },
+  {
+    id: 'help-2',
+    category: 'Academic Advisory' as const,
+    title: 'Undergraduate Course Advisory Board',
+    officeOrPerson: 'Level Staff Advisers (100L – 400L)',
+    description: 'Course registration clearance, prerequisites counseling, add/drop assistance, and academic performance guidance.',
+    contactEmail: 'statistics.adviser@ui.edu.ng',
+    location: 'Faculty of Science, University of Ibadan',
+    availability: 'Departmental consultation hours (check notice board for current session)',
+    lastVerifiedDate: '2026-11-01',
+    orderIndex: 2,
+  },
+  {
+    id: 'help-3',
+    category: 'Student Welfare' as const,
+    title: 'ASSON UI Executive Welfare Committee',
+    officeOrPerson: 'ASSON Welfare Director & Secretariat',
+    description: 'Peer study circles, tutorial groups, student wellbeing support, and welfare emergencies for statistics scholars.',
+    contactEmail: 'asson.unibadan@gmail.com',
+    location: 'ASSON Secretariat, Department of Statistics',
+    availability: 'Available during semester sessions and tutorial hours',
+    lastVerifiedDate: '2026-11-01',
+    orderIndex: 3,
+  },
+  {
+    id: 'help-4',
+    category: 'Platform Technical Help' as const,
+    title: 'ASSON Portal Technical Desk',
+    officeOrPerson: 'Platform Administrator & Editorial Desk',
+    description: 'Report missing examination papers, broken PDF downloads, metadata corrections, or mobile display issues.',
+    contactEmail: 'asson.unibadan@gmail.com',
+    location: 'Online via Portal Feedback Centre',
+    availability: 'Reviewed daily by ASSON Editorial Board',
+    lastVerifiedDate: '2026-11-01',
+    orderIndex: 4,
+  },
+];
+
 export const MOCK_SUBMISSIONS: StudentSubmission[] = [];
 
 export const MOCK_AUDIT_LOGS: AuditLog[] = [];

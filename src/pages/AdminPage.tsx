@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MOCK_AUDIT_LOGS, MOCK_SUBMISSIONS, MOCK_RESOURCES } from '../lib/mockData';
-import { fetchAuditLogs, fetchStudentSubmissions, fetchResources, approveSubmissionInDb } from '../lib/supabase';
+import { fetchAuditLogs, fetchStudentSubmissions, fetchResources, approveSubmissionInDb, adminSignIn, adminSignOut } from '../lib/supabase';
 import { AuditLog, StudentSubmission, AcademicResource } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -26,7 +26,8 @@ import {
   X,
   Eye,
   FileText,
-  ExternalLink
+  ExternalLink,
+  Mail
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 
@@ -38,7 +39,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem('asson_admin_authenticated') === 'true';
   });
-  const [passcode, setPasscode] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'moderation' | 'analytics' | 'audit'>('moderation');
@@ -64,21 +67,29 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     });
   }, []);
 
-  const handleLogin = (e?: React.FormEvent) => {
+  const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    // Default master passkey: 2026 or asson-ui
-    if (passcode.trim() === '2026' || passcode.trim().toLowerCase() === 'asson' || passcode === '') {
+    if (!email.trim()) {
+      setAuthError('Please provide your executive email or identity.');
+      return;
+    }
+    setIsLoggingIn(true);
+    setAuthError(null);
+
+    const res = await adminSignIn(email, password);
+    setIsLoggingIn(false);
+
+    if (res.success) {
       setIsAuthenticated(true);
-      sessionStorage.setItem('asson_admin_authenticated', 'true');
-      toast.success('Executive Access Granted', 'Authenticated as ASSON Academic Editorial Director');
+      toast.success('Executive Access Granted', `Authenticated as ${email}`);
     } else {
-      setAuthError('Invalid Executive Passkey. Hint: use 2026 or click Quick Demo Access.');
+      setAuthError(res.error || 'Authentication failed. Please verify executive credentials.');
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await adminSignOut();
     setIsAuthenticated(false);
-    sessionStorage.removeItem('asson_admin_authenticated');
     toast.info('Session Ended', 'Logged out of ASSON Admin Console');
   };
 
@@ -135,15 +146,34 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
           <form onSubmit={handleLogin} className="space-y-4 text-left">
             <div>
               <label className="text-xs font-bold text-text-main block mb-1.5">
-                Executive Access Passkey
+                Executive Email / Identity
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="e.g. executive@asson.ui.edu.ng"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setAuthError(null);
+                  }}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-xs focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/20"
+                />
+                <Mail className="w-4 h-4 text-text-muted absolute right-3.5 top-3" />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-text-main block mb-1.5">
+                Access Key / Password
               </label>
               <div className="relative">
                 <input
                   type="password"
-                  placeholder="Enter Executive PIN (e.g. 2026)"
-                  value={passcode}
+                  placeholder="Enter executive password"
+                  value={password}
                   onChange={(e) => {
-                    setPasscode(e.target.value);
+                    setPassword(e.target.value);
                     setAuthError(null);
                   }}
                   className="w-full px-4 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-xs font-mono focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/20"
@@ -161,21 +191,28 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
               type="submit"
               variant="primary"
               size="md"
+              disabled={isLoggingIn}
               className="w-full justify-center font-bold text-xs h-11 shadow-md hover:shadow-lg"
             >
-              Unlock Executive Console
+              {isLoggingIn ? 'Verifying...' : 'Unlock Executive Console'}
             </Button>
 
             <div className="pt-2">
               <button
                 type="button"
                 onClick={() => {
-                  setPasscode('2026');
-                  handleLogin();
+                  setEmail('admin@asson.ui.edu.ng');
+                  setPassword('demo-session-token');
+                  adminSignIn('admin@asson.ui.edu.ng', 'demo-session-token').then((res) => {
+                    if (res.success) {
+                      setIsAuthenticated(true);
+                      toast.success('Executive Access Granted', 'Authenticated as ASSON Academic Editorial Director');
+                    }
+                  });
                 }}
-                className="w-full py-2.5 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 text-brand-green text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 text-brand-green text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Sparkles className="w-3.5 h-3.5" /> Quick Demo Executive Access (1-Click)
+                <Sparkles className="w-3.5 h-3.5" /> Authorised Executive Demo Session (1-Click)
               </button>
             </div>
           </form>

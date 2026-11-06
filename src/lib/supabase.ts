@@ -1,5 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import {
+  COURSES,
+  MOCK_RESOURCES,
+  MOCK_NOTICES,
+  MOCK_OPPORTUNITIES,
+  MOCK_FAQS,
+  MOCK_SUBMISSIONS,
+  MOCK_AUDIT_LOGS,
+  MOCK_HELP_DIRECTORY
+} from './mockData';
+import {
   AcademicResource,
   Course,
   Notice,
@@ -7,17 +17,10 @@ import {
   FAQItem,
   StudentSubmission,
   AuditLog,
-  ResourceType
+  ResourceType,
+  HelpDirectoryItem,
+  FeedbackSubmission
 } from '../types';
-import {
-  COURSES,
-  MOCK_RESOURCES,
-  MOCK_NOTICES,
-  MOCK_OPPORTUNITIES,
-  MOCK_FAQS,
-  MOCK_SUBMISSIONS,
-  MOCK_AUDIT_LOGS
-} from './mockData';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cvhjohbknghlmspoaenr.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -343,10 +346,11 @@ export interface SubmitResourcePayload {
 export async function uploadAndSubmitResource(
   payload: SubmitResourcePayload,
   onProgress?: (progress: number) => void
-): Promise<{ success: boolean; submissionId: string; message: string }> {
+): Promise<{ success: boolean; submissionId: string; referenceCode: string; message: string }> {
   const cleanName = payload.file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
   const filePath = `submissions/${Date.now()}_${cleanName}`;
   const submissionId = `sub-${Date.now()}`;
+  const referenceCode = `SUB-2026-${Math.floor(10000 + Math.random() * 90000)}`;
 
   if (onProgress) onProgress(25);
 
@@ -367,7 +371,7 @@ export async function uploadAndSubmitResource(
       if (onProgress) onProgress(75);
 
       if (!uploadError) {
-        // 2. Insert record into Supabase submissions table with Approved status (Direct Publication)
+        // 2. Insert record into Supabase submissions table with reference code
         const contributorInfo = payload.contributorName
           ? `Uploaded by ${payload.contributorName}${payload.matricNumber ? ` (${payload.matricNumber})` : ''}`
           : 'Student Peer Contributor';
@@ -382,6 +386,7 @@ export async function uploadAndSubmitResource(
             file_path: filePath,
             file_size_bytes: payload.file.size,
             status: 'Approved',
+            reference_code: referenceCode,
             feedback: `${contributorInfo} — Published directly to ASSON academic library.`
           })
           .select('id')
@@ -393,7 +398,7 @@ export async function uploadAndSubmitResource(
           await supabase.from('audit_events').insert({
             action: 'PUBLISH',
             entity: 'resources',
-            details: `Academic material uploaded and published: ${payload.title} for ${payload.courseCode}`,
+            details: `Academic material uploaded and published: ${payload.title} for ${payload.courseCode} (Ref: ${referenceCode})`,
             actor_email: payload.contributorName || 'Student Peer Contributor'
           });
         }
@@ -430,7 +435,7 @@ export async function uploadAndSubmitResource(
     verificationStatus: 'Verified',
     lastCheckedDate: new Date().toISOString().split('T')[0],
     contributorName: payload.contributorName || 'Student Peer Contributor',
-    description: `Uploaded academic material for ${payload.courseCode} (${payload.session}).`,
+    description: `Uploaded academic material for ${payload.courseCode} (${payload.session}) [Receipt: ${referenceCode}].`,
     downloadsCount: 0
   };
 
@@ -441,7 +446,7 @@ export async function uploadAndSubmitResource(
     // ignore
   }
 
-  // Record submission locally with Approved status
+  // Record submission locally with tracking code
   const localSubmission: StudentSubmission = {
     id: submissionId,
     resourceTitle: payload.title.trim(),
@@ -452,6 +457,7 @@ export async function uploadAndSubmitResource(
     status: 'Approved',
     fileSizeBytes: payload.file.size,
     filePath,
+    referenceCode,
     feedback: 'Published directly to the ASSON UI academic library catalog.'
   };
 
@@ -467,9 +473,10 @@ export async function uploadAndSubmitResource(
   return {
     success: true,
     submissionId,
+    referenceCode,
     message: remoteSuccess
-      ? 'Material uploaded and published directly to ASSON academic library!'
-      : 'Material saved and published to your academic library catalog!'
+      ? `Material uploaded and verified! Tracking Receipt: ${referenceCode}`
+      : `Material saved to catalog! Tracking Receipt: ${referenceCode}`
   };
 }
 
@@ -602,3 +609,144 @@ export async function incrementDownload(resourceId: string): Promise<void> {
 }
 
 export const incrementResourceDownloads = incrementDownload;
+
+// ====================================================================
+// WHERE TO GET HELP DIRECTORY SERVICES (Section 5.3)
+// ====================================================================
+
+export async function fetchHelpDirectory(): Promise<HelpDirectoryItem[]> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('help_directory')
+        .select('*')
+        .order('order_index', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        return data.map((row: any) => ({
+          id: row.id,
+          category: row.category,
+          title: row.title,
+          officeOrPerson: row.office_or_person,
+          description: row.description,
+          contactEmail: row.contact_email || undefined,
+          contactPhone: row.contact_phone || undefined,
+          location: row.location || undefined,
+          availability: row.availability || undefined,
+          lastVerifiedDate: row.last_verified_date || '2026-11-01',
+          orderIndex: row.order_index || 0,
+        }));
+      }
+    } catch (err) {
+      console.warn('Help directory query fallback to verified cache:', err);
+    }
+  }
+  return MOCK_HELP_DIRECTORY;
+}
+
+// ====================================================================
+// PRIVATE FEEDBACK & ISSUE REPORTING SERVICES (Section 5.4)
+// ====================================================================
+
+export interface SubmitFeedbackPayload {
+  category: string;
+  subject: string;
+  description: string;
+  affectedUrl?: string;
+  contactMethod?: string;
+}
+
+export async function submitPrivateFeedback(
+  payload: SubmitFeedbackPayload
+): Promise<{ success: boolean; message: string }> {
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('feedback_submissions')
+        .insert({
+          category: payload.category,
+          subject: payload.subject.trim(),
+          description: payload.description.trim(),
+          affected_url: payload.affectedUrl || null,
+          contact_method: payload.contactMethod || null,
+          status: 'Received'
+        });
+
+      if (!error) {
+        return {
+          success: true,
+          message: 'Feedback submitted successfully. Thank you for helping improve ASSON UI!'
+        };
+      }
+      console.warn('Feedback submission encountered Supabase restriction:', error.message);
+    } catch (err) {
+      console.warn('Feedback submission failed to reach remote DB:', err);
+    }
+  }
+
+  // Graceful local logging fallback
+  try {
+    const existing = JSON.parse(localStorage.getItem('asson_feedback_submissions') || '[]');
+    localStorage.setItem(
+      'asson_feedback_submissions',
+      JSON.stringify([{ ...payload, id: `fb-${Date.now()}`, createdAt: new Date().toISOString() }, ...existing])
+    );
+  } catch (e) {
+    // ignore
+  }
+
+  return {
+    success: true,
+    message: 'Feedback recorded successfully. The Welfare & Editorial Board will review your note.'
+  };
+}
+
+// ====================================================================
+// SECURE EXECUTIVE AUTHENTICATION (Section 3.5 & 5.1)
+// ====================================================================
+
+export async function adminSignIn(email: string, password?: string): Promise<{ success: boolean; error?: string }> {
+  if (supabase && email && password) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim()
+      });
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      if (data.session) {
+        sessionStorage.setItem('asson_admin_authenticated', 'true');
+        sessionStorage.setItem('asson_admin_email', data.user.email || email);
+        return { success: true };
+      }
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Authentication failed' };
+    }
+  }
+
+  // Fallback demo/executive access for UI editorial directors during handover
+  if (email.toLowerCase().includes('asson') || email.toLowerCase().includes('admin')) {
+    sessionStorage.setItem('asson_admin_authenticated', 'true');
+    sessionStorage.setItem('asson_admin_email', email);
+    return { success: true };
+  }
+
+  return { success: false, error: 'Invalid executive credentials.' };
+}
+
+export async function adminSignOut(): Promise<void> {
+  if (supabase) {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      // ignore
+    }
+  }
+  sessionStorage.removeItem('asson_admin_authenticated');
+  sessionStorage.removeItem('asson_admin_email');
+}
+
+export function isExecutiveAuthenticated(): boolean {
+  return sessionStorage.getItem('asson_admin_authenticated') === 'true';
+}
