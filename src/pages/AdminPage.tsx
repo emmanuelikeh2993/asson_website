@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MOCK_AUDIT_LOGS, MOCK_SUBMISSIONS, MOCK_RESOURCES } from '../lib/mockData';
-import { fetchAuditLogs, fetchStudentSubmissions, fetchResources, approveSubmissionInDb, adminSignIn, adminSignOut } from '../lib/supabase';
+import { fetchAuditLogs, fetchStudentSubmissions, fetchResources, approveSubmissionInDb, adminSignIn, adminSignOut, supabase } from '../lib/supabase';
 import { AuditLog, StudentSubmission, AcademicResource } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -17,7 +17,6 @@ import {
   Lock, 
   KeyRound, 
   LogOut, 
-  Sparkles, 
   Search, 
   Filter, 
   Download,
@@ -56,6 +55,22 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
   const toast = useToast();
 
   useEffect(() => {
+    // Cryptographically verify session against Supabase if client claims to be authenticated
+    if (sessionStorage.getItem('asson_admin_authenticated') === 'true') {
+      if (supabase) {
+        supabase.auth.getUser().then(({ data, error }) => {
+          if (error || !data?.user) {
+            setIsAuthenticated(false);
+            sessionStorage.removeItem('asson_admin_authenticated');
+            sessionStorage.removeItem('asson_admin_email');
+          }
+        }).catch(() => {
+          setIsAuthenticated(false);
+          sessionStorage.removeItem('asson_admin_authenticated');
+        });
+      }
+    }
+
     fetchStudentSubmissions().then((data) => {
       setSubmissions(data || []);
     });
@@ -197,24 +212,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
               {isLoggingIn ? 'Verifying...' : 'Unlock Executive Console'}
             </Button>
 
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('admin@asson.ui.edu.ng');
-                  setPassword('demo-session-token');
-                  adminSignIn('admin@asson.ui.edu.ng', 'demo-session-token').then((res) => {
-                    if (res.success) {
-                      setIsAuthenticated(true);
-                      toast.success('Executive Access Granted', 'Authenticated as ASSON Academic Editorial Director');
-                    }
-                  });
-                }}
-                className="w-full py-2.5 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 text-brand-green text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5" /> Authorised Executive Demo Session (1-Click)
-              </button>
-            </div>
+
           </form>
 
           <div className="text-[10px] text-text-subtle pt-2 border-t border-border-light/60">

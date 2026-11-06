@@ -134,10 +134,12 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/zip',
-      'application/octet-stream'
+      'application/x-zip-compressed'
     ];
-    if (!validTypes.includes(selectedFile.type) && !selectedFile.name.match(/\.(pdf|docx|zip)$/i)) {
-      setError('Invalid format. Please upload a PDF, DOCX, or ZIP file.');
+    const hasValidExtension = Boolean(selectedFile.name.match(/\.(pdf|docx|zip)$/i));
+    const hasValidMime = validTypes.includes(selectedFile.type) || (selectedFile.type === '' && hasValidExtension);
+    if (!hasValidExtension || !hasValidMime) {
+      setError('Invalid format. Please upload a verified PDF, DOCX, or ZIP file.');
       return;
     }
     setFile(selectedFile);

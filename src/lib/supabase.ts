@@ -22,7 +22,7 @@ import {
   FeedbackSubmission
 } from '../types';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cvhjohbknghlmspoaenr.supabase.co';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 /**
@@ -695,41 +695,31 @@ export async function submitPrivateFeedback(
 // ====================================================================
 
 export async function adminSignIn(email: string, password?: string): Promise<{ success: boolean; error?: string }> {
-  const normEmail = (email || '').trim().toLowerCase();
-  const normPass = (password || '').trim().toLowerCase();
+  if (!email || !password || !email.includes('@')) {
+    return { success: false, error: 'A valid email address and password are required.' };
+  }
 
-  if (supabase && email && password && email.includes('@')) {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password.trim()
-      });
-      if (!error && data.session) {
-        sessionStorage.setItem('asson_admin_authenticated', 'true');
-        sessionStorage.setItem('asson_admin_email', data.user.email || email);
-        return { success: true };
-      }
-    } catch (err: any) {
-      // Continue to executive key validation
+  if (!supabase) {
+    return { success: false, error: 'Authentication service is not configured. Contact the platform administrator.' };
+  }
+
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: password.trim()
+    });
+
+    if (error || !data.session) {
+      return { success: false, error: 'Invalid credentials. Access denied.' };
     }
-  }
 
-  // Executive Secret Key validation for ASSON UI Executive Council
-  const isKeyMatch = 
-    normEmail.includes('asson') || 
-    normEmail.includes('admin') || 
-    normPass.includes('asson') || 
-    normPass.includes('2026') ||
-    normEmail === 'exco' ||
-    normPass === 'exco';
-
-  if (isKeyMatch) {
+    // Store minimal session marker — actual auth is validated via supabase.auth.getUser()
     sessionStorage.setItem('asson_admin_authenticated', 'true');
-    sessionStorage.setItem('asson_admin_email', email || 'ASSON Executive Admin');
+    sessionStorage.setItem('asson_admin_email', data.user.email || email);
     return { success: true };
+  } catch (_err) {
+    return { success: false, error: 'Authentication failed. Please try again.' };
   }
-
-  return { success: false, error: 'Invalid executive credentials or secret key.' };
 }
 
 export async function adminSignOut(): Promise<void> {
