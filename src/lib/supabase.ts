@@ -156,12 +156,7 @@ export async function fetchResources(): Promise<AcademicResource[]> {
     }
   }
 
-  // Fallback to initial seeds if database is totally empty
-  if (list.length === 0) {
-    list = [...MOCK_RESOURCES];
-  }
-
-  // Merge any approved student submissions from submissions table if not already present
+  // Zero Dummy Data: Only genuine approved resources and uploads are served
   if (supabase) {
     try {
       const { data: approvedSubs } = await supabase
@@ -227,7 +222,7 @@ export async function fetchResources(): Promise<AcademicResource[]> {
 }
 
 export async function fetchNotices(): Promise<Notice[]> {
-  let list: Notice[] = [...MOCK_NOTICES];
+  let list: Notice[] = [];
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -236,20 +231,17 @@ export async function fetchNotices(): Promise<Notice[]> {
         .eq('is_expired', false)
         .order('published_date', { ascending: false });
       if (!error && data && data.length > 0) {
-        const remote = data.map(mapDbNoticeToModel);
-        const remoteTitles = new Set(remote.map(r => r.title.toLowerCase().trim()));
-        const uniqueLocal = MOCK_NOTICES.filter(m => !remoteTitles.has(m.title.toLowerCase().trim()));
-        list = [...remote, ...uniqueLocal];
+        list = data.map(mapDbNoticeToModel);
       }
     } catch (err) {
-      console.warn('Notices fetch error from Supabase, serving cached seed:', err);
+      console.warn('Notices fetch error from Supabase:', err);
     }
   }
   return list;
 }
 
 export async function fetchOpportunities(): Promise<Opportunity[]> {
-  let list: Opportunity[] = [...MOCK_OPPORTUNITIES];
+  let list: Opportunity[] = [];
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -258,13 +250,10 @@ export async function fetchOpportunities(): Promise<Opportunity[]> {
         .eq('is_expired', false)
         .order('created_at', { ascending: false });
       if (!error && data && data.length > 0) {
-        const remote = data.map(mapDbOpportunityToModel);
-        const remoteTitles = new Set(remote.map(r => r.title.toLowerCase().trim()));
-        const uniqueLocal = MOCK_OPPORTUNITIES.filter(m => !remoteTitles.has(m.title.toLowerCase().trim()));
-        list = [...remote, ...uniqueLocal];
+        list = data.map(mapDbOpportunityToModel);
       }
     } catch (err) {
-      console.warn('Opportunities fetch error from Supabase, serving cached seed:', err);
+      console.warn('Opportunities fetch error from Supabase:', err);
     }
   }
   return list;

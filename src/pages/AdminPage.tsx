@@ -265,7 +265,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
         </div>
       </div>
 
-      {/* Top Telemetry Metric Cards (SportyBet / Spotify Style) */}
+      {/* Top Telemetry Metric Cards: 100% Genuine Computed Data */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div className="p-4 sm:p-5 rounded-2xl border border-border-light bg-surface-card shadow-card">
           <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider block">
@@ -275,7 +275,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
             {resourcesCount}
           </span>
           <span className="text-[11px] text-brand-green font-semibold mt-1 block">
-            Across 57 courses
+            Verified across UI catalog
           </span>
         </div>
 
@@ -293,25 +293,25 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
 
         <div className="p-4 sm:p-5 rounded-2xl border border-border-light bg-surface-card shadow-card">
           <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider block">
-            Lifetime Downloads
+            Approved & Published
           </span>
           <span className="text-2xl sm:text-3xl font-extrabold text-text-main mt-1 block">
-            2,410+
+            {submissions.filter(s => s.status === 'Approved').length}
           </span>
           <span className="text-[11px] text-emerald-700 font-semibold mt-1 block">
-            Zero login barriers
+            Live in public library
           </span>
         </div>
 
         <div className="p-4 sm:p-5 rounded-2xl border border-border-light bg-surface-card shadow-card">
           <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider block">
-            Active Student Devices
+            Total Submissions
           </span>
           <span className="text-2xl sm:text-3xl font-extrabold text-[#0284c7] mt-1 block">
-            1,180
+            {submissions.length}
           </span>
           <span className="text-[11px] text-text-muted font-medium mt-1 block">
-            Departmental reach
+            Genuine student uploads
           </span>
         </div>
       </div>

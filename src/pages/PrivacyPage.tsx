@@ -209,3 +209,4 @@ export const PrivacyPage: React.FC = () => {
     </div>
   );
 };
+

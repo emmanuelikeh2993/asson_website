@@ -60,187 +60,203 @@ export const NoticesPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Mobile-Friendly Category Switcher Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-4 scrollbar-none lg:hidden">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 duration-150 shrink-0 ${
-              selectedCategory === cat
-                ? 'bg-brand-green text-white shadow-xs font-bold'
-                : 'bg-surface-card border border-border-light text-text-muted hover:text-text-main'
-            }`}
-          >
-            {cat === 'All' ? 'All Notices' : cat}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Filter Sidebar & Pinned Notices (Desktop) */}
-        <aside className="lg:col-span-4 space-y-4">
-          {/* Category Filter Pills (Desktop) */}
-          <div className="hidden lg:block p-4 rounded-2xl border border-border-light bg-surface-card shadow-sm">
-            <h3 className="text-xs font-bold text-text-main uppercase tracking-wider mb-3">
-              Announcement Categories
-            </h3>
-            <div className="space-y-1">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`w-full text-left text-xs px-3 py-2 rounded-xl font-medium transition-colors flex items-center justify-between ${
-                    selectedCategory === cat
-                      ? 'bg-brand-green text-white font-bold'
-                      : 'text-text-muted hover:bg-surface-bg hover:text-text-main'
-                  }`}
-                >
-                  <span>{cat === 'All' ? 'All Notices' : `${cat} Notices`}</span>
-                  <span className="text-[10px] opacity-80 font-mono">
-                    {cat === 'All' ? notices.length : notices.filter((n) => n.category === cat).length}
-                  </span>
-                </button>
-              ))}
-            </div>
+      {notices.length === 0 ? (
+        <div className="py-16 px-4 text-center rounded-3xl border border-dashed border-border-light bg-surface-card max-w-xl mx-auto space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-brand-green flex items-center justify-center mx-auto border border-emerald-200 shadow-2xs">
+            <Bell className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-bold text-text-main">No Active Announcements</h3>
+            <p className="text-xs text-text-muted max-w-md mx-auto leading-relaxed">
+              There are currently no active public circulars or examination announcements issued. Official communiques from the Department of Statistics and the ASSON Secretariat will be published here in real time.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Mobile-Friendly Category Switcher Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-4 scrollbar-none lg:hidden">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 duration-150 shrink-0 ${
+                  selectedCategory === cat
+                    ? 'bg-brand-green text-white shadow-xs font-bold'
+                    : 'bg-surface-card border border-border-light text-text-muted hover:text-text-main'
+                }`}
+              >
+                {cat === 'All' ? 'All Notices' : cat}
+              </button>
+            ))}
           </div>
 
-          {/* Pinned Urgent Updates Tray */}
-          {pinnedNotices.length > 0 && (
-            <div className="p-4 rounded-2xl border border-red-200 bg-red-50/50 space-y-3">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-brand-red uppercase tracking-wider">
-                <Pin className="w-4 h-4" /> Pinned Urgent Updates
-              </div>
-              <div className="space-y-2">
-                {pinnedNotices.map((pn) => (
-                  <div
-                    key={pn.id}
-                    onClick={() => setActiveNotice(pn)}
-                    className="p-3 rounded-xl bg-surface-card border border-red-200 shadow-xs cursor-pointer hover:border-brand-red transition-all"
-                  >
-                    <span className="text-[10px] font-bold text-brand-red uppercase block">
-                      {pn.issuer}
-                    </span>
-                    <h4 className="text-xs font-bold text-text-main mt-0.5 line-clamp-2">
-                      {pn.title}
-                    </h4>
-                    <span className="text-[10px] text-text-muted block mt-1">
-                      Published: {formatDate(pn.publishedDate)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Notice List Feed */}
-          <div className="p-4 rounded-2xl border border-border-light bg-surface-card shadow-sm">
-            <h3 className="text-xs font-bold text-text-main uppercase tracking-wider mb-3">
-              Recent Communiques ({filteredNotices.length})
-            </h3>
-            <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
-              {filteredNotices.map((n) => {
-                const isSelected = activeNotice?.id === n.id;
-                return (
-                  <div
-                    key={n.id}
-                    onClick={() => setActiveNotice(n)}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                      isSelected
-                        ? 'border-brand-green bg-emerald-50/60 shadow-xs'
-                        : 'border-border-light hover:border-brand-green/40 hover:bg-surface-bg'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                      <span className="text-[10px] font-bold text-brand-green uppercase">
-                        {n.category}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Column: Filter Sidebar & Pinned Notices (Desktop) */}
+            <aside className="lg:col-span-4 space-y-4">
+              {/* Category Filter Pills (Desktop) */}
+              <div className="hidden lg:block p-4 rounded-2xl border border-border-light bg-surface-card shadow-sm">
+                <h3 className="text-xs font-bold text-text-main uppercase tracking-wider mb-3">
+                  Announcement Categories
+                </h3>
+                <div className="space-y-1">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`w-full text-left text-xs px-3 py-2 rounded-xl font-medium transition-colors flex items-center justify-between ${
+                        selectedCategory === cat
+                          ? 'bg-brand-green text-white font-bold'
+                          : 'text-text-muted hover:bg-surface-bg hover:text-text-main'
+                      }`}
+                    >
+                      <span>{cat === 'All' ? 'All Notices' : `${cat} Notices`}</span>
+                      <span className="text-[10px] opacity-80 font-mono">
+                        {cat === 'All' ? notices.length : notices.filter((n) => n.category === cat).length}
                       </span>
-                      {n.isUrgent && (
-                        <span className="text-[9px] font-bold bg-red-100 text-brand-red px-1.5 py-0.2 rounded">
-                          Urgent
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="text-xs font-bold text-text-main line-clamp-2 leading-snug">
-                      {n.title}
-                    </h4>
-                    <span className="text-[10px] text-text-muted mt-1 block">
-                      {formatDate(n.publishedDate)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </aside>
-
-        {/* Right Column: Full Active Notice Reader */}
-        <main className="lg:col-span-8">
-          {activeNotice ? (
-            <article className="p-6 sm:p-8 rounded-3xl border border-border-light bg-surface-card shadow-card space-y-6">
-              {/* Notice Metadata Header */}
-              <div className="border-b border-border-light/60 pb-6 space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="course">{activeNotice.category}</Badge>
-                  {activeNotice.isUrgent && (
-                    <Badge variant="urgent" withIcon>Urgent Announcement</Badge>
-                  )}
-                  <span className="text-xs text-text-muted ml-auto font-medium">
-                    Published: {formatDate(activeNotice.publishedDate)}
-                  </span>
-                </div>
-
-                <h2 className="text-lg sm:text-2xl font-extrabold text-text-main tracking-tight leading-snug">
-                  {activeNotice.title}
-                </h2>
-
-                <div className="flex flex-wrap items-center gap-4 text-xs text-text-muted pt-1">
-                  <div className="flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4 text-brand-green" />
-                    <span>Issued by: <strong className="text-text-main">{activeNotice.issuer}</strong></span>
-                  </div>
-                  {activeNotice.deadline && (
-                    <div className="flex items-center gap-1.5 text-brand-red font-semibold">
-                      <Calendar className="w-4 h-4" />
-                      <span>Action Deadline: {formatDate(activeNotice.deadline)}</span>
-                    </div>
-                  )}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Summary Callout Box */}
-              {activeNotice.summary && (
-                <div className="p-4 rounded-2xl bg-surface-bg border border-border-light text-xs font-medium text-text-main leading-relaxed">
-                  <strong className="text-brand-deep block mb-1">Executive Summary:</strong>
-                  {activeNotice.summary}
+              {/* Pinned Urgent Updates Tray */}
+              {pinnedNotices.length > 0 && (
+                <div className="p-4 rounded-2xl border border-red-200 bg-red-50/50 space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-red uppercase tracking-wider">
+                    <Pin className="w-4 h-4" /> Pinned Urgent Updates
+                  </div>
+                  <div className="space-y-2">
+                    {pinnedNotices.map((pn) => (
+                      <div
+                        key={pn.id}
+                        onClick={() => setActiveNotice(pn)}
+                        className="p-3 rounded-xl bg-surface-card border border-red-200 shadow-xs cursor-pointer hover:border-brand-red transition-all"
+                      >
+                        <span className="text-[10px] font-bold text-brand-red uppercase block">
+                          {pn.issuer}
+                        </span>
+                        <h4 className="text-xs font-bold text-text-main mt-0.5 line-clamp-2">
+                          {pn.title}
+                        </h4>
+                        <span className="text-[10px] text-text-muted block mt-1">
+                          Published: {formatDate(pn.publishedDate)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Full Notice Content Body */}
-              <div className="text-xs sm:text-sm text-text-main leading-relaxed space-y-4 whitespace-pre-line">
-                {activeNotice.content}
+              {/* Notice List Feed */}
+              <div className="p-4 rounded-2xl border border-border-light bg-surface-card shadow-sm">
+                <h3 className="text-xs font-bold text-text-main uppercase tracking-wider mb-3">
+                  Recent Communiques ({filteredNotices.length})
+                </h3>
+                <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+                  {filteredNotices.map((n) => {
+                    const isSelected = activeNotice?.id === n.id;
+                    return (
+                      <div
+                        key={n.id}
+                        onClick={() => setActiveNotice(n)}
+                        className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-brand-green bg-emerald-50/60 shadow-xs'
+                            : 'border-border-light hover:border-brand-green/40 hover:bg-surface-bg'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span className="text-[10px] font-bold text-brand-green uppercase">
+                            {n.category}
+                          </span>
+                          {n.isUrgent && (
+                            <span className="text-[9px] font-bold bg-red-100 text-brand-red px-1.5 py-0.2 rounded">
+                              Urgent
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="text-xs font-bold text-text-main line-clamp-2 leading-snug">
+                          {n.title}
+                        </h4>
+                        <span className="text-[10px] text-text-muted mt-1 block">
+                          {formatDate(n.publishedDate)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
+            </aside>
 
-              {/* Notice Action Footer */}
-              <div className="pt-6 border-t border-border-light/60 flex items-center justify-between text-xs">
-                <span className="text-text-muted text-[11px]">
-                  ASSON UI Official Academic Desk
-                </span>
-                <button
-                  onClick={() => handleShareNotice(activeNotice)}
-                  className="px-3 py-1.5 rounded-xl border border-border-light hover:bg-emerald-50 hover:text-brand-green text-text-main font-semibold flex items-center gap-1.5 transition-colors"
-                >
-                  <Share2 className="w-3.5 h-3.5" /> Share Notice
-                </button>
-              </div>
-            </article>
-          ) : (
-            <div className="p-12 rounded-3xl border border-dashed border-border-light bg-surface-card text-center text-text-muted text-xs">
-              Select an announcement from the list to view its complete communique.
-            </div>
-          )}
-        </main>
-      </div>
+            {/* Right Column: Full Active Notice Reader */}
+            <main className="lg:col-span-8">
+              {activeNotice ? (
+                <article className="p-6 sm:p-8 rounded-3xl border border-border-light bg-surface-card shadow-card space-y-6">
+                  {/* Notice Metadata Header */}
+                  <div className="border-b border-border-light/60 pb-6 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="course">{activeNotice.category}</Badge>
+                      {activeNotice.isUrgent && (
+                        <Badge variant="urgent" withIcon>Urgent Announcement</Badge>
+                      )}
+                      <span className="text-xs text-text-muted ml-auto font-medium">
+                        Published: {formatDate(activeNotice.publishedDate)}
+                      </span>
+                    </div>
+
+                    <h2 className="text-lg sm:text-2xl font-extrabold text-text-main tracking-tight leading-snug">
+                      {activeNotice.title}
+                    </h2>
+
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-text-muted pt-1">
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="w-4 h-4 text-brand-green" />
+                        <span>Issued by: <strong className="text-text-main">{activeNotice.issuer}</strong></span>
+                      </div>
+                      {activeNotice.deadline && (
+                        <div className="flex items-center gap-1.5 text-brand-red font-semibold">
+                          <Calendar className="w-4 h-4" />
+                          <span>Action Deadline: {formatDate(activeNotice.deadline)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Summary Callout Box */}
+                  {activeNotice.summary && (
+                    <div className="p-4 rounded-2xl bg-surface-bg border border-border-light text-xs font-medium text-text-main leading-relaxed">
+                      <strong className="text-brand-deep block mb-1">Executive Summary:</strong>
+                      {activeNotice.summary}
+                    </div>
+                  )}
+
+                  {/* Full Notice Content Body */}
+                  <div className="text-xs sm:text-sm text-text-main leading-relaxed space-y-4 whitespace-pre-line">
+                    {activeNotice.content}
+                  </div>
+
+                  {/* Notice Action Footer */}
+                  <div className="pt-6 border-t border-border-light/60 flex items-center justify-between text-xs">
+                    <span className="text-text-muted text-[11px]">
+                      ASSON UI Official Academic Desk
+                    </span>
+                    <button
+                      onClick={() => handleShareNotice(activeNotice)}
+                      className="px-3 py-1.5 rounded-xl border border-border-light hover:bg-emerald-50 hover:text-brand-green text-text-main font-semibold flex items-center gap-1.5 transition-colors"
+                    >
+                      <Share2 className="w-3.5 h-3.5" /> Share Notice
+                    </button>
+                  </div>
+                </article>
+              ) : (
+                <div className="p-12 rounded-3xl border border-dashed border-border-light bg-surface-card text-center text-text-muted text-xs">
+                  Select an announcement from the list to view its complete communique.
+                </div>
+              )}
+            </main>
+          </div>
+        </>
+      )}
     </div>
   );
 };

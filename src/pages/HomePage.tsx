@@ -191,15 +191,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
             <div className="col-span-full py-12 text-center bg-surface-card rounded-2xl border border-border-light p-6">
               <FileText className="w-8 h-8 text-text-muted mx-auto mb-2 opacity-50" />
               <p className="text-xs sm:text-sm font-semibold text-text-main">
-                No past papers listed for {selectedLevel}L yet.
+                {selectedLevel === 'All' ? 'No past examination papers catalogued yet.' : `No past papers listed for ${selectedLevel}L yet.`}
               </p>
-              <p className="text-xs text-text-muted mt-1">
-                Have examination papers for this level? Share them with your fellow scholars.
+              <p className="text-xs text-text-muted mt-1 max-w-sm mx-auto">
+                Have examination papers or test questions? Contribute them to help your fellow statistics scholars revise effectively.
               </p>
               <button
                 type="button"
                 onClick={onOpenSubmit}
-                className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-brand-green hover:underline cursor-pointer"
+                className="mt-3.5 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep active:scale-95 transition-all shadow-sm cursor-pointer"
               >
                 <PlusCircle className="w-3.5 h-3.5" /> Submit a Past Question
               </button>
