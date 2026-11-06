@@ -254,14 +254,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
             <span className="text-xs font-bold text-white block">Academic Director</span>
             <span className="text-[10px] text-emerald-300">ASSON UI Exco</span>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
+          <button
+            type="button"
             onClick={handleLogout}
-            className="border-white/20 text-white hover:bg-white/10 text-xs h-9 font-semibold"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-white/30 bg-white/15 hover:bg-white/25 text-white text-xs font-bold backdrop-blur-md transition-all active:scale-95 cursor-pointer shadow-xs"
           >
-            <LogOut className="w-3.5 h-3.5 mr-1.5" /> Logout
-          </Button>
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Logout</span>
+          </button>
         </div>
       </div>
 
