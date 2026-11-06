@@ -1,74 +1,44 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, FileText, Plus, Bell, GraduationCap, BookOpen } from 'lucide-react';
+import { Home, FileText, BookOpen, Bell, GraduationCap } from 'lucide-react';
 
 interface MobileNavProps {
-  onOpenSubmit: () => void;
+  onOpenSubmit?: () => void;
 }
 
-export const MobileNav: React.FC<MobileNavProps> = ({ onOpenSubmit }) => {
+export const MobileNav: React.FC<MobileNavProps> = () => {
   const location = useLocation();
 
-  const leftLinks = [
+  const navTabs = [
     { name: 'Home', path: '/', icon: Home },
     { name: 'Past Papers', path: '/past-questions', icon: FileText },
-  ];
-
-  const rightLinks = [
+    { name: 'Library', path: '/resources', icon: BookOpen },
     { name: 'Notices', path: '/notices', icon: Bell },
     { name: 'Grants', path: '/opportunities', icon: GraduationCap },
   ];
 
   return (
-    <nav 
-      aria-label="Mobile Bottom Navigation" 
-      className="fixed bottom-0 left-0 right-0 z-40 bg-surface-card/95 backdrop-blur-md border-t border-border-light px-2 py-1.5 lg:hidden shadow-lg flex items-center justify-around pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+    <nav
+      aria-label="Mobile Bottom Navigation"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-surface-card/95 backdrop-blur-md border-t border-border-light px-1 py-1 lg:hidden shadow-sm flex items-center justify-around pb-[max(0.5rem,env(safe-area-inset-bottom))]"
     >
-      {/* Left Navigation Tabs */}
-      {leftLinks.map((link) => {
-        const Icon = link.icon;
-        const isActive = location.pathname === link.path;
+      {navTabs.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = location.pathname === tab.path;
         return (
           <Link
-            key={link.path}
-            to={link.path}
-            className={`flex flex-col items-center justify-center p-1.5 min-w-[60px] min-h-[46px] rounded-xl transition-all duration-150 active:scale-95 ${
+            key={tab.path}
+            to={tab.path}
+            className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 min-h-[46px] rounded-xl transition-all duration-150 active:scale-95 ${
               isActive
-                ? 'text-brand-green font-bold bg-emerald-50/80 shadow-xs'
+                ? 'text-brand-green font-bold bg-emerald-50/70 shadow-2xs'
                 : 'text-text-muted hover:text-text-main'
             }`}
           >
-            <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-            <span className="text-[10px] mt-0.5 font-medium leading-none">{link.name}</span>
-          </Link>
-        );
-      })}
-
-      {/* Floating Center Action: Submit Material */}
-      <button
-        onClick={onOpenSubmit}
-        className="flex flex-col items-center justify-center -mt-5 bg-gradient-to-tr from-brand-deep to-brand-green text-white p-3 rounded-full shadow-lg hover:shadow-xl active:scale-90 transition-transform border-4 border-surface-card group"
-        aria-label="Submit Academic Material"
-      >
-        <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-200" />
-      </button>
-
-      {/* Right Navigation Tabs */}
-      {rightLinks.map((link) => {
-        const Icon = link.icon;
-        const isActive = location.pathname === link.path;
-        return (
-          <Link
-            key={link.path}
-            to={link.path}
-            className={`flex flex-col items-center justify-center p-1.5 min-w-[60px] min-h-[46px] rounded-xl transition-all duration-150 active:scale-95 ${
-              isActive
-                ? 'text-brand-green font-bold bg-emerald-50/80 shadow-xs'
-                : 'text-text-muted hover:text-text-main'
-            }`}
-          >
-            <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-            <span className="text-[10px] mt-0.5 font-medium leading-none">{link.name}</span>
+            <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+            <span className="text-[10px] sm:text-[11px] mt-1 font-medium leading-none tracking-tight">
+              {tab.name}
+            </span>
           </Link>
         );
       })}
