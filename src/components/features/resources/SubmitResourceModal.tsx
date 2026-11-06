@@ -772,7 +772,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                 </div>
               </div>
 
-              {/* Upload Confirmation Permission Checkbox */}
+              {/* Upload Terms & Policy Confirmation Checkbox */}
               <div className="pt-1">
                 <label className="flex items-start gap-2.5 p-3 rounded-xl border border-border-light bg-surface-card hover:bg-neutral-50 cursor-pointer">
                   <input
@@ -785,7 +785,27 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                     className="mt-0.5 rounded border-neutral-300 text-brand-green focus:ring-brand-green"
                   />
                   <span className="text-xs text-text-muted leading-relaxed">
-                    I confirm that this document is genuine, legible, belongs to the official UI Statistics curriculum, and I authorize ASSON UI to host it for scholars.
+                    I have read and agree to the{' '}
+                    <Link
+                      to="/terms"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-brand-green font-semibold underline hover:text-brand-deep inline-flex items-center gap-0.5"
+                    >
+                      Terms of Academic Contribution
+                    </Link>{' '}
+                    and{' '}
+                    <Link
+                      to="/privacy"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-brand-green font-semibold underline hover:text-brand-deep inline-flex items-center gap-0.5"
+                    >
+                      Privacy Policy
+                    </Link>
+                    , and I confirm this academic material is genuine for UI Statistics scholars.
                   </span>
                 </label>
               </div>

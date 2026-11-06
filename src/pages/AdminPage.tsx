@@ -146,12 +146,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
           <form onSubmit={handleLogin} className="space-y-4 text-left">
             <div>
               <label className="text-xs font-bold text-text-main block mb-1.5">
-                Executive Email / Identity
+                Executive Identity or Secret Key
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="e.g. executive@asson.ui.edu.ng"
+                  placeholder="e.g. executive@asson.ui.edu.ng or secret key"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);

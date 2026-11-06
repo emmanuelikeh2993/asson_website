@@ -15,6 +15,8 @@ import { FaqPage } from './pages/FaqPage';
 import { HelpPage } from './pages/HelpPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AdminPage } from './pages/AdminPage';
+import { TermsPage } from './pages/TermsPage';
+import { PrivacyPage } from './pages/PrivacyPage';
 import { MOCK_RESOURCES, COURSES } from './lib/mockData';
 import { AcademicResource } from './types';
 import { ToastProvider, useToast } from './components/ui/Toast';
@@ -102,6 +104,16 @@ export function AppContent() {
             path="/dashboard" 
             element={
               <DashboardPage 
+                onOpenSubmit={() => setIsSubmitOpen(true)} 
+              />
+            } 
+          />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route 
+            path="/console" 
+            element={
+              <AdminPage 
                 onOpenSubmit={() => setIsSubmitOpen(true)} 
               />
             } 

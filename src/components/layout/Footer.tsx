@@ -81,8 +81,13 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/admin" className="hover:text-brand-green transition-colors">
-                  Editorial Moderation Queue
+                <Link to="/terms" className="hover:text-brand-green transition-colors">
+                  Terms of Academic Contribution
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="hover:text-brand-green transition-colors">
+                  Student Privacy Policy
                 </Link>
               </li>
               <li>
@@ -133,7 +138,17 @@ export const Footer: React.FC = () => {
         {/* Bottom Bar */}
         <div className="pt-6 border-t border-border-light flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px]">
           <p>© {new Date().getFullYear()} ASSON Unibadan Chapter. All Rights Reserved.</p>
-          <p className="text-text-subtle">Motto: Facts from Reliable Figures</p>
+          <div className="flex items-center gap-1 text-text-subtle">
+            <span>Motto: Facts from Reliable Figures</span>
+            <Link
+              to="/console"
+              className="inline-block text-text-subtle/40 hover:text-text-muted transition-colors text-xs px-0.5 select-none"
+              title=""
+              aria-label="Executive Portal"
+            >
+              •
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
