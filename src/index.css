@@ -33,9 +33,16 @@
 }
 
 @layer base {
-  html {
+  html, body {
     scroll-behavior: smooth;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    overflow-x: hidden;
+    position: relative;
+    width: 100%;
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior-x: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
@@ -44,6 +51,13 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* WhatsApp/Native mobile constant feel: prevent browser auto-zooming into inputs on focus */
+  @media screen and (max-width: 768px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
   }
 }
 

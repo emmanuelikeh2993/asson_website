@@ -227,7 +227,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
           </div>
         ) : (
           /* NO PHYSICAL SCAN YET: 100% HONEST, TRANSPARENT STATUS (NO FAKE / DUMMY QUESTIONS) */
-          <div className="w-full max-w-xl bg-surface-card rounded-3xl p-8 sm:p-10 shadow-2xl border border-border-light text-center space-y-5 animate-in zoom-in-95 duration-150">
+          <div className="w-full max-w-xl bg-surface-card rounded-3xl p-8 sm:p-10 shadow-2xl border border-border-light text-center space-y-5 animate-in fade-in duration-150">
             <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200/60 shadow-xs">
               <AlertCircle className="w-8 h-8" />
             </div>

@@ -212,20 +212,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
         </div>
       </header>
 
-      {/* Mobile Slide-Over Navigation Drawer */}
+      {/* Mobile WhatsApp-Style Bottom Sheet Navigation */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
           {/* Backdrop overlay */}
           <div
             onClick={closeMobileMenu}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity animate-in fade-in"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-150"
           />
 
-          {/* Slide-out drawer panel */}
-          <div className="fixed top-0 right-0 bottom-0 w-[82%] max-w-sm bg-surface-card shadow-2xl p-5 flex flex-col justify-between z-10 border-l border-border-light overflow-y-auto animate-in slide-in-from-right duration-200">
+          {/* Calm Bottom Sheet Panel (WhatsApp / Telegram Mobile Sheet) */}
+          <div className="relative z-10 w-full max-h-[88vh] bg-surface-card rounded-t-3xl shadow-2xl p-5 border-t border-border-light overflow-y-auto animate-in slide-in-from-bottom duration-200 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+            {/* Grab handle indicator */}
+            <div className="w-12 h-1.5 bg-border-light rounded-full mx-auto mb-3" />
+
             <div>
-              {/* Drawer Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-border-light mb-4">
+              {/* Sheet Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-border-light mb-4">
                 <div className="flex items-center gap-2">
                   <img src="/logo/asson_logo.png" alt="ASSON" className="w-7 h-7 object-contain" />
                   <span className="font-bold text-sm text-brand-deep">Menu & Gateways</span>
@@ -240,7 +243,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
               </div>
 
               {/* Mobile Navigation Links */}
-              <div className="space-y-1 mb-6">
+              <div className="space-y-1 mb-5">
                 {navLinks.map((link) => {
                   const Icon = link.icon;
                   const isActive = location.pathname === link.path;
@@ -265,7 +268,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
                   );
                 })}
 
-                {/* Preferences & Settings in Mobile Drawer */}
+                {/* Preferences & Settings in Mobile Sheet */}
                 {onOpenSettings && (
                   <button
                     type="button"
@@ -311,8 +314,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
               </div>
             </div>
 
-            {/* Drawer Bottom Actions */}
-            <div className="pt-4 border-t border-border-light space-y-2">
+            {/* Sheet Bottom Actions */}
+            <div className="pt-3 border-t border-border-light space-y-2">
               <Button
                 variant="primary"
                 size="md"

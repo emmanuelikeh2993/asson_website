@@ -85,3 +85,4 @@ CREATE POLICY "Public and users can register RSVP"
 CREATE POLICY "Users can view their own RSVP"
     ON public.event_rsvps FOR SELECT
     USING (auth.uid() = user_id OR public.has_role('editor'));
+

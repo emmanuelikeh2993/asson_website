@@ -70,7 +70,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       />
 
       {/* Palette Container (inspired by Image 21) */}
-      <div className="relative w-full max-w-2xl rounded-2xl bg-surface-card shadow-2xl border border-border-light overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150">
+      <div className="relative w-full max-w-2xl rounded-2xl bg-surface-card shadow-2xl border border-border-light overflow-hidden z-10 animate-in fade-in duration-150">
         {/* Search Bar Input */}
         <div className="flex items-center px-4 py-3.5 border-b border-border-light gap-3 bg-surface-card">
           <Search className="w-5 h-5 text-brand-green shrink-0" />

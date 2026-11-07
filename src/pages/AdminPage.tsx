@@ -1242,7 +1242,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
             onClick={() => setFeedbackTarget(null)}
             className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
           />
-          <div className="relative z-10 w-full max-w-md rounded-3xl bg-surface-card p-6 shadow-2xl border border-border-light space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="relative z-10 w-full max-w-md rounded-3xl bg-surface-card p-6 shadow-2xl border border-border-light space-y-4 animate-in fade-in duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-border-light">
               <h3 className="text-sm font-bold text-text-main">
                 Request Revisions from Contributor
@@ -1320,7 +1320,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
             onClick={() => setIsCreateNoticeOpen(false)}
             className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
           />
-          <div className="relative z-10 w-full max-w-lg rounded-3xl bg-surface-card p-6 shadow-2xl border border-border-light space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="relative z-10 w-full max-w-lg rounded-3xl bg-surface-card p-6 shadow-2xl border border-border-light space-y-4 animate-in fade-in duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-border-light">
               <div className="flex items-center gap-2">
                 <Bell className="w-4 h-4 text-brand-green" />
@@ -1439,7 +1439,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
             onClick={() => setIsCreateOppOpen(false)}
             className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
           />
-          <div className="relative z-10 w-full max-w-lg rounded-3xl bg-surface-card p-6 shadow-2xl border border-border-light space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="relative z-10 w-full max-w-lg rounded-3xl bg-surface-card p-6 shadow-2xl border border-border-light space-y-4 animate-in fade-in duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-border-light">
               <div className="flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-brand-green" />
@@ -1580,7 +1580,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
             onClick={() => setIsCreateFaqOpen(false)}
             className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
           />
-          <div className="relative z-10 w-full max-w-lg rounded-3xl bg-surface-card p-6 shadow-2xl border border-border-light space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="relative z-10 w-full max-w-lg rounded-3xl bg-surface-card p-6 shadow-2xl border border-border-light space-y-4 animate-in fade-in duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-border-light">
               <div className="flex items-center gap-2">
                 <HelpCircle className="w-4 h-4 text-brand-green" />
@@ -1663,7 +1663,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
             onClick={() => setIsCreateCalOpen(false)}
             className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
           />
-          <div className="relative z-10 w-full max-w-lg rounded-3xl bg-surface-card p-6 shadow-2xl border border-border-light space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="relative z-10 w-full max-w-lg rounded-3xl bg-surface-card p-6 shadow-2xl border border-border-light space-y-4 animate-in fade-in duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-border-light">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-brand-green" />

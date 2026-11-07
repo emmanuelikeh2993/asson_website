@@ -309,3 +309,4 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({ onOpenSu
     </div>
   );
 };
+

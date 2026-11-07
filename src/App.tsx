@@ -262,10 +262,6 @@ export function AppContent() {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        onOpenAuth={() => {
-          setIsSettingsOpen(false);
-          setIsAuthOpen(true);
-        }}
       />
 
       {/* Student Study Locker Account Modal (WhatsApp / Spotify-style quiet auth) */}

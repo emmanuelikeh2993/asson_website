@@ -241,7 +241,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
     >
       {showExitConfirm ? (
         /* Discard Confirmation Screen */
-        <div className="py-6 px-3 text-center space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="py-6 px-3 text-center space-y-4 animate-in fade-in duration-150">
           <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
             <AlertCircle className="w-7 h-7" />
           </div>
@@ -274,7 +274,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
         </div>
       ) : submittedReceipt ? (
         /* Celebratory Completion State (Inspired by Dribbble Frame 4) */
-        <div className="py-6 px-2 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div className="py-6 px-2 text-center space-y-5 animate-in fade-in duration-200">
           <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-brand-green border border-emerald-200 flex items-center justify-center mx-auto shadow-sm">
             <CheckCircle2 className="w-9 h-9" />
           </div>

@@ -53,7 +53,7 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Modal Dialog with Sticky Header & Scrollable Body */}
       <div 
         className={cn(
-          "relative w-full max-h-[92vh] flex flex-col rounded-2xl bg-surface-card shadow-modal border border-border-light z-10 animate-in fade-in zoom-in-95 duration-150 overflow-hidden",
+          "relative w-full max-h-[92vh] flex flex-col rounded-2xl bg-surface-card shadow-modal border border-border-light z-10 animate-in fade-in duration-150 overflow-hidden",
           maxWidthStyles[maxWidth]
         )}
         role="dialog"
