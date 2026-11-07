@@ -1,4 +1,4 @@
-const CACHE_NAME = 'asson-ui-cache-v4';
+const CACHE_NAME = 'asson-ui-cache-v5';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
@@ -35,16 +35,27 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event: Network-first for dynamic navigation, Cache-first for static assets
+// Fetch Event: Network-first for dynamic navigation, Cache-first for hashed static assets
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
-  // Ignore non-GET or cross-origin analytics/supabase calls to avoid caching mutations
+  // Ignore non-GET requests to avoid caching mutations
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
 
-  // Network-first for navigation requests (HTML pages)
+  // Explicitly bypass cache for API calls (Supabase DB, Auth, Storage, Analytics)
+  if (
+    url.hostname.includes('supabase.co') ||
+    url.pathname.startsWith('/rest/') ||
+    url.pathname.startsWith('/auth/') ||
+    url.pathname.startsWith('/storage/v1/object/upload')
+  ) {
+    return;
+  }
+
+  // Network-First for navigation requests (HTML pages & SPA routes)
+  // Ensures students never see stale notices, past questions, or timetables
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)

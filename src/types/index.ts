@@ -26,7 +26,7 @@ export interface AcademicResource {
   semester: 1 | 2;
   session: string;        // e.g. "2023/2024"
   type: ResourceType;
-  fileType: 'PDF' | 'DOCX' | 'ZIP';
+  fileType: 'PDF' | 'DOCX';
   fileSizeBytes: number;
   downloadUrl: string;
   filePath?: string;

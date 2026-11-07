@@ -46,7 +46,6 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
   const [resourceType, setResourceType] = useState<ResourceType>('Past Question');
   const [session, setSession] = useState('2024/2025');
   const [contributorName, setContributorName] = useState('');
-  const [matricNumber, setMatricNumber] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -133,13 +132,12 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
     const validTypes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/zip',
-      'application/x-zip-compressed'
+      'application/msword'
     ];
-    const hasValidExtension = Boolean(selectedFile.name.match(/\.(pdf|docx|zip)$/i));
+    const hasValidExtension = Boolean(selectedFile.name.match(/\.(pdf|docx)$/i));
     const hasValidMime = validTypes.includes(selectedFile.type) || (selectedFile.type === '' && hasValidExtension);
     if (!hasValidExtension || !hasValidMime) {
-      setError('Invalid format. Please upload a verified PDF, DOCX, or ZIP file.');
+      setError('Invalid format. Per ASSON security guidelines, only verified PDF and DOCX files are permitted. Archives (.zip) are strictly prohibited.');
       return;
     }
     setFile(selectedFile);
@@ -193,7 +191,6 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
           resourceType,
           session,
           contributorName: contributorName.trim() || undefined,
-          matricNumber: matricNumber.trim() || undefined,
         },
         (progress) => setUploadProgress(progress)
       );
@@ -687,7 +684,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
               {/* Drag and Drop Zone */}
               <div>
                 <label className="text-xs font-bold text-text-main block mb-1">
-                  Attach Academic File (PDF, DOCX, ZIP) <span className="text-brand-red">*</span>
+                  Attach Academic File (PDF or DOCX Only) <span className="text-brand-red">*</span>
                 </label>
                 <div
                   onDragOver={(e) => e.preventDefault()}
@@ -715,7 +712,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                         <span>Change file</span>
                         <input
                           type="file"
-                          accept=".pdf,.docx,.zip,application/pdf"
+                          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                           onChange={handleFileChange}
                           className="hidden"
                         />
@@ -731,7 +728,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                           <span>Click to upload</span>
                           <input
                             type="file"
-                            accept=".pdf,.docx,.zip,application/pdf"
+                            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                             onChange={handleFileChange}
                             className="hidden"
                           />
@@ -739,39 +736,28 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                         <span className="text-xs text-text-muted"> or drag and drop</span>
                       </div>
                       <p className="text-[10px] text-text-subtle">
-                        PDF, DOCX, or ZIP files up to 15MB
+                        PDF or Word (.docx) documents up to 15MB. Archives (.zip) are strictly prohibited.
                       </p>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Peer Contributor Optional Fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div>
-                  <label className="text-xs font-bold text-text-main block mb-1">
-                    Your Name (Optional Credit)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Tunde Balogun (or leave blank)"
-                    value={contributorName}
-                    onChange={(e) => setContributorName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-xs focus:outline-none focus:border-brand-green"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-text-main block mb-1">
-                    Matric No. (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 219804 (peer verification)"
-                    value={matricNumber}
-                    onChange={(e) => setMatricNumber(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-xs focus:outline-none focus:border-brand-green"
-                  />
-                </div>
+              {/* Peer Contributor Field (Zero Personal Data / No Matriculation Required) */}
+              <div className="pt-1">
+                <label className="text-xs font-bold text-text-main block mb-1">
+                  Contributor Name or Course Rep Alias (Optional Credit)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Tunde Balogun or 200L Course Rep (or leave blank for Anonymous)"
+                  value={contributorName}
+                  onChange={(e) => setContributorName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-xs focus:outline-none focus:border-brand-green"
+                />
+                <p className="text-[10px] text-text-subtle mt-1">
+                  Per NDPA and ASSON privacy standards, matriculation numbers are never collected.
+                </p>
               </div>
 
               {/* Upload Terms & Policy Confirmation Checkbox */}

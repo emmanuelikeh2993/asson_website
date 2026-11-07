@@ -86,18 +86,35 @@
 - **Notice Board (`src/pages/NoticesPage.tsx`)**: Categorized announcements (`ASSON`, `Department`, `Faculty`, `University`) with pinned urgent Senate/resumption tray.
 - **Opportunities Hub (`src/pages/OpportunitiesPage.tsx`)**: Scholarship and internship board with eligibility filters, deadline countdown tags, and application links.
 - **FAQ Accordion (`src/pages/FaqPage.tsx`)**: Interactive accordion covering academic grading, past question downloads, and portal policies.
-- **Student Dashboard (`src/pages/DashboardPage.tsx`)**: Personal matriculation profile, saved bookmarks tray, and peer contribution status tracker (`Under Review`, `Approved`, `Changes Requested`).
-- **Admin & Moderation Console (`src/pages/AdminPage.tsx`)**: Vetting pipeline for ASSON executives to approve or request changes on student submissions, plus a platform audit log table.
+- **Student Dashboard (`src/pages/DashboardPage.tsx`)**: Device-local academic study locker preserving saved bookmarks, download history, and peer contribution status tracker (`Under Review`, `Approved`, `Changes Requested`) via zero-login local storage without collecting personal matriculation numbers.
+- **Admin & Moderation Console (`src/pages/AdminPage.tsx`)**: Full administrative CMS with role verification (`editor` / `admin` / `super_admin`), submissions moderation pipeline, announcements broadcast engine, opportunities editor, FAQs manager, analytics telemetry, and immutable audit logs.
 
 ### 4.4 Data Layer Architecture (`src/lib/supabase.ts`)
-- **Dual-Layer Resilient Fetching**:
+- **Resilient Data Fetching with Honest States**:
   - Connects to Supabase with the publishable key.
   - Implements snake_case to camelCase data mappers for all tables (`mapDbResourceToModel`, `mapDbNoticeToModel`, `mapDbOpportunityToModel`, etc.).
-  - If the network fails or keys are unset, it gracefully serves the verified mock seed dataset (`src/lib/mockData.ts`), guaranteeing **zero blank screens and 100% uptime**.
+  - Purged all fake dummy past questions and notices. When offline or during database interruptions, the application displays honest error states and empty prompts rather than misleading mock data.
+  - Expiration dates for notices and opportunities are dynamically computed on read, ensuring students never act on expired deadlines.
 
-### 4.5 Git & Repository Status
+### 4.5 Production Hardening & Security Hardening (V2.0)
+- **Tier 1: Security, File Restrictions & Privacy Minimization**:
+  - Restricted material uploads strictly to **PDF and DOCX only** (all `.zip` and archive formats are barred at both client and database levels via check constraints).
+  - Strict compliance with Nigeria Data Protection Act (NDPA): Eliminated all matriculation number harvesting across all forms, tables, and states.
+  - Locked down `audit_events` RLS policies so only authenticated editors and admins can insert audit records.
+- **Tier 2: Real Database-Enforced Authorization**:
+  - Executive authentication in `adminSignIn` and `AdminPage.tsx` cryptographically verifies roles against `public.user_roles` (`editor`, `admin`, `super_admin`). Unprivileged users are rejected immediately.
+  - `approveSubmissionInDb` updates Supabase first and returns explicit error feedback if RLS or network fails, eliminating silent catch blocks.
+- **Tier 3: Service Worker & Institutional Trust**:
+  - Upgraded service worker (`public/sw.js`) to cache version `v5` using **Network-First** with cache fallback for navigation requests and explicit API cache bypass.
+  - Added the official student-run institutional disclaimer in `Footer.tsx` distinguishing ASSON UI from the University of Ibadan administration, protecting the use of the UI crest.
+  - Added NDPA data controller declaration and faculty takedown contact channel (`academic@asson-ui.org`).
+  - Added automated GitHub Actions CI workflow (`.github/workflows/ci.yml`) running `npm ci` and `npm run build` on every push and PR.
+- **Tier 4: Dynamic Editorial CMS**:
+  - Executives can create, broadcast, and remove Notices, Scholarships/Opportunities, and FAQs directly from the Admin Console UI, removing any need to manually edit SQL tables.
+
+### 4.6 Git & Repository Status
 - Git repository initialized on the `main` branch.
-- Initial commit created: `c986dec` (`feat: complete initial release of ASSON UI student platform (v1.0)`).
+- Automated CI pipeline configured on GitHub Actions.
 - Environment files (`.env`), database passwords, build artifacts (`dist/`), and `node_modules` are excluded via `.gitignore`.
 
 ---

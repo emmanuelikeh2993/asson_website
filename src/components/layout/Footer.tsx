@@ -127,26 +127,38 @@ export const Footer: React.FC = () => {
               <span>asson@ui.edu.ng</span>
             </p>
             <div className="pt-2">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-800">
                 <ShieldCheck className="w-3.5 h-3.5 text-brand-green" />
-                Verified ASSON UI Platform V1.0
+                Verified ASSON UI Platform V2.0
               </span>
             </div>
           </div>
         </div>
 
+        {/* Institutional & Legal Governance Notices (Tier 3 Compliance) */}
+        <div className="pt-6 border-t border-border-light text-[11px] space-y-2.5 text-text-subtle leading-relaxed">
+          <p>
+            <strong className="text-text-muted">Institutional Disclaimer:</strong> ASSON UI is an independent academic resource initiative organized by the Association of Statistics Students of Nigeria (ASSON), University of Ibadan Chapter. It is a student-run service and not an official administrative portal of the University of Ibadan. The University crest is displayed solely to indicate departmental chapter affiliation.
+          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-border-light/60">
+            <p>
+              <strong className="text-text-muted">NDPA Privacy Commitment:</strong> We adhere to the Nigeria Data Protection Act (NDPA). Zero tracking cookies, zero marketing analytics, and zero matriculation number harvesting.
+            </p>
+            <p className="shrink-0 text-[10px]">
+              <span className="text-text-muted">Faculty Takedown / Inquiries:</span> <a href="mailto:academic@asson-ui.org" className="text-brand-green hover:underline">academic@asson-ui.org</a>
+            </p>
+          </div>
+        </div>
+
         {/* Bottom Bar */}
-        <div className="pt-6 border-t border-border-light flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px]">
-          <p>© {new Date().getFullYear()} ASSON Unibadan Chapter. All Rights Reserved.</p>
-          <div className="flex items-center gap-1 text-text-subtle">
-            <span>Motto: Facts from Reliable Figures</span>
+        <div className="pt-4 mt-4 border-t border-border-light flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px]">
+          <p>© {new Date().getFullYear()} ASSON Unibadan Chapter. All Rights Reserved. Motto: Facts from Reliable Figures.</p>
+          <div className="flex items-center gap-3 text-text-subtle">
             <Link
               to="/console"
-              className="inline-block text-text-subtle/40 hover:text-text-muted transition-colors text-xs px-0.5 select-none"
-              title=""
-              aria-label="Executive Portal"
+              className="inline-flex items-center gap-1 text-text-muted hover:text-brand-green font-semibold transition-colors text-xs"
             >
-              •
+              <span>Executive Portal</span>
             </Link>
           </div>
         </div>

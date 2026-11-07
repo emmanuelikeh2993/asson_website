@@ -54,7 +54,7 @@ function mapDbResourceToModel(row: any): AcademicResource {
     semester: (row.semester as 1 | 2) || 1,
     session: row.session || '2024/2025',
     type: row.type || 'Past Question',
-    fileType: (row.file_type as 'PDF' | 'DOCX' | 'ZIP') || 'PDF',
+    fileType: (row.file_type as 'PDF' | 'DOCX') || 'PDF',
     fileSizeBytes: Number(row.file_size_bytes) || 2048000,
     downloadUrl: row.file_path && row.file_path.startsWith('http')
       ? row.file_path
@@ -78,6 +78,7 @@ function mapDbCourseToModel(row: any): Course {
 }
 
 function mapDbNoticeToModel(row: any): Notice {
+  const isPastDeadline = row.deadline ? new Date(row.deadline) < new Date(new Date().setHours(0, 0, 0, 0)) : false;
   return {
     id: row.id,
     title: row.title,
@@ -89,11 +90,12 @@ function mapDbNoticeToModel(row: any): Notice {
     effectiveDate: row.effective_date || undefined,
     deadline: row.deadline || undefined,
     issuer: row.issuer || 'ASSON Secretariat',
-    isExpired: Boolean(row.is_expired),
+    isExpired: Boolean(row.is_expired) || isPastDeadline,
   };
 }
 
 function mapDbOpportunityToModel(row: any): Opportunity {
+  const isPastDeadline = row.deadline ? new Date(row.deadline) < new Date(new Date().setHours(0, 0, 0, 0)) : false;
   return {
     id: row.id,
     title: row.title,
@@ -105,7 +107,7 @@ function mapDbOpportunityToModel(row: any): Opportunity {
     applicationUrl: row.application_url || '#',
     location: row.location || 'National',
     isVerified: Boolean(row.is_verified),
-    isExpired: Boolean(row.is_expired),
+    isExpired: Boolean(row.is_expired) || isPastDeadline,
     postedDate: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : '2026-10-20',
   };
 }
@@ -187,7 +189,7 @@ export async function fetchResources(): Promise<AcademicResource[]> {
               semester: courseMeta.semester as 1 | 2,
               session: sub.session || '2024/2025',
               type: sub.resource_type || 'Past Question',
-              fileType: fPath.endsWith('.docx') ? 'DOCX' : fPath.endsWith('.zip') ? 'ZIP' : 'PDF',
+              fileType: fPath.endsWith('.docx') ? 'DOCX' : 'PDF',
               fileSizeBytes: Number(sub.file_size_bytes) || 2048000,
               downloadUrl,
               filePath: fPath,
@@ -299,15 +301,11 @@ export async function fetchStudentSubmissions(): Promise<StudentSubmission[]> {
         }));
       }
     } catch (err) {
-      console.warn('Submissions fetch error from Supabase, serving cached seed:', err);
+      console.warn('Submissions fetch error from Supabase:', err);
     }
   }
 
-  if (list.length === 0) {
-    list = [...MOCK_SUBMISSIONS];
-  }
-
-  // Merge any locally tracked submissions
+  // Merge any locally tracked submissions submitted on this device
   try {
     const local = JSON.parse(localStorage.getItem('asson_submissions') || '[]');
     if (Array.isArray(local) && local.length > 0) {
@@ -329,7 +327,6 @@ export interface SubmitResourcePayload {
   resourceType: ResourceType;
   session: string;
   contributorName?: string;
-  matricNumber?: string;
 }
 
 export async function uploadAndSubmitResource(
@@ -360,9 +357,9 @@ export async function uploadAndSubmitResource(
       if (onProgress) onProgress(75);
 
       if (!uploadError) {
-        // 2. Insert record into Supabase submissions table with reference code
+        // 2. Insert record into Supabase submissions table with reference code (Zero personal matriculation data)
         const contributorInfo = payload.contributorName
-          ? `Uploaded by ${payload.contributorName}${payload.matricNumber ? ` (${payload.matricNumber})` : ''}`
+          ? `Uploaded by ${payload.contributorName}`
           : 'Student Peer Contributor';
 
         const { data: insertData, error: insertError } = await supabase
@@ -376,20 +373,13 @@ export async function uploadAndSubmitResource(
             file_size_bytes: payload.file.size,
             status: 'Approved',
             reference_code: referenceCode,
-            feedback: `${contributorInfo} — Published directly to ASSON academic library.`
+            feedback: `${contributorInfo} — Submitted to ASSON academic library.`
           })
           .select('id')
           .single();
 
         if (!insertError && insertData) {
           remoteSuccess = true;
-          // 3. Log audit event
-          await supabase.from('audit_events').insert({
-            action: 'PUBLISH',
-            entity: 'resources',
-            details: `Academic material uploaded and published: ${payload.title} for ${payload.courseCode} (Ref: ${referenceCode})`,
-            actor_email: payload.contributorName || 'Student Peer Contributor'
-          });
         }
       } else {
         console.warn('Storage upload encountered policy restriction, saving to local submission queue:', uploadError.message);
@@ -417,7 +407,7 @@ export async function uploadAndSubmitResource(
     semester: courseMeta.semester as 1 | 2,
     session: payload.session,
     type: payload.resourceType,
-    fileType: payload.file.name.endsWith('.docx') ? 'DOCX' : payload.file.name.endsWith('.zip') ? 'ZIP' : 'PDF',
+    fileType: payload.file.name.endsWith('.docx') ? 'DOCX' : 'PDF',
     fileSizeBytes: payload.file.size,
     downloadUrl: `${supabaseUrl}/storage/v1/object/public/resources/${filePath}`,
     filePath,
@@ -472,29 +462,25 @@ export async function uploadAndSubmitResource(
 export async function approveSubmissionInDb(
   submissionId: string,
   submission: StudentSubmission
-): Promise<boolean> {
-  // Update local storage
-  try {
-    const local = JSON.parse(localStorage.getItem('asson_submissions') || '[]');
-    const updated = local.map((s: any) => s.id === submissionId ? { ...s, status: 'Approved', feedback: 'Approved by ASSON Editorial Board.' } : s);
-    localStorage.setItem('asson_submissions', JSON.stringify(updated));
-  } catch (e) {
-    // ignore
-  }
-
+): Promise<{ success: boolean; error?: string }> {
   if (supabase) {
     try {
-      // 1. Update submissions table
-      await supabase
+      // 1. Update submissions table in Supabase
+      const { error: updateError } = await supabase
         .from('submissions')
         .update({ status: 'Approved', feedback: 'Approved by ASSON Editorial Board.' })
         .eq('id', submissionId);
+
+      if (updateError) {
+        console.error('Remote submission approval failed:', updateError.message);
+        return { success: false, error: updateError.message };
+      }
 
       // 2. Publish to resources table so paper immediately appears in public catalog
       const courseNum = submission.courseCode.match(/\d+/)?.[0] || '200';
       const level = courseNum.startsWith('1') ? '100' : courseNum.startsWith('2') ? '200' : courseNum.startsWith('3') ? '300' : '400';
 
-      await supabase.from('resources').insert({
+      const { error: insertError } = await supabase.from('resources').insert({
         title: submission.resourceTitle,
         course_code: submission.courseCode,
         course_title: `${submission.courseCode} Academic Material`,
@@ -502,7 +488,7 @@ export async function approveSubmissionInDb(
         semester: 1,
         session: submission.session,
         type: submission.resourceType,
-        file_type: 'PDF',
+        file_type: submission.filePath?.endsWith('.docx') ? 'DOCX' : 'PDF',
         file_path: submission.filePath || `submissions/${submission.id}.pdf`,
         file_size_bytes: submission.fileSizeBytes || 2500000,
         verification_status: 'Verified',
@@ -511,20 +497,72 @@ export async function approveSubmissionInDb(
         downloads_count: 0
       });
 
+      if (insertError) {
+        console.warn('Resource catalog registration warning:', insertError.message);
+      }
+
       // 3. Log audit event
+      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Academic Director';
       await supabase.from('audit_events').insert({
         action: 'PUBLISH',
         entity: 'submissions',
         details: `Approved & published submission ${submission.id}: "${submission.resourceTitle}" (${submission.courseCode})`,
-        actor_email: 'ASSON Academic Director'
+        actor_email: userEmail
       });
-
-      return true;
-    } catch (err) {
-      console.warn('Failed to update remote submission approval:', err);
+    } catch (err: any) {
+      console.error('Failed to update remote submission approval:', err);
+      return { success: false, error: err?.message || 'Database connection error during approval.' };
     }
   }
-  return true;
+
+  // Update local storage only if remote succeeded or offline
+  try {
+    const local = JSON.parse(localStorage.getItem('asson_submissions') || '[]');
+    const updated = local.map((s: any) => s.id === submissionId ? { ...s, status: 'Approved', feedback: 'Approved by ASSON Editorial Board.' } : s);
+    localStorage.setItem('asson_submissions', JSON.stringify(updated));
+  } catch (e) {
+    // ignore
+  }
+
+  return { success: true };
+}
+
+export async function requestChangesOnSubmissionInDb(
+  submissionId: string,
+  feedbackNote: string
+): Promise<{ success: boolean; error?: string }> {
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('submissions')
+        .update({ status: 'Changes Requested', feedback: feedbackNote })
+        .eq('id', submissionId);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Academic Director';
+      await supabase.from('audit_events').insert({
+        action: 'UPDATE',
+        entity: 'submissions',
+        details: `Changes requested on submission ${submissionId}: "${feedbackNote}"`,
+        actor_email: userEmail
+      });
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update submission status.' };
+    }
+  }
+
+  try {
+    const local = JSON.parse(localStorage.getItem('asson_submissions') || '[]');
+    const updated = local.map((s: any) => s.id === submissionId ? { ...s, status: 'Changes Requested', feedback: feedbackNote } : s);
+    localStorage.setItem('asson_submissions', JSON.stringify(updated));
+  } catch (e) {
+    // ignore
+  }
+
+  return { success: true };
 }
 
 export async function fetchAuditLogs(): Promise<AuditLog[]> {
@@ -691,10 +729,28 @@ export async function submitPrivateFeedback(
 }
 
 // ====================================================================
-// SECURE EXECUTIVE AUTHENTICATION (Section 3.5 & 5.1)
+// SECURE EXECUTIVE AUTHENTICATION & ROLE VERIFICATION (Tiers 1 & 2)
 // ====================================================================
 
-export async function adminSignIn(email: string, password?: string): Promise<{ success: boolean; error?: string }> {
+export async function verifyExecutiveRole(userId: string): Promise<{ isAuthorized: boolean; role?: 'editor' | 'admin' | 'super_admin' }> {
+  if (!supabase) return { isAuthorized: false };
+  try {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!error && data && ['editor', 'admin', 'super_admin'].includes(data.role)) {
+      return { isAuthorized: true, role: data.role as 'editor' | 'admin' | 'super_admin' };
+    }
+  } catch (e) {
+    console.warn('Role verification query failed:', e);
+  }
+  return { isAuthorized: false };
+}
+
+export async function adminSignIn(email: string, password?: string): Promise<{ success: boolean; role?: string; error?: string }> {
   if (!email || !password || !email.includes('@')) {
     return { success: false, error: 'A valid email address and password are required.' };
   }
@@ -709,16 +765,30 @@ export async function adminSignIn(email: string, password?: string): Promise<{ s
       password: password.trim()
     });
 
-    if (error || !data.session) {
-      return { success: false, error: 'Invalid credentials. Access denied.' };
+    if (error || !data.session || !data.user) {
+      return { success: false, error: error?.message || 'Invalid credentials. Access denied.' };
     }
 
-    // Store minimal session marker — actual auth is validated via supabase.auth.getUser()
+    // Role-gated authentication: verify in public.user_roles (enforced by RLS)
+    const roleCheck = await verifyExecutiveRole(data.user.id);
+    if (!roleCheck.isAuthorized) {
+      // Disallow non-executive users immediately
+      await supabase.auth.signOut();
+      sessionStorage.removeItem('asson_admin_authenticated');
+      sessionStorage.removeItem('asson_admin_email');
+      sessionStorage.removeItem('asson_admin_role');
+      return {
+        success: false,
+        error: 'Access denied: Your account does not have authorized executive privileges (editor or admin role required in database).'
+      };
+    }
+
     sessionStorage.setItem('asson_admin_authenticated', 'true');
     sessionStorage.setItem('asson_admin_email', data.user.email || email);
-    return { success: true };
-  } catch (_err) {
-    return { success: false, error: 'Authentication failed. Please try again.' };
+    sessionStorage.setItem('asson_admin_role', roleCheck.role || 'editor');
+    return { success: true, role: roleCheck.role };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Authentication failed. Please try again.' };
   }
 }
 
@@ -732,8 +802,195 @@ export async function adminSignOut(): Promise<void> {
   }
   sessionStorage.removeItem('asson_admin_authenticated');
   sessionStorage.removeItem('asson_admin_email');
+  sessionStorage.removeItem('asson_admin_role');
 }
 
 export function isExecutiveAuthenticated(): boolean {
   return sessionStorage.getItem('asson_admin_authenticated') === 'true';
+}
+
+// ====================================================================
+// EDITORIAL CMS SERVICES (Tier 4: Dynamic Admin Management)
+// ====================================================================
+
+export async function createNoticeInDb(notice: {
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  isUrgent: boolean;
+  issuer: string;
+  deadline?: string;
+  effectiveDate?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  if (supabase) {
+    try {
+      const { error } = await supabase.from('notices').insert({
+        title: notice.title.trim(),
+        summary: notice.summary.trim(),
+        content: notice.content.trim(),
+        category: notice.category,
+        is_urgent: notice.isUrgent,
+        issuer: notice.issuer.trim(),
+        deadline: notice.deadline || null,
+        effective_date: notice.effectiveDate || null,
+        is_expired: false,
+      });
+
+      if (error) return { success: false, error: error.message };
+
+      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
+      await supabase.from('audit_events').insert({
+        action: 'CREATE',
+        entity: 'notices',
+        details: `Created new announcement: "${notice.title}" (${notice.category})`,
+        actor_email: userEmail
+      });
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Database error creating notice.' };
+    }
+  }
+  return { success: false, error: 'Database service is offline.' };
+}
+
+export async function deleteNoticeInDb(id: string): Promise<{ success: boolean; error?: string }> {
+  if (supabase) {
+    try {
+      const { error } = await supabase.from('notices').delete().eq('id', id);
+      if (error) return { success: false, error: error.message };
+
+      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
+      await supabase.from('audit_events').insert({
+        action: 'DELETE',
+        entity: 'notices',
+        details: `Deleted notice ${id}`,
+        actor_email: userEmail
+      });
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Database error deleting notice.' };
+    }
+  }
+  return { success: false, error: 'Database service is offline.' };
+}
+
+export async function createOpportunityInDb(opp: {
+  title: string;
+  provider: string;
+  category: string;
+  deadline: string;
+  eligibility: string;
+  description: string;
+  applicationUrl: string;
+  location: string;
+}): Promise<{ success: boolean; error?: string }> {
+  if (supabase) {
+    try {
+      const { error } = await supabase.from('opportunities').insert({
+        title: opp.title.trim(),
+        provider: opp.provider.trim(),
+        category: opp.category,
+        deadline: opp.deadline,
+        eligibility: opp.eligibility.trim(),
+        description: opp.description.trim(),
+        application_url: opp.applicationUrl.trim(),
+        location: opp.location.trim(),
+        is_verified: true,
+        is_expired: false
+      });
+
+      if (error) return { success: false, error: error.message };
+
+      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
+      await supabase.from('audit_events').insert({
+        action: 'CREATE',
+        entity: 'opportunities',
+        details: `Added opportunity: "${opp.title}" by ${opp.provider}`,
+        actor_email: userEmail
+      });
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Database error adding opportunity.' };
+    }
+  }
+  return { success: false, error: 'Database service is offline.' };
+}
+
+export async function deleteOpportunityInDb(id: string): Promise<{ success: boolean; error?: string }> {
+  if (supabase) {
+    try {
+      const { error } = await supabase.from('opportunities').delete().eq('id', id);
+      if (error) return { success: false, error: error.message };
+
+      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
+      await supabase.from('audit_events').insert({
+        action: 'DELETE',
+        entity: 'opportunities',
+        details: `Deleted opportunity ${id}`,
+        actor_email: userEmail
+      });
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Database error deleting opportunity.' };
+    }
+  }
+  return { success: false, error: 'Database service is offline.' };
+}
+
+export async function createFaqInDb(faq: {
+  question: string;
+  answer: string;
+  category: string;
+}): Promise<{ success: boolean; error?: string }> {
+  if (supabase) {
+    try {
+      const { error } = await supabase.from('faqs').insert({
+        question: faq.question.trim(),
+        answer: faq.answer.trim(),
+        category: faq.category.trim()
+      });
+
+      if (error) return { success: false, error: error.message };
+
+      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
+      await supabase.from('audit_events').insert({
+        action: 'CREATE',
+        entity: 'faqs',
+        details: `Added FAQ: "${faq.question}"`,
+        actor_email: userEmail
+      });
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Database error creating FAQ.' };
+    }
+  }
+  return { success: false, error: 'Database service is offline.' };
+}
+
+export async function deleteFaqInDb(id: string): Promise<{ success: boolean; error?: string }> {
+  if (supabase) {
+    try {
+      const { error } = await supabase.from('faqs').delete().eq('id', id);
+      if (error) return { success: false, error: error.message };
+
+      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
+      await supabase.from('audit_events').insert({
+        action: 'DELETE',
+        entity: 'faqs',
+        details: `Deleted FAQ ${id}`,
+        actor_email: userEmail
+      });
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Database error deleting FAQ.' };
+    }
+  }
+  return { success: false, error: 'Database service is offline.' };
 }
