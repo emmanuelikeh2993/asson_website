@@ -58,7 +58,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
   return (
     <div className="space-y-8 sm:space-y-12 pb-16">
       {/* 1. Authoritative Academic Hero Section */}
-      <section className="relative bg-brand-deep text-white pt-8 pb-10 sm:pt-14 sm:pb-16 px-4 sm:px-6 lg:px-8 border-b border-emerald-900/60">
+      <section className="relative w-full max-w-full overflow-hidden bg-brand-deep text-white pt-8 pb-10 sm:pt-14 sm:pb-16 px-4 sm:px-6 lg:px-8 border-b border-emerald-900/60">
         <div className="max-w-4xl mx-auto flex flex-col items-center text-center">
           {/* Subtle Departmental Tag */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] sm:text-xs text-emerald-100 font-medium mb-4">
@@ -126,7 +126,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
 
       {/* 2. Urgent Announcement Pill (If active) */}
       {urgentNotice && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
           <Link
             to="/notices"
             className="flex items-center justify-between gap-3 p-3 sm:p-3.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 hover:bg-amber-100/80 dark:hover:bg-amber-900/30 transition-colors group"
@@ -150,7 +150,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
       )}
 
       {/* 3. Verified Past Examination Questions (Immediately Visible) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-text-main">
@@ -220,7 +220,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
       </section>
 
       {/* 4. Curriculum Directory By Level */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
         <div className="p-5 sm:p-6 rounded-2xl bg-surface-card border border-border-light shadow-2xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <div>
@@ -267,7 +267,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
       <LandingFaqSection />
 
       {/* 6. Respectful Community Contribution Strip */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
         <div className="rounded-2xl bg-neutral-900 text-white p-5 sm:p-7 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-center sm:text-left">
             <h3 className="text-sm sm:text-base font-bold">

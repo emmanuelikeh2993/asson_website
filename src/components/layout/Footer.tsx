@@ -4,7 +4,7 @@ import { Mail, Phone, MapPin, ExternalLink, ShieldCheck } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="border-t border-border-light bg-surface-card pt-12 pb-16 lg:pb-12 mt-16 text-xs text-text-muted">
+    <footer className="border-t border-border-light bg-surface-card pt-12 pb-16 lg:pb-12 mt-16 text-xs text-text-muted w-full max-w-full overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Col 1: Brand & Logos */}

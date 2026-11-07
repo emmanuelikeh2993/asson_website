@@ -82,7 +82,7 @@ export function AppContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface-bg text-text-main selection:bg-brand-light selection:text-brand-deep">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col bg-surface-bg text-text-main selection:bg-brand-light selection:text-brand-deep">
       {/* Install PWA Prompt Banner for Mobile Devices */}
       <InstallPwaPrompt />
 

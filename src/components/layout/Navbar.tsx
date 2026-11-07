@@ -58,25 +58,26 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
           {/* Brand & Department Logo alongside University Crest */}
           <Link to="/" className="flex items-center gap-2 sm:gap-2.5 shrink-0 group">
+            {/* Left Logos: ASSON Logo always visible; University Crest visible on sm+ screens */}
             <div className="flex items-center gap-1.5 sm:gap-2">
               <img
                 src="/logo/asson_logo.png"
                 alt="ASSON Logo"
-                className="w-8 h-8 sm:w-9 sm:h-9 object-contain drop-shadow-sm group-hover:scale-105 transition-transform"
+                className="w-7 h-7 sm:w-9 sm:h-9 object-contain drop-shadow-sm group-hover:scale-105 transition-transform"
               />
-              <span className="w-px h-5 sm:h-6 bg-border-light" />
+              <span className="w-px h-5 sm:h-6 bg-border-light hidden sm:inline-block" />
               <img
                 src="/logo/ui_crest.jpg"
                 alt="University of Ibadan Crest"
-                className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded drop-shadow-sm group-hover:scale-105 transition-transform"
+                className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded drop-shadow-sm group-hover:scale-105 transition-transform hidden sm:inline-block"
               />
             </div>
             <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 <span className="font-extrabold text-sm sm:text-base tracking-tight text-brand-deep group-hover:text-brand-green transition-colors">
                   ASSON UI
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-bold uppercase bg-emerald-50 text-brand-green px-1.5 py-0.5 rounded border border-emerald-200">
+                <span className="text-[9px] sm:text-[10px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/40 text-brand-green px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
                   Unibadan
                 </span>
               </div>
@@ -121,22 +122,22 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
             })}
           </nav>
 
-          {/* Right CTA Actions */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Right CTA Actions: Lean & uncluttered on mobile like WhatsApp, full on desktop */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* Mobile Search Button */}
             <button
               onClick={onOpenSearch}
-              className="p-2 text-text-muted hover:text-brand-green hover:bg-surface-bg rounded-xl md:hidden min-w-[40px] min-h-[40px] flex items-center justify-center transition-colors"
+              className="p-1.5 sm:p-2 text-text-muted hover:text-brand-green hover:bg-surface-bg rounded-xl md:hidden min-w-[34px] min-h-[34px] flex items-center justify-center transition-colors"
               aria-label="Search"
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
 
-            {/* Quick Theme Switcher Button */}
+            {/* Quick Theme Switcher Button (Desktop & Tablet only; mobile accesses theme via Settings) */}
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-2 text-text-muted hover:text-brand-green hover:bg-surface-bg rounded-xl transition-all cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center"
+              className="hidden md:flex p-2 text-text-muted hover:text-brand-green hover:bg-surface-bg rounded-xl transition-all cursor-pointer min-w-[36px] min-h-[36px] items-center justify-center"
               title={actualTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               aria-label="Toggle theme"
             >
@@ -160,12 +161,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
               </button>
             )}
 
-            {/* Student Study Locker Account (WhatsApp / Spotify Quiet Style) */}
+            {/* Student Study Locker Account (Tablet & Desktop; mobile accesses via Settings) */}
             {onOpenAuth && (
               <button
                 type="button"
                 onClick={onOpenAuth}
-                className="p-1 sm:px-2.5 sm:py-1.5 rounded-xl border border-border-light bg-surface-bg hover:border-brand-green/50 transition-all cursor-pointer min-h-[36px] flex items-center gap-1.5"
+                className="hidden sm:flex p-1 sm:px-2.5 sm:py-1.5 rounded-xl border border-border-light bg-surface-bg hover:border-brand-green/50 transition-all cursor-pointer min-h-[36px] items-center gap-1.5"
                 title={profile ? `Signed in as ${profile.displayName}` : 'Student Study Locker / Sign In'}
               >
                 {profile ? (
@@ -193,7 +194,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
               size="sm"
               variant="primary"
               onClick={onOpenSubmit}
-              className="text-xs h-8 sm:h-9 px-2.5 sm:px-3.5 shadow-sm hover:shadow active:scale-95 font-bold"
+              className="text-xs h-7.5 sm:h-9 px-2 sm:px-3.5 shadow-sm hover:shadow active:scale-95 font-bold shrink-0"
             >
               <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1.5" />
               <span className="hidden sm:inline">Submit Material</span>
@@ -203,7 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
             {/* Mobile Hamburger Menu Button */}
             <button
               onClick={() => setMobileMenuOpen((prev) => !prev)}
-              className="p-2 text-text-muted hover:text-brand-green hover:bg-surface-bg rounded-xl lg:hidden min-w-[40px] min-h-[40px] flex items-center justify-center transition-colors"
+              className="p-1.5 text-text-muted hover:text-brand-green hover:bg-surface-bg rounded-xl lg:hidden min-w-[34px] min-h-[34px] flex items-center justify-center transition-colors shrink-0"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

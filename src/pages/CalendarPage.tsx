@@ -70,7 +70,7 @@ export const CalendarPage: React.FC = () => {
   const totalDays = new Date(year, month + 1, 0).getDate();
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6 sm:space-y-8 animate-in fade-in duration-200">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6 sm:space-y-8 animate-in fade-in duration-200 w-full max-w-full overflow-hidden">
       {/* Calm Institutional Header (WhatsApp / Spotify Style) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border-light">
         <div>
