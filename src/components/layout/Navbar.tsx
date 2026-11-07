@@ -12,18 +12,25 @@ import {
   HelpCircle,
   User,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Sun,
+  Moon,
+  Settings,
+  Palette
 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useTheme } from '../../context/ThemeContext';
 
 interface NavbarProps {
   onOpenSearch: () => void;
   onOpenSubmit: () => void;
+  onOpenSettings?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOpenSettings }) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { actualTheme, toggleTheme } = useTheme();
 
   const navLinks = [
     { name: 'Resources', path: '/resources', icon: BookOpen },
@@ -116,6 +123,34 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit }) =>
               <Search className="w-5 h-5" />
             </button>
 
+            {/* Quick Theme Switcher Button */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-2 text-text-muted hover:text-brand-green hover:bg-surface-bg rounded-xl transition-all cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center"
+              title={actualTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label="Toggle theme"
+            >
+              {actualTheme === 'dark' ? (
+                <Sun className="w-4 h-4 text-amber-400 animate-in spin-in-90 duration-200" />
+              ) : (
+                <Moon className="w-4 h-4 text-slate-700 animate-in spin-in-90 duration-200" />
+              )}
+            </button>
+
+            {/* Desktop Settings & Preferences Button */}
+            {onOpenSettings && (
+              <button
+                type="button"
+                onClick={onOpenSettings}
+                className="hidden sm:flex p-2 text-text-muted hover:text-brand-green hover:bg-surface-bg rounded-xl transition-all cursor-pointer min-w-[36px] min-h-[36px] items-center justify-center"
+                title="Preferences & Settings"
+                aria-label="Open Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            )}
+
             {/* Submit Resource CTA: Visible & Compact on Mobile, Full on Desktop */}
             <Button
               size="sm"
@@ -192,6 +227,31 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit }) =>
                     </Link>
                   );
                 })}
+
+                {/* Preferences & Settings in Mobile Drawer */}
+                {onOpenSettings && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeMobileMenu();
+                      onOpenSettings();
+                    }}
+                    className="w-full flex items-center justify-between p-3 rounded-xl text-xs font-semibold text-text-main hover:bg-surface-bg hover:text-brand-green transition-all duration-150 active:scale-95 cursor-pointer text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="p-1.5 rounded-lg bg-surface-bg text-text-muted">
+                        <Settings className="w-4 h-4 text-brand-green" />
+                      </span>
+                      <span>Preferences & Settings</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-bg border border-border-light text-text-muted capitalize">
+                        {actualTheme}
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5 text-text-subtle" />
+                    </div>
+                  </button>
+                )}
               </div>
 
               {/* Quick Level Filter Shortcuts */}

@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --surface-bg: #F6F8F7;
+  --surface-card: #FFFFFF;
+  --surface-elevated: #FFFFFF;
+  --surface-subtle: #EDF2E8;
+  --text-main: #17232D;
+  --text-muted: #5C6B75;
+  --text-subtle: #8C9BA5;
+  --border-light: #D8E2DE;
+  --border-hover: #B5C7C0;
+  --brand-green: #087A3E;
+  --brand-deep: #064B2B;
+  --brand-light: #E7F5ED;
+}
+
+.dark {
+  --surface-bg: #0C1115;       /* Deep slate / Telegram dark / Claude dark canvas */
+  --surface-card: #151D24;     /* Elevated neat card background */
+  --surface-elevated: #1D2730; /* Higher elevation surface */
+  --surface-subtle: #19222A;   /* Subdued containers & chips */
+  --text-main: #F2F5F8;        /* Crisp readable heading text */
+  --text-muted: #94A3B8;       /* Legible muted body text */
+  --text-subtle: #64748B;      /* Footers & micro-captions */
+  --border-light: #24303B;     /* Crisp subtle borders */
+  --border-hover: #384856;     /* Interactive border hover */
+  --brand-green: #10B981;      /* High-contrast vivid Emerald Green */
+  --brand-deep: #059669;       /* Medium emerald */
+  --brand-light: #064E3B;      /* Deep green tint */
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -9,8 +39,11 @@
   }
 
   body {
-    @apply bg-surface-bg text-text-main antialiased selection:bg-brand-light selection:text-brand-deep;
+    background-color: var(--surface-bg);
+    color: var(--text-main);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -25,11 +58,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D8E2DE;
+  background: var(--border-light);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #B5C7C0;
+  background: var(--border-hover);
 }
-

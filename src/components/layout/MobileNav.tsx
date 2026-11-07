@@ -4,6 +4,7 @@ import { Home, FileText, BookOpen, Bell, GraduationCap } from 'lucide-react';
 
 interface MobileNavProps {
   onOpenSubmit?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const MobileNav: React.FC<MobileNavProps> = () => {

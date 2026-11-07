@@ -6,7 +6,9 @@ import { Footer } from './components/layout/Footer';
 import { InstallPwaPrompt } from './components/layout/InstallPwaPrompt';
 import { CommandPalette } from './components/features/resources/CommandPalette';
 import { SubmitResourceModal } from './components/features/resources/SubmitResourceModal';
+import { SettingsModal } from './components/features/settings/SettingsModal';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { ThemeProvider } from './context/ThemeContext';
 import { HomePage } from './pages/HomePage';
 import { ResourcesPage } from './pages/ResourcesPage';
 import { PastQuestionsPage } from './pages/PastQuestionsPage';
@@ -26,15 +28,19 @@ import { FileQuestion, ArrowRight, Home, Search, BookOpen } from 'lucide-react';
 export function AppContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
 
-  // Handle direct navigation to submission modal via /submit or ?submit=true
+  // Handle direct navigation to submission or settings modal via query or route
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('submit') === 'true' || location.pathname === '/submit') {
       setIsSubmitOpen(true);
+    }
+    if (params.get('settings') === 'true' || location.pathname === '/settings') {
+      setIsSettingsOpen(true);
     }
   }, [location.pathname, location.search]);
 
@@ -77,6 +83,7 @@ export function AppContent() {
       <Navbar
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenSubmit={() => setIsSubmitOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       {/* Main Routed Page Content */}
@@ -117,6 +124,7 @@ export function AppContent() {
               element={
                 <DashboardPage 
                   onOpenSubmit={() => setIsSubmitOpen(true)} 
+                  onOpenSettings={() => setIsSettingsOpen(true)}
                 />
               } 
             />
@@ -141,6 +149,7 @@ export function AppContent() {
 
             {/* Seamless Aliases and Deep-linking Routes */}
             <Route path="/submit" element={<Navigate to="/resources?submit=true" replace />} />
+            <Route path="/settings" element={<Navigate to="/resources?settings=true" replace />} />
             <Route path="/library" element={<Navigate to="/resources" replace />} />
             <Route path="/grants" element={<Navigate to="/opportunities" replace />} />
             <Route path="/get-help" element={<Navigate to="/help" replace />} />
@@ -192,7 +201,10 @@ export function AppContent() {
       <Footer />
 
       {/* Mobile Bottom Sticky Navigation */}
-      <MobileNav onOpenSubmit={() => setIsSubmitOpen(true)} />
+      <MobileNav 
+        onOpenSubmit={() => setIsSubmitOpen(true)} 
+        onOpenSettings={() => setIsSettingsOpen(true)}
+      />
 
       {/* Global Command Palette Modal (Ctrl+K or /) */}
       <CommandPalette
@@ -215,6 +227,12 @@ export function AppContent() {
           );
         }}
       />
+
+      {/* Preferences & Settings Modal (Claude/WhatsApp/Telegram-style) */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </div>
   );
 }
@@ -222,9 +240,11 @@ export function AppContent() {
 export default function App() {
   return (
     <Router>
-      <ToastProvider>
-        <AppContent />
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
+      </ThemeProvider>
     </Router>
   );
 }

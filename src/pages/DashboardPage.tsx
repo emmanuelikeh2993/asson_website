@@ -15,7 +15,8 @@ import {
   Download,
   BookOpen,
   History,
-  ShieldCheck
+  ShieldCheck,
+  Settings
 } from 'lucide-react';
 import { formatFileSize, formatDate } from '../lib/utils';
 import { triggerResourceDownload } from '../lib/download';
@@ -23,9 +24,10 @@ import { useToast } from '../components/ui/Toast';
 
 interface DashboardPageProps {
   onOpenSubmit: () => void;
+  onOpenSettings?: () => void;
 }
 
-export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenSubmit }) => {
+export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenSubmit, onOpenSettings }) => {
   const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
   const [bookmarks, setBookmarks] = useState<AcademicResource[]>(MOCK_RESOURCES.slice(0, 3));
   const [downloadHistory, setDownloadHistory] = useState<any[]>([]);
@@ -80,15 +82,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenSubmit }) =>
           </div>
         </div>
 
-        <Button
-          variant="primary"
-          size="md"
-          onClick={onOpenSubmit}
-          className="bg-white text-brand-deep hover:bg-emerald-50 shrink-0 font-bold text-xs h-10 shadow-md"
-        >
-          <PlusCircle className="w-4 h-4 mr-1.5" />
-          Submit Academic Material
-        </Button>
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          {onOpenSettings && (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+              title="Preferences & Settings"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span>Preferences</span>
+            </button>
+          )}
+          <Button
+            variant="primary"
+            size="md"
+            onClick={onOpenSubmit}
+            className="bg-white text-brand-deep hover:bg-emerald-50 shrink-0 font-bold text-xs h-10 shadow-md"
+          >
+            <PlusCircle className="w-4 h-4 mr-1.5" />
+            Submit Academic Material
+          </Button>
+        </div>
       </div>
 
       {/* 2. Stat Metric Cards */}
