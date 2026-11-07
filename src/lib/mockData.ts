@@ -1,4 +1,4 @@
-import { AcademicResource, Course, Notice, Opportunity, FAQItem, StudentSubmission, AuditLog } from '../types';
+import { AcademicResource, Course, Notice, Opportunity, FAQItem, StudentSubmission, AuditLog, CalendarEvent } from '../types';
 
 // Official University of Ibadan Department of Statistics Course Catalog
 export const COURSES: Course[] = [
@@ -52,6 +52,9 @@ export const MOCK_NOTICES: Notice[] = [];
 
 // Zero Dummy Data: Only genuine vetted scholarships/grants are served
 export const MOCK_OPPORTUNITIES: Opportunity[] = [];
+
+// Zero Dummy Data: Only genuine calendar events are served
+export const MOCK_CALENDAR_EVENTS: CalendarEvent[] = [];
 
 export const MOCK_FAQS: FAQItem[] = [
   {

@@ -129,21 +129,21 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Link
             to="/notices"
-            className="flex items-center justify-between gap-3 p-3 sm:p-3.5 rounded-xl bg-amber-50/90 border border-amber-200/80 hover:bg-amber-100/80 transition-colors group"
+            className="flex items-center justify-between gap-3 p-3 sm:p-3.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 hover:bg-amber-100/80 dark:hover:bg-amber-900/30 transition-colors group"
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="p-1 rounded-md bg-amber-600 text-white shrink-0">
                 <Bell className="w-3.5 h-3.5" />
               </span>
-              <span className="text-xs font-bold text-amber-900 truncate">
+              <span className="text-xs font-bold text-amber-900 dark:text-amber-200 truncate">
                 {urgentNotice.title}
               </span>
-              <span className="text-[11px] text-amber-750 hidden md:inline truncate">
+              <span className="text-[11px] text-amber-800/80 dark:text-amber-300/80 hidden md:inline truncate">
                 — {urgentNotice.summary}
               </span>
             </div>
-            <span className="text-xs font-bold text-amber-800 group-hover:underline shrink-0 flex items-center gap-1">
-              Read it please <ArrowRight className="w-3.5 h-3.5" />
+            <span className="text-xs font-bold text-amber-800 dark:text-amber-300 group-hover:underline shrink-0 flex items-center gap-1">
+              Read notice <ArrowRight className="w-3.5 h-3.5" />
             </span>
           </Link>
         </div>
@@ -160,20 +160,20 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
               Verified examination questions across departmental and faculty courses.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={onOpenSubmit}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-brand-green/30 bg-emerald-50 text-brand-green hover:bg-emerald-100 text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-2xs"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-brand-green/30 bg-emerald-50 dark:bg-emerald-950/40 text-brand-green hover:bg-emerald-100 text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-2xs"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>Submit Material</span>
             </button>
             <Link
               to={selectedLevel === 'All' ? '/past-questions' : `/past-questions?level=${selectedLevel}`}
-              className="text-xs font-bold text-text-muted hover:text-brand-green flex items-center gap-1 px-2 py-1.5"
+              className="text-xs font-bold text-brand-green hover:underline flex items-center gap-1 px-1 py-1.5"
             >
-              <span className="hidden sm:inline">View All Papers</span>
+              <span>View All</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>

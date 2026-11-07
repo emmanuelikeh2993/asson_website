@@ -18,6 +18,10 @@ import {
   fetchFaqs,
   createFaqInDb,
   deleteFaqInDb,
+  fetchCalendarEvents,
+  createCalendarEventInDb,
+  deleteCalendarEventInDb,
+  DEFAULT_CALENDAR_EVENTS,
   supabase 
 } from '../lib/supabase';
 import { 
@@ -28,7 +32,10 @@ import {
   Opportunity, 
   FAQItem, 
   NoticeCategory, 
-  OpportunityCategory 
+  OpportunityCategory,
+  CalendarEvent,
+  CalendarCategory,
+  AcademicLevel
 } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -81,7 +88,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  type TabKey = 'moderation' | 'notices' | 'opportunities' | 'faqs' | 'analytics' | 'audit';
+  type TabKey = 'moderation' | 'calendar' | 'notices' | 'opportunities' | 'faqs' | 'analytics' | 'audit';
   const [activeTab, setActiveTab] = useState<TabKey>('moderation');
 
   const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
@@ -90,12 +97,24 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
 
   // Modal states
   const [feedbackTarget, setFeedbackTarget] = useState<StudentSubmission | null>(null);
   const [feedbackNote, setFeedbackNote] = useState('');
 
   // CMS Creation Modals
+  const [isCreateCalOpen, setIsCreateCalOpen] = useState(false);
+  const [calForm, setCalForm] = useState({
+    title: '',
+    category: 'Continuous Assessment' as CalendarCategory,
+    startDate: '',
+    endDate: '',
+    targetLevel: 'all' as AcademicLevel | 'all',
+    venue: '',
+    description: '',
+    isConfirmed: true,
+  });
   const [isCreateNoticeOpen, setIsCreateNoticeOpen] = useState(false);
   const [noticeForm, setNoticeForm] = useState({
     title: '',
@@ -166,6 +185,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     fetchNotices().then((data) => setNotices(data.length > 0 ? data : MOCK_NOTICES));
     fetchOpportunities().then((data) => setOpportunities(data.length > 0 ? data : MOCK_OPPORTUNITIES));
     fetchFaqs().then((data) => setFaqs(data || MOCK_FAQS));
+    fetchCalendarEvents().then((data) => setCalendarEvents(data.length > 0 ? data : DEFAULT_CALENDAR_EVENTS));
   }, []);
 
   const handleLogin = async (e?: React.FormEvent) => {
@@ -381,6 +401,56 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     toast.info('FAQ Removed', 'Removed item from knowledge base.');
   };
 
+  const handleCreateCalendarEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!calForm.title.trim() || !calForm.startDate) {
+      toast.error('Validation Error', 'Title and Start Date are required.');
+      return;
+    }
+
+    const res = await createCalendarEventInDb({
+      title: calForm.title.trim(),
+      category: calForm.category,
+      startDate: calForm.startDate,
+      endDate: calForm.endDate || undefined,
+      targetLevel: calForm.targetLevel === 'all' ? undefined : (calForm.targetLevel as AcademicLevel),
+      venue: calForm.venue.trim() || undefined,
+      description: calForm.description.trim() || undefined,
+      isConfirmed: calForm.isConfirmed,
+    });
+
+    if (!res.success) {
+      toast.error('Failed to Schedule Date', res.error || 'Database rejection.');
+      return;
+    }
+
+    const refreshed = await fetchCalendarEvents();
+    setCalendarEvents(refreshed.length > 0 ? refreshed : DEFAULT_CALENDAR_EVENTS);
+    setIsCreateCalOpen(false);
+    setCalForm({
+      title: '',
+      category: 'Continuous Assessment',
+      startDate: '',
+      endDate: '',
+      targetLevel: 'all',
+      venue: '',
+      description: '',
+      isConfirmed: true,
+    });
+    toast.success('Academic Date Scheduled', `"${calForm.title}" published to student calendar.`);
+  };
+
+  const handleDeleteCalendarEvent = async (id: string, title: string) => {
+    if (!confirm(`Are you sure you want to remove academic date: "${title}"?`)) return;
+    const res = await deleteCalendarEventInDb(id);
+    if (!res.success) {
+      toast.error('Delete Failed', res.error || 'Failed to remove date from calendar.');
+      return;
+    }
+    setCalendarEvents((prev) => prev.filter((c) => c.id !== id));
+    toast.info('Date Removed', `Removed "${title}" from academic calendar.`);
+  };
+
   // If not authenticated, render executive gate
   if (!isAuthenticated) {
     return (
@@ -576,6 +646,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
         </button>
 
         <button
+          onClick={() => setActiveTab('calendar')}
+          className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+            activeTab === 'calendar'
+              ? 'bg-brand-green text-white shadow-xs'
+              : 'text-text-muted hover:text-text-main hover:bg-surface-bg'
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          Calendar ({calendarEvents.length})
+        </button>
+
+        <button
           onClick={() => setActiveTab('notices')}
           className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 shrink-0 ${
             activeTab === 'notices'
@@ -758,6 +840,111 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                         </tr>
                       );
                     })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: Academic Calendar & Milestones CMS */}
+      {activeTab === 'calendar' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm sm:text-base font-extrabold text-text-main tracking-tight">
+                Academic Calendar & Milestones CMS ({calendarEvents.length} Events)
+              </h3>
+              <p className="text-xs text-text-muted mt-0.5">
+                Publish tests, examinations, and departmental deadlines visible on student interactive calendars.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => setIsCreateCalOpen(true)}
+              className="text-xs h-8.5 font-bold shadow-xs self-start sm:self-auto shrink-0"
+            >
+              <PlusCircle className="w-3.5 h-3.5 mr-1.5" /> Schedule Academic Date
+            </Button>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-border-light bg-surface-card shadow-card">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs" aria-label="Academic Calendar Schedule">
+                <caption className="sr-only">Academic Calendar Events Table</caption>
+                <thead>
+                  <tr className="border-b border-border-light bg-surface-bg font-bold text-text-muted">
+                    <th scope="col" className="py-3.5 px-4">Event Title</th>
+                    <th scope="col" className="py-3.5 px-4">Category</th>
+                    <th scope="col" className="py-3.5 px-4">Level</th>
+                    <th scope="col" className="py-3.5 px-4">Start Date</th>
+                    <th scope="col" className="py-3.5 px-4">Venue</th>
+                    <th scope="col" className="py-3.5 px-4">Status</th>
+                    <th scope="col" className="py-3.5 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border-light/60">
+                  {calendarEvents.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-text-muted">
+                        <Calendar className="w-8 h-8 text-text-subtle mx-auto mb-2 opacity-40" />
+                        <p className="font-semibold text-text-main text-xs">No Calendar Events Scheduled</p>
+                        <p className="text-[11px] text-text-muted mt-0.5">
+                          Click "Schedule Academic Date" above to add mid-semester tests or exam schedules.
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    calendarEvents.map((evt) => (
+                      <tr key={evt.id} className="hover:bg-surface-bg/60 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-text-main max-w-xs truncate">
+                          {evt.title}
+                          {evt.description && (
+                            <span className="text-[11px] text-text-muted block font-normal truncate mt-0.5">
+                              {evt.description}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
+                            evt.category === 'Examination' ? 'bg-red-50 text-red-700 border border-red-200' :
+                            evt.category === 'Continuous Assessment' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                            evt.category === 'Academic Milestone' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                            'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          }`}>
+                            {evt.category}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-text-muted font-semibold">
+                          {!evt.targetLevel ? 'All Levels' : `${evt.targetLevel}L`}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-text-main font-medium">
+                          {new Date(evt.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="py-3.5 px-4 text-text-muted text-[11px]">
+                          {evt.venue || 'TBA'}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            evt.isConfirmed ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {evt.isConfirmed ? 'Confirmed' : 'Provisional'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCalendarEvent(evt.id, evt.title)}
+                            className="p-1.5 rounded-lg text-text-muted hover:text-brand-red hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors inline-flex items-center"
+                            title="Delete Event"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>
@@ -1462,6 +1649,155 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   className="font-bold"
                 >
                   Save FAQ
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL 5: Schedule Academic Date --- */}
+      {isCreateCalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            onClick={() => setIsCreateCalOpen(false)}
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
+          />
+          <div className="relative z-10 w-full max-w-lg rounded-3xl bg-surface-card p-6 shadow-2xl border border-border-light space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-border-light">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-brand-green" />
+                <h3 className="text-sm font-bold text-text-main">Schedule Academic Date</h3>
+              </div>
+              <button
+                onClick={() => setIsCreateCalOpen(false)}
+                className="p-1.5 text-text-muted hover:text-text-main rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCalendarEvent} className="space-y-3.5 text-xs">
+              <div>
+                <label className="font-bold text-text-main block mb-1">Event Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. STA 311 Continuous Assessment Test"
+                  value={calForm.title}
+                  onChange={(e) => setCalForm({ ...calForm, title: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main focus:outline-none focus:border-brand-green"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-text-main block mb-1">Category</label>
+                  <select
+                    value={calForm.category}
+                    onChange={(e) => setCalForm({ ...calForm, category: e.target.value as CalendarCategory })}
+                    className="w-full px-3 py-2 rounded-xl border border-border-light bg-surface-bg text-text-main focus:outline-none focus:border-brand-green"
+                  >
+                    <option value="Continuous Assessment">Continuous Assessment (CA)</option>
+                    <option value="Examination">Final Examination</option>
+                    <option value="Academic Milestone">Academic Milestone</option>
+                    <option value="Departmental Event">Departmental Event</option>
+                    <option value="Registration Deadline">Registration Deadline</option>
+                    <option value="Resumption / Senate">Resumption / Senate</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-text-main block mb-1">Target Level</label>
+                  <select
+                    value={calForm.targetLevel}
+                    onChange={(e) => setCalForm({ ...calForm, targetLevel: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl border border-border-light bg-surface-bg text-text-main focus:outline-none focus:border-brand-green"
+                  >
+                    <option value="all">All Levels</option>
+                    <option value="100">100 Level</option>
+                    <option value="200">200 Level</option>
+                    <option value="300">300 Level</option>
+                    <option value="400">400 Level</option>
+                    <option value="Postgraduate">Postgraduate</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-text-main block mb-1">Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={calForm.startDate}
+                    onChange={(e) => setCalForm({ ...calForm, startDate: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-border-light bg-surface-bg text-text-main focus:outline-none focus:border-brand-green"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-text-main block mb-1">End Date (Optional)</label>
+                  <input
+                    type="date"
+                    value={calForm.endDate}
+                    onChange={(e) => setCalForm({ ...calForm, endDate: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-border-light bg-surface-bg text-text-main focus:outline-none focus:border-brand-green"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-text-main block mb-1">Venue / Room (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Department Large Lecture Theatre (LLT)"
+                  value={calForm.venue}
+                  onChange={(e) => setCalForm({ ...calForm, venue: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main focus:outline-none focus:border-brand-green"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-text-main block mb-1">Description / Notes</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Bring scientific calculators and Student ID card."
+                  value={calForm.description}
+                  onChange={(e) => setCalForm({ ...calForm, description: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main focus:outline-none focus:border-brand-green"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="cal-is-confirmed"
+                  checked={calForm.isConfirmed}
+                  onChange={(e) => setCalForm({ ...calForm, isConfirmed: e.target.checked })}
+                  className="rounded text-brand-green focus:ring-brand-green"
+                />
+                <label htmlFor="cal-is-confirmed" className="text-xs text-text-main font-medium cursor-pointer">
+                  Confirmed Date (uncheck if provisional / pending Senate approval)
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border-light">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsCreateCalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  className="font-bold"
+                >
+                  Publish to Calendar
                 </Button>
               </div>
             </form>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Search,
@@ -16,28 +16,37 @@ import {
   Sun,
   Moon,
   Settings,
-  Palette
+  Palette,
+  Calendar
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useTheme } from '../../context/ThemeContext';
+import { getCachedStudentProfile } from '../../lib/supabase';
+import { UserProfile } from '../../types';
 
 interface NavbarProps {
   onOpenSearch: () => void;
   onOpenSubmit: () => void;
   onOpenSettings?: () => void;
+  onOpenAuth?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOpenSettings }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOpenSettings, onOpenAuth }) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(() => getCachedStudentProfile());
   const { actualTheme, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    setProfile(getCachedStudentProfile());
+  }, [location.pathname]);
 
   const navLinks = [
     { name: 'Resources', path: '/resources', icon: BookOpen },
     { name: 'Past Questions', path: '/past-questions', icon: FileText },
+    { name: 'Calendar', path: '/calendar', icon: Calendar },
     { name: 'Notices', path: '/notices', icon: Bell },
     { name: 'Opportunities', path: '/opportunities', icon: GraduationCap },
-    { name: 'Get Help', path: '/help', icon: HelpCircle },
     { name: 'Dashboard', path: '/dashboard', icon: User },
   ];
 
@@ -148,6 +157,34 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
                 aria-label="Open Settings"
               >
                 <Settings className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Student Study Locker Account (WhatsApp / Spotify Quiet Style) */}
+            {onOpenAuth && (
+              <button
+                type="button"
+                onClick={onOpenAuth}
+                className="p-1 sm:px-2.5 sm:py-1.5 rounded-xl border border-border-light bg-surface-bg hover:border-brand-green/50 transition-all cursor-pointer min-h-[36px] flex items-center gap-1.5"
+                title={profile ? `Signed in as ${profile.displayName}` : 'Student Study Locker / Sign In'}
+              >
+                {profile ? (
+                  <>
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 text-brand-green text-[10px] font-bold flex items-center justify-center border border-emerald-300 dark:border-emerald-800">
+                      {profile.displayName.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="hidden md:inline text-xs font-semibold text-text-main max-w-[80px] truncate">
+                      {profile.displayName.split(' ')[0]}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <User className="w-4 h-4 text-text-muted" />
+                    <span className="hidden sm:inline text-xs font-semibold text-text-muted hover:text-text-main">
+                      Sign In
+                    </span>
+                  </>
+                )}
               </button>
             )}
 

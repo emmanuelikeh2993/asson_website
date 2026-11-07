@@ -5,10 +5,34 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "portrait-primary",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#0C1115",
+  "theme_color": "#087A3E",
   "categories": ["education", "books", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Past Examination Papers",
+      "short_name": "Past Papers",
+      "description": "Quickly search past examination questions",
+      "url": "/past-questions",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Academic Calendar",
+      "short_name": "Calendar",
+      "description": "View CA tests, exam timetables and milestones",
+      "url": "/calendar",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Department Notices",
+      "short_name": "Notices",
+      "description": "Official announcements & event RSVPs",
+      "url": "/notices",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icon-192.png",

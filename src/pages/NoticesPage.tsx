@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { MOCK_NOTICES } from '../lib/mockData';
-import { fetchNotices } from '../lib/supabase';
+import { fetchNotices, registerEventRsvp, isNoticeRsvpd } from '../lib/supabase';
 import { Notice, NoticeCategory } from '../types';
 import { Badge } from '../components/ui/Badge';
-import { Bell, Calendar, Building2, Pin, ArrowRight, Share2, CheckCircle2 } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { Bell, Calendar, Building2, Pin, ArrowRight, Share2, CheckCircle2, MapPin, Clock, Users, ExternalLink, Check } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
 
@@ -11,6 +12,7 @@ export const NoticesPage: React.FC = () => {
   const [notices, setNotices] = useState<Notice[]>(MOCK_NOTICES);
   const [selectedCategory, setSelectedCategory] = useState<NoticeCategory | 'All'>('All');
   const [activeNotice, setActiveNotice] = useState<Notice | null>(MOCK_NOTICES[0]);
+  const [rsvpdNotices, setRsvpdNotices] = useState<Record<string, boolean>>({});
   const toast = useToast();
 
   useEffect(() => {
@@ -18,9 +20,29 @@ export const NoticesPage: React.FC = () => {
       if (data && data.length > 0) {
         setNotices(data);
         setActiveNotice(data[0]);
+
+        // Load RSVP status
+        const statuses: Record<string, boolean> = {};
+        data.forEach((n) => {
+          statuses[n.id] = isNoticeRsvpd(n.id);
+        });
+        setRsvpdNotices(statuses);
       }
     });
   }, []);
+
+  const handleRsvp = async (n: Notice) => {
+    if (rsvpdNotices[n.id]) return;
+    const res = await registerEventRsvp(n.id);
+    setRsvpdNotices((prev) => ({ ...prev, [n.id]: true }));
+    setNotices((prev) =>
+      prev.map((item) => (item.id === n.id ? { ...item, rsvpCount: res.newCount } : item))
+    );
+    if (activeNotice && activeNotice.id === n.id) {
+      setActiveNotice({ ...activeNotice, rsvpCount: res.newCount });
+    }
+    toast.success('RSVP Confirmed', res.message);
+  };
 
   const categories: (NoticeCategory | 'All')[] = ['All', 'ASSON', 'Department', 'Faculty', 'University'];
 
@@ -227,6 +249,81 @@ export const NoticesPage: React.FC = () => {
                     <div className="p-4 rounded-2xl bg-surface-bg border border-border-light text-xs font-medium text-text-main leading-relaxed">
                       <strong className="text-brand-deep block mb-1">Executive Summary:</strong>
                       {activeNotice.summary}
+                    </div>
+                  )}
+
+                  {/* Quiet Event & RSVP Block (WhatsApp Calm Design) */}
+                  {(activeNotice.eventDate || activeNotice.hasInAppRsvp || activeNotice.venue) && (
+                    <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-brand-green block">
+                            Programme Schedule & Attendance
+                          </span>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-text-main font-semibold">
+                            {activeNotice.eventDate && (
+                              <span className="inline-flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5 text-brand-green" />
+                                {formatDate(activeNotice.eventDate)}
+                              </span>
+                            )}
+                            {activeNotice.eventTime && (
+                              <span className="inline-flex items-center gap-1.5 font-normal text-text-muted">
+                                <Clock className="w-3.5 h-3.5" />
+                                {activeNotice.eventTime}
+                              </span>
+                            )}
+                            {activeNotice.venue && (
+                              <span className="inline-flex items-center gap-1.5 font-normal text-text-muted">
+                                <MapPin className="w-3.5 h-3.5 text-brand-green" />
+                                {activeNotice.venue}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* RSVP Action */}
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          {activeNotice.rsvpUrl ? (
+                            <a
+                              href={activeNotice.rsvpUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep transition-colors shadow-2xs"
+                            >
+                              <span>Register Link</span>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleRsvp(activeNotice)}
+                              disabled={rsvpdNotices[activeNotice.id]}
+                              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs ${
+                                rsvpdNotices[activeNotice.id]
+                                  ? 'bg-emerald-700 text-white cursor-default'
+                                  : 'bg-brand-green text-white hover:bg-brand-deep cursor-pointer active:scale-98'
+                              }`}
+                            >
+                              {rsvpdNotices[activeNotice.id] ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5" /> You're Attending
+                                </>
+                              ) : (
+                                <>
+                                  <Users className="w-3.5 h-3.5" /> RSVP to Attend
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {activeNotice.rsvpCount !== undefined && activeNotice.rsvpCount > 0 && (
+                        <p className="text-[11px] text-text-muted">
+                          <strong>{activeNotice.rsvpCount}</strong> students registered to attend.
+                        </p>
+                      )}
                     </div>
                   )}
 

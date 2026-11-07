@@ -51,6 +51,45 @@ export interface Notice {
   deadline?: string;
   issuer: string;
   isExpired: boolean;
+  // Event metadata attached to announcements (Spotify / WhatsApp quiet integration)
+  eventDate?: string;
+  eventTime?: string;
+  venue?: string;
+  rsvpUrl?: string;
+  hasInAppRsvp?: boolean;
+  rsvpCount?: number;
+}
+
+export type CalendarCategory = 
+  | 'Examination' 
+  | 'Continuous Assessment' 
+  | 'Registration Deadline' 
+  | 'Departmental Event' 
+  | 'Resumption / Senate' 
+  | 'Academic Milestone';
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  category: CalendarCategory;
+  startDate: string; // YYYY-MM-DD
+  endDate?: string;
+  startTime?: string;
+  targetLevel?: AcademicLevel;
+  venue?: string;
+  isConfirmed: boolean;
+  noticeId?: string;
+}
+
+export interface UserProfile {
+  id: string;
+  displayName: string;
+  email: string;
+  level: AcademicLevel;
+  department: string;
+  avatarUrl?: string;
+  role?: string;
 }
 
 export type OpportunityCategory = 'Scholarship' | 'Internship';

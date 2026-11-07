@@ -1,8 +1,9 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { AcademicResource } from '../../../types';
 import { Badge } from '../../ui/Badge';
 import { Button } from '../../ui/Button';
-import { FileText, Download, Eye, Flag } from 'lucide-react';
+import { FileText, Download, Eye, Flag, Share2 } from 'lucide-react';
 import { formatFileSize } from '../../../lib/utils';
 import { triggerResourceDownload } from '../../../lib/download';
 import { useToast } from '../../ui/Toast';
@@ -52,9 +53,15 @@ export const DownloadCard: React.FC<DownloadCardProps> = ({
         </div>
 
         {/* Title */}
-        <h4 className="text-sm font-bold text-text-main group-hover:text-brand-green transition-colors line-clamp-2 mb-1 leading-snug">
-          {resource.title}
-        </h4>
+        <Link 
+          to={resource.type === 'Past Question' ? `/past-questions/${resource.id}` : `/resources/${resource.id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="block group/link"
+        >
+          <h4 className="text-sm font-bold text-text-main group-hover/link:text-brand-green group-hover:text-brand-green transition-colors line-clamp-2 mb-1 leading-snug">
+            {resource.title}
+          </h4>
+        </Link>
 
         {/* Course Title & Session */}
         <p className="text-xs text-text-muted mb-3 line-clamp-1">

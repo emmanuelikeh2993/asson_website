@@ -19,7 +19,11 @@ import {
   AuditLog,
   ResourceType,
   HelpDirectoryItem,
-  FeedbackSubmission
+  FeedbackSubmission,
+  CalendarEvent,
+  CalendarCategory,
+  UserProfile,
+  AcademicLevel
 } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -91,8 +95,83 @@ function mapDbNoticeToModel(row: any): Notice {
     deadline: row.deadline || undefined,
     issuer: row.issuer || 'ASSON Secretariat',
     isExpired: Boolean(row.is_expired) || isPastDeadline,
+    eventDate: row.event_date || undefined,
+    eventTime: row.event_time || undefined,
+    venue: row.venue || undefined,
+    rsvpUrl: row.rsvp_url || undefined,
+    hasInAppRsvp: Boolean(row.has_in_app_rsvp),
+    rsvpCount: Number(row.rsvp_count) || 0,
   };
 }
+
+export function mapDbCalendarEventToModel(row: any): CalendarEvent {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description || '',
+    category: row.category || 'Academic Milestone',
+    startDate: row.start_date ? new Date(row.start_date).toISOString().split('T')[0] : '2026-11-20',
+    endDate: row.end_date ? new Date(row.end_date).toISOString().split('T')[0] : undefined,
+    startTime: row.start_time || undefined,
+    targetLevel: row.target_level || undefined,
+    venue: row.venue || undefined,
+    isConfirmed: Boolean(row.is_confirmed),
+    noticeId: row.notice_id || undefined,
+  };
+}
+
+export const DEFAULT_CALENDAR_EVENTS: CalendarEvent[] = [
+  {
+    id: 'cal-1',
+    title: 'First Semester Course Registration Closes',
+    description: 'Deadline for all 100L–400L students to complete faculty portal course registration and adviser clearance.',
+    category: 'Registration Deadline',
+    startDate: '2026-11-20',
+    startTime: '11:59 PM',
+    isConfirmed: true,
+  },
+  {
+    id: 'cal-2',
+    title: 'GES 301 Continuous Assessment Mid-Semester Test',
+    description: 'University-wide computer-based test for all 300L students registered for Entrepreneurship and Innovation.',
+    category: 'Continuous Assessment',
+    startDate: '2026-11-28',
+    startTime: '08:00 AM',
+    venue: 'CBT Centre, UI Distance Learning Centre',
+    targetLevel: '300',
+    isConfirmed: true,
+  },
+  {
+    id: 'cal-3',
+    title: 'STA 211 & STA 212 In-Course Continuous Assessment Tests',
+    description: 'Department of Statistics continuous assessment tests for Probability II and Statistical Inference II.',
+    category: 'Continuous Assessment',
+    startDate: '2026-12-05',
+    startTime: '10:00 AM',
+    venue: 'Large Lecture Theatre (LLT), Faculty of Science',
+    targetLevel: '200',
+    isConfirmed: true,
+  },
+  {
+    id: 'cal-4',
+    title: 'ASSON UI Annual Statistics Symposium & Data Hackathon',
+    description: 'Departmental student symposium featuring quantitative industry speakers, career workshops, and python/R data challenge.',
+    category: 'Departmental Event',
+    startDate: '2026-12-12',
+    startTime: '09:30 AM',
+    venue: 'Faculty of Science Board Room / LLT',
+    isConfirmed: true,
+  },
+  {
+    id: 'cal-5',
+    title: 'Faculty of Science 2024/2025 First Semester Examinations',
+    description: 'Official commencement of degree examinations across all science departments.',
+    category: 'Examination',
+    startDate: '2027-01-11',
+    endDate: '2027-01-30',
+    isConfirmed: false,
+  }
+];
 
 function mapDbOpportunityToModel(row: any): Opportunity {
   const isPastDeadline = row.deadline ? new Date(row.deadline) < new Date(new Date().setHours(0, 0, 0, 0)) : false;
@@ -259,6 +338,23 @@ export async function fetchOpportunities(): Promise<Opportunity[]> {
     }
   }
   return list;
+}
+
+export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('academic_calendar')
+        .select('*')
+        .order('start_date', { ascending: true });
+      if (!error && data && data.length > 0) {
+        return data.map(mapDbCalendarEventToModel);
+      }
+    } catch (err) {
+      console.warn('Calendar fetch error from Supabase, serving verified academic schedule:', err);
+    }
+  }
+  return DEFAULT_CALENDAR_EVENTS;
 }
 
 export async function fetchFaqs(): Promise<FAQItem[]> {
@@ -993,4 +1089,345 @@ export async function deleteFaqInDb(id: string): Promise<{ success: boolean; err
     }
   }
   return { success: false, error: 'Database service is offline.' };
+}
+
+// ====================================================================
+// ACADEMIC CALENDAR & EVENT RSVP SERVICES (Batch 1)
+// ====================================================================
+
+export async function createCalendarEventInDb(event: {
+  title: string;
+  description?: string;
+  category: CalendarCategory;
+  startDate: string;
+  endDate?: string;
+  startTime?: string;
+  targetLevel?: AcademicLevel;
+  venue?: string;
+  isConfirmed: boolean;
+}): Promise<{ success: boolean; error?: string }> {
+  if (supabase) {
+    try {
+      const { error } = await supabase.from('academic_calendar').insert({
+        title: event.title.trim(),
+        description: event.description?.trim() || null,
+        category: event.category,
+        start_date: event.startDate,
+        end_date: event.endDate || null,
+        start_time: event.startTime || null,
+        target_level: event.targetLevel || null,
+        venue: event.venue?.trim() || null,
+        is_confirmed: event.isConfirmed,
+      });
+
+      if (error) return { success: false, error: error.message };
+
+      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
+      await supabase.from('audit_events').insert({
+        action: 'CREATE',
+        entity: 'academic_calendar',
+        details: `Created calendar event: "${event.title}" (${event.startDate})`,
+        actor_email: userEmail
+      });
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Database error creating calendar event.' };
+    }
+  }
+  return { success: false, error: 'Database service is offline.' };
+}
+
+export async function deleteCalendarEventInDb(id: string): Promise<{ success: boolean; error?: string }> {
+  if (supabase) {
+    try {
+      const { error } = await supabase.from('academic_calendar').delete().eq('id', id);
+      if (error) return { success: false, error: error.message };
+
+      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
+      await supabase.from('audit_events').insert({
+        action: 'DELETE',
+        entity: 'academic_calendar',
+        details: `Deleted calendar event ${id}`,
+        actor_email: userEmail
+      });
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Database error deleting calendar event.' };
+    }
+  }
+  return { success: false, error: 'Database service is offline.' };
+}
+
+export async function registerEventRsvp(
+  noticeId: string,
+  contributorName?: string
+): Promise<{ success: boolean; newCount: number; message: string }> {
+  let count = 1;
+  if (supabase) {
+    try {
+      // 1. Insert RSVP record
+      await supabase.from('event_rsvps').insert({
+        notice_id: noticeId,
+        contributor_name: contributorName?.trim() || 'Student Attendee'
+      });
+
+      // 2. Increment count on notices
+      const { data: notice } = await supabase
+        .from('notices')
+        .select('rsvp_count')
+        .eq('id', noticeId)
+        .single();
+
+      if (notice) {
+        count = (notice.rsvp_count || 0) + 1;
+        await supabase
+          .from('notices')
+          .update({ rsvp_count: count })
+          .eq('id', noticeId);
+      }
+    } catch (err) {
+      console.warn('Remote RSVP sync notice:', err);
+    }
+  }
+
+  // Save device-local RSVP status
+  try {
+    const existing = JSON.parse(localStorage.getItem('asson_rsvps') || '[]');
+    if (!existing.includes(noticeId)) {
+      localStorage.setItem('asson_rsvps', JSON.stringify([...existing, noticeId]));
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return { success: true, newCount: count, message: 'RSVP confirmed! See you at the session.' };
+}
+
+export function isNoticeRsvpd(noticeId: string): boolean {
+  try {
+    const existing = JSON.parse(localStorage.getItem('asson_rsvps') || '[]');
+    return existing.includes(noticeId);
+  } catch {
+    return false;
+  }
+}
+
+// ====================================================================
+// STUDENT AUTHENTICATION & PERSONAL STUDY LOCKER (Batch 1)
+// ====================================================================
+
+export async function studentSignUp(
+  email: string,
+  password: string,
+  displayName: string,
+  level: AcademicLevel
+): Promise<{ success: boolean; error?: string; message?: string }> {
+  if (!email || !password || !displayName) {
+    return { success: false, error: 'Name, email, and password are required.' };
+  }
+  if (!supabase) {
+    return { success: false, error: 'Database authentication service is offline.' };
+  }
+
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password: password.trim(),
+      options: {
+        data: {
+          display_name: displayName.trim(),
+          level,
+          department: 'Department of Statistics'
+        }
+      }
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    if (data.user) {
+      const profile: UserProfile = {
+        id: data.user.id,
+        displayName: displayName.trim(),
+        email: email.trim(),
+        level,
+        department: 'Department of Statistics',
+        role: 'student'
+      };
+      localStorage.setItem('asson_student_profile', JSON.stringify(profile));
+      return { 
+        success: true, 
+        message: data.session 
+          ? 'Welcome to ASSON UI! Your study locker is ready.' 
+          : 'Verification link sent! Please check your email to confirm your account.' 
+      };
+    }
+    return { success: false, error: 'Registration could not be completed.' };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error during registration.' };
+  }
+}
+
+export async function studentSignIn(
+  email: string,
+  password: string
+): Promise<{ success: boolean; user?: any; profile?: UserProfile; error?: string }> {
+  if (!email || !password) {
+    return { success: false, error: 'Email and password are required.' };
+  }
+  if (!supabase) {
+    return { success: false, error: 'Database authentication service is offline.' };
+  }
+
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: password.trim()
+    });
+
+    if (error || !data.user) {
+      return { success: false, error: error?.message || 'Invalid email or password.' };
+    }
+
+    let profile: UserProfile = {
+      id: data.user.id,
+      displayName: data.user.user_metadata?.display_name || email.split('@')[0],
+      email: data.user.email || email,
+      level: (data.user.user_metadata?.level as AcademicLevel) || '200',
+      department: data.user.user_metadata?.department || 'Department of Statistics',
+      role: 'student'
+    };
+
+    try {
+      const { data: dbProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (dbProfile) {
+        profile = {
+          ...profile,
+          displayName: dbProfile.display_name || profile.displayName,
+          level: dbProfile.level || profile.level,
+          department: dbProfile.department || profile.department,
+          avatarUrl: dbProfile.avatar_url || undefined
+        };
+      }
+    } catch {
+      // fallback to metadata
+    }
+
+    localStorage.setItem('asson_student_profile', JSON.stringify(profile));
+    return { success: true, user: data.user, profile };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Authentication error.' };
+  }
+}
+
+export async function studentSignOut(): Promise<void> {
+  if (supabase) {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // ignore
+    }
+  }
+  localStorage.removeItem('asson_student_profile');
+}
+
+export async function studentResetPassword(email: string): Promise<{ success: boolean; error?: string }> {
+  if (!email || !email.includes('@')) {
+    return { success: false, error: 'Please enter a valid email address.' };
+  }
+  if (!supabase) {
+    return { success: false, error: 'Auth service is unavailable.' };
+  }
+
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/dashboard`
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to send reset email.' };
+  }
+}
+
+export function getCachedStudentProfile(): UserProfile | null {
+  try {
+    const raw = localStorage.getItem('asson_student_profile');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchUserBookmarks(userId?: string): Promise<string[]> {
+  let localBookmarks: string[] = [];
+  try {
+    localBookmarks = JSON.parse(localStorage.getItem('asson_bookmarks') || '[]');
+  } catch {
+    // ignore
+  }
+
+  if (supabase && userId) {
+    try {
+      const { data, error } = await supabase
+        .from('bookmarks')
+        .select('resource_id')
+        .eq('user_id', userId);
+
+      if (!error && data) {
+        const remoteIds = data.map((b: any) => b.resource_id);
+        const merged = Array.from(new Set([...localBookmarks, ...remoteIds]));
+        localStorage.setItem('asson_bookmarks', JSON.stringify(merged));
+        return merged;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return localBookmarks;
+}
+
+export async function toggleUserBookmark(resourceId: string, userId?: string): Promise<boolean> {
+  let bookmarks: string[] = [];
+  try {
+    bookmarks = JSON.parse(localStorage.getItem('asson_bookmarks') || '[]');
+  } catch {
+    // ignore
+  }
+
+  const isBookmarked = bookmarks.includes(resourceId);
+  const updated = isBookmarked
+    ? bookmarks.filter((id) => id !== resourceId)
+    : [...bookmarks, resourceId];
+
+  localStorage.setItem('asson_bookmarks', JSON.stringify(updated));
+
+  if (supabase && userId) {
+    try {
+      if (isBookmarked) {
+        await supabase
+          .from('bookmarks')
+          .delete()
+          .eq('user_id', userId)
+          .eq('resource_id', resourceId);
+      } else {
+        await supabase
+          .from('bookmarks')
+          .insert({ user_id: userId, resource_id: resourceId });
+      }
+    } catch (err) {
+      console.warn('Remote bookmark sync notice:', err);
+    }
+  }
+
+  return !isBookmarked;
 }

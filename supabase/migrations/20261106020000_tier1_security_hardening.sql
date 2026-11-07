@@ -40,3 +40,4 @@ BEGIN
         ALTER TABLE public.profiles DROP COLUMN matric_number;
     END IF;
 END $$;
+

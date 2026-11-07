@@ -7,11 +7,14 @@ import { InstallPwaPrompt } from './components/layout/InstallPwaPrompt';
 import { CommandPalette } from './components/features/resources/CommandPalette';
 import { SubmitResourceModal } from './components/features/resources/SubmitResourceModal';
 import { SettingsModal } from './components/features/settings/SettingsModal';
+import { AuthModal } from './components/features/auth/AuthModal';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { ThemeProvider } from './context/ThemeContext';
 import { HomePage } from './pages/HomePage';
 import { ResourcesPage } from './pages/ResourcesPage';
+import { ResourceDetailPage } from './pages/ResourceDetailPage';
 import { PastQuestionsPage } from './pages/PastQuestionsPage';
+import { CalendarPage } from './pages/CalendarPage';
 import { NoticesPage } from './pages/NoticesPage';
 import { OpportunitiesPage } from './pages/OpportunitiesPage';
 import { FaqPage } from './pages/FaqPage';
@@ -29,11 +32,12 @@ export function AppContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
 
-  // Handle direct navigation to submission or settings modal via query or route
+  // Handle direct navigation to submission, settings, or auth modal via query or route
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('submit') === 'true' || location.pathname === '/submit') {
@@ -41,6 +45,9 @@ export function AppContent() {
     }
     if (params.get('settings') === 'true' || location.pathname === '/settings') {
       setIsSettingsOpen(true);
+    }
+    if (params.get('auth') === 'true' || location.pathname === '/auth' || location.pathname === '/login') {
+      setIsAuthOpen(true);
     }
   }, [location.pathname, location.search]);
 
@@ -67,7 +74,7 @@ export function AppContent() {
   }, []);
 
   const handleSelectResource = (resource: AcademicResource) => {
-    navigate(`/resources?id=${resource.id}`);
+    navigate(`/resources/${resource.id}`);
   };
 
   const handleSelectCourse = (courseCode: string) => {
@@ -84,6 +91,7 @@ export function AppContent() {
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenSubmit={() => setIsSubmitOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
       />
 
       {/* Main Routed Page Content */}
@@ -107,6 +115,15 @@ export function AppContent() {
                 />
               } 
             />
+            {/* Shareable Resource Detail Pages (WhatsApp / Telegram Direct Link Previews) */}
+            <Route 
+              path="/resources/:id" 
+              element={
+                <ResourceDetailPage 
+                  onOpenSubmit={() => setIsSubmitOpen(true)} 
+                />
+              } 
+            />
             <Route 
               path="/past-questions" 
               element={
@@ -115,6 +132,16 @@ export function AppContent() {
                 />
               } 
             />
+            <Route 
+              path="/past-questions/:id" 
+              element={
+                <ResourceDetailPage 
+                  onOpenSubmit={() => setIsSubmitOpen(true)} 
+                />
+              } 
+            />
+            {/* Interactive Academic Calendar & Timetable */}
+            <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/notices" element={<NoticesPage />} />
             <Route path="/opportunities" element={<OpportunitiesPage />} />
             <Route path="/faqs" element={<FaqPage />} />
@@ -125,6 +152,7 @@ export function AppContent() {
                 <DashboardPage 
                   onOpenSubmit={() => setIsSubmitOpen(true)} 
                   onOpenSettings={() => setIsSettingsOpen(true)}
+                  onOpenAuth={() => setIsAuthOpen(true)}
                 />
               } 
             />
@@ -150,6 +178,8 @@ export function AppContent() {
             {/* Seamless Aliases and Deep-linking Routes */}
             <Route path="/submit" element={<Navigate to="/resources?submit=true" replace />} />
             <Route path="/settings" element={<Navigate to="/resources?settings=true" replace />} />
+            <Route path="/login" element={<Navigate to="/resources?auth=true" replace />} />
+            <Route path="/auth" element={<Navigate to="/resources?auth=true" replace />} />
             <Route path="/library" element={<Navigate to="/resources" replace />} />
             <Route path="/grants" element={<Navigate to="/opportunities" replace />} />
             <Route path="/get-help" element={<Navigate to="/help" replace />} />
@@ -232,6 +262,16 @@ export function AppContent() {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+        onOpenAuth={() => {
+          setIsSettingsOpen(false);
+          setIsAuthOpen(true);
+        }}
+      />
+
+      {/* Student Study Locker Account Modal (WhatsApp / Spotify-style quiet auth) */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
       />
     </div>
   );

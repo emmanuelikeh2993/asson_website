@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MOCK_SUBMISSIONS, MOCK_RESOURCES } from '../lib/mockData';
-import { fetchStudentSubmissions, fetchResources } from '../lib/supabase';
-import { StudentSubmission, AcademicResource } from '../types';
+import { fetchStudentSubmissions, fetchResources, getCachedStudentProfile, fetchUserBookmarks } from '../lib/supabase';
+import { StudentSubmission, AcademicResource, UserProfile } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { 
@@ -16,7 +16,8 @@ import {
   BookOpen,
   History,
   ShieldCheck,
-  Settings
+  Settings,
+  LogIn
 } from 'lucide-react';
 import { formatFileSize, formatDate } from '../lib/utils';
 import { triggerResourceDownload } from '../lib/download';
@@ -25,22 +26,33 @@ import { useToast } from '../components/ui/Toast';
 interface DashboardPageProps {
   onOpenSubmit: () => void;
   onOpenSettings?: () => void;
+  onOpenAuth?: () => void;
 }
 
-export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenSubmit, onOpenSettings }) => {
+export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenSubmit, onOpenSettings, onOpenAuth }) => {
+  const [profile, setProfile] = useState<UserProfile | null>(() => getCachedStudentProfile());
   const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
-  const [bookmarks, setBookmarks] = useState<AcademicResource[]>(MOCK_RESOURCES.slice(0, 3));
+  const [bookmarks, setBookmarks] = useState<AcademicResource[]>([]);
   const [downloadHistory, setDownloadHistory] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'submissions' | 'bookmarks' | 'downloads'>('submissions');
   const toast = useToast();
 
   useEffect(() => {
+    const cached = getCachedStudentProfile();
+    setProfile(cached);
+
     fetchStudentSubmissions().then((data) => {
       setSubmissions(data || []);
     });
-    fetchResources().then((data) => {
-      if (data && data.length > 0) {
-        setBookmarks(data.slice(0, 3));
+
+    Promise.all([fetchResources(), fetchUserBookmarks(cached?.id)]).then(([allRes, bmarkIds]) => {
+      if (allRes && allRes.length > 0) {
+        if (bmarkIds && bmarkIds.length > 0) {
+          const userBookmarks = allRes.filter((r) => bmarkIds.includes(r.id));
+          setBookmarks(userBookmarks);
+        } else {
+          setBookmarks(allRes.slice(0, 2));
+        }
       }
     });
 
@@ -60,29 +72,41 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenSubmit, onOp
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6 sm:space-y-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6 sm:space-y-8 animate-in fade-in duration-200">
       {/* 1. Device Study Locker Banner (Zero-Login Transparency) */}
       <div className="rounded-3xl bg-gradient-to-r from-brand-deep to-emerald-900 text-white p-6 sm:p-8 shadow-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0">
-            <User className="w-7 h-7 sm:w-8 sm:h-8" />
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 font-bold text-xl">
+            {profile ? profile.displayName.charAt(0).toUpperCase() : <User className="w-7 h-7 sm:w-8 sm:h-8" />}
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight">
-                My Academic Study Locker
+                {profile ? `${profile.displayName}'s Study Locker` : 'My Academic Study Locker'}
               </h1>
               <span className="text-[10px] font-bold bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full">
-                Device-Local Storage
+                {profile ? `${profile.level}L • Cloud Synchronized` : 'Device-Local Storage'}
               </span>
             </div>
-            <p className="text-xs text-emerald-100/80 mt-1">
-              Your submissions, bookmarks, and downloads are preserved locally on this browser. Zero login or account required.
+            <p className="text-xs text-emerald-100/80 mt-1 max-w-xl leading-relaxed">
+              {profile 
+                ? 'Your bookmarks, download history, and submitted papers are synchronized with your verified student account.'
+                : 'Your submissions, bookmarks, and downloads are preserved locally on this browser. Zero login or account required.'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          {!profile && onOpenAuth && (
+            <button
+              type="button"
+              onClick={onOpenAuth}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In / Sync</span>
+            </button>
+          )}
           {onOpenSettings && (
             <button
               type="button"

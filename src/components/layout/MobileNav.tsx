@@ -1,21 +1,20 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, FileText, BookOpen, Bell, GraduationCap } from 'lucide-react';
+import { Home, FileText, Calendar, Bell, Settings } from 'lucide-react';
 
 interface MobileNavProps {
   onOpenSubmit?: () => void;
   onOpenSettings?: () => void;
 }
 
-export const MobileNav: React.FC<MobileNavProps> = () => {
+export const MobileNav: React.FC<MobileNavProps> = ({ onOpenSettings }) => {
   const location = useLocation();
 
   const navTabs = [
     { name: 'Home', path: '/', icon: Home },
     { name: 'Past Papers', path: '/past-questions', icon: FileText },
-    { name: 'Library', path: '/resources', icon: BookOpen },
+    { name: 'Calendar', path: '/calendar', icon: Calendar },
     { name: 'Notices', path: '/notices', icon: Bell },
-    { name: 'Grants', path: '/opportunities', icon: GraduationCap },
   ];
 
   return (
@@ -32,7 +31,7 @@ export const MobileNav: React.FC<MobileNavProps> = () => {
             to={tab.path}
             className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 min-h-[46px] rounded-xl transition-all duration-150 active:scale-95 ${
               isActive
-                ? 'text-brand-green font-bold bg-emerald-50/70 shadow-2xs'
+                ? 'text-brand-green font-bold bg-emerald-50/70 dark:bg-emerald-950/40 shadow-2xs'
                 : 'text-text-muted hover:text-text-main'
             }`}
           >
@@ -43,6 +42,19 @@ export const MobileNav: React.FC<MobileNavProps> = () => {
           </Link>
         );
       })}
+
+      {/* 5th Tab: Preferences & Settings (WhatsApp/Telegram/Claude style) */}
+      <button
+        type="button"
+        onClick={onOpenSettings}
+        className="flex flex-col items-center justify-center flex-1 py-1.5 px-1 min-h-[46px] rounded-xl transition-all duration-150 active:scale-95 text-text-muted hover:text-brand-green cursor-pointer"
+        aria-label="Preferences and Settings"
+      >
+        <Settings className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.8]" />
+        <span className="text-[10px] sm:text-[11px] mt-1 font-medium leading-none tracking-tight">
+          Settings
+        </span>
+      </button>
     </nav>
   );
 };
