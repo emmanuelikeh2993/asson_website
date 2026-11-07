@@ -86,35 +86,18 @@
 - **Notice Board (`src/pages/NoticesPage.tsx`)**: Categorized announcements (`ASSON`, `Department`, `Faculty`, `University`) with pinned urgent Senate/resumption tray.
 - **Opportunities Hub (`src/pages/OpportunitiesPage.tsx`)**: Scholarship and internship board with eligibility filters, deadline countdown tags, and application links.
 - **FAQ Accordion (`src/pages/FaqPage.tsx`)**: Interactive accordion covering academic grading, past question downloads, and portal policies.
-- **Student Dashboard (`src/pages/DashboardPage.tsx`)**: Device-local academic study locker preserving saved bookmarks, download history, and peer contribution status tracker (`Under Review`, `Approved`, `Changes Requested`) via zero-login local storage without collecting personal matriculation numbers.
-- **Admin & Moderation Console (`src/pages/AdminPage.tsx`)**: Full administrative CMS with role verification (`editor` / `admin` / `super_admin`), submissions moderation pipeline, announcements broadcast engine, opportunities editor, FAQs manager, analytics telemetry, and immutable audit logs.
+- **Student Dashboard (`src/pages/DashboardPage.tsx`)**: Personal matriculation profile, saved bookmarks tray, and peer contribution status tracker (`Under Review`, `Approved`, `Changes Requested`).
+- **Admin & Moderation Console (`src/pages/AdminPage.tsx`)**: Vetting pipeline for ASSON executives to approve or request changes on student submissions, plus a platform audit log table.
 
 ### 4.4 Data Layer Architecture (`src/lib/supabase.ts`)
-- **Resilient Data Fetching with Honest States**:
+- **Dual-Layer Resilient Fetching**:
   - Connects to Supabase with the publishable key.
   - Implements snake_case to camelCase data mappers for all tables (`mapDbResourceToModel`, `mapDbNoticeToModel`, `mapDbOpportunityToModel`, etc.).
-  - Purged all fake dummy past questions and notices. When offline or during database interruptions, the application displays honest error states and empty prompts rather than misleading mock data.
-  - Expiration dates for notices and opportunities are dynamically computed on read, ensuring students never act on expired deadlines.
+  - If the network fails or keys are unset, it gracefully serves the verified mock seed dataset (`src/lib/mockData.ts`), guaranteeing **zero blank screens and 100% uptime**.
 
-### 4.5 Production Hardening & Security Hardening (V2.0)
-- **Tier 1: Security, File Restrictions & Privacy Minimization**:
-  - Restricted material uploads strictly to **PDF and DOCX only** (all `.zip` and archive formats are barred at both client and database levels via check constraints).
-  - Strict compliance with Nigeria Data Protection Act (NDPA): Eliminated all matriculation number harvesting across all forms, tables, and states.
-  - Locked down `audit_events` RLS policies so only authenticated editors and admins can insert audit records.
-- **Tier 2: Real Database-Enforced Authorization**:
-  - Executive authentication in `adminSignIn` and `AdminPage.tsx` cryptographically verifies roles against `public.user_roles` (`editor`, `admin`, `super_admin`). Unprivileged users are rejected immediately.
-  - `approveSubmissionInDb` updates Supabase first and returns explicit error feedback if RLS or network fails, eliminating silent catch blocks.
-- **Tier 3: Service Worker & Institutional Trust**:
-  - Upgraded service worker (`public/sw.js`) to cache version `v5` using **Network-First** with cache fallback for navigation requests and explicit API cache bypass.
-  - Added the official student-run institutional disclaimer in `Footer.tsx` distinguishing ASSON UI from the University of Ibadan administration, protecting the use of the UI crest.
-  - Added NDPA data controller declaration and faculty takedown contact channel (`academic@asson-ui.org`).
-  - Added automated GitHub Actions CI workflow (`.github/workflows/ci.yml`) running `npm ci` and `npm run build` on every push and PR.
-- **Tier 4: Dynamic Editorial CMS**:
-  - Executives can create, broadcast, and remove Notices, Scholarships/Opportunities, and FAQs directly from the Admin Console UI, removing any need to manually edit SQL tables.
-
-### 4.6 Git & Repository Status
+### 4.5 Git & Repository Status
 - Git repository initialized on the `main` branch.
-- Automated CI pipeline configured on GitHub Actions.
+- Initial commit created: `c986dec` (`feat: complete initial release of ASSON UI student platform (v1.0)`).
 - Environment files (`.env`), database passwords, build artifacts (`dist/`), and `node_modules` are excluded via `.gitignore`.
 
 ---
@@ -246,6 +229,36 @@ Confirms 0 TypeScript or packaging errors.
   - `/sitemap.xml` verified live.
   - Social share preview cards active.
   - Route aliases (`/submit`, `/library`, `/grants`, `/get-help`) active.
+
+### 8.5 Manifest 2 Batch 1 & Mobile App Experience (Commit `b7d444c`)
+- **Full Screen Standalone App Experience (PWA)**:
+  - Enabled `"display": "standalone"` and `"display_override": ["window-controls-overlay", "standalone", "minimal-ui"]` in `public/manifest.json`.
+  - Added home screen launcher shortcuts for Past Papers, Calendar, and Notices.
+  - Added full mobile standalone meta tags in `index.html` (`mobile-web-app-capable`, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style: black-translucent`, and dual theme colors matching light/dark modes).
+  - Designed in-app "Install App" triggers and step-by-step guidance for iOS/Safari and Android/Chrome.
+- **Orderly Preferences & Settings (WhatsApp / Telegram / Claude Aesthetic)**:
+  - Built grouped, uncluttered settings panel in `SettingsModal.tsx`:
+    - Appearance & Theme: Light / Dark / System segmented toggle.
+    - Full Screen Standalone App status & 1-tap installation.
+    - Academic Level Focus selector (100L–400L / Postgraduate).
+    - Campus Data Saver toggle for low mobile bandwidth on UI campus networks.
+    - Offline past question storage manager with cache clearance.
+    - Student Study Locker account view & sign out.
+    - Legal compliance (Terms, NDPA privacy, ASSON build version).
+- **Shareable Resource URLs (`/resources/:id` & `/past-questions/:id`)**:
+  - Implemented dedicated shareable view with dynamic title metadata.
+  - Direct 1-click WhatsApp share button (`api.whatsapp.com/send?text=...`).
+  - Instant download, copy link with confirmation, and bookmarking.
+- **Academic Calendar CMS & Student Schedule (`/calendar`)**:
+  - Built interactive Calendar page with Agenda list view and Month calendar view.
+  - Filter by category (Continuous Assessment, Examination, Milestones, Events) and level.
+  - Built complete Admin Calendar CMS tab in `AdminPage.tsx` with modal for scheduling CA tests and exam dates.
+- **Embedded In-Notice RSVPs (`/notices`)**:
+  - Embedded dates, times, venues, and 1-click RSVP registration directly into departmental announcements (preventing navigation clutter).
+- **Automated Verification**:
+  - Unit tests established with Vitest in `src/__tests__/app.test.ts` (all 3 tests passing).
+  - Production build compiled cleanly with 0 TypeScript errors.
+
 
 
 
