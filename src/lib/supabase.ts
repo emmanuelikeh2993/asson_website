@@ -831,6 +831,18 @@ export async function submitPrivateFeedback(
 export async function verifyExecutiveRole(userId: string): Promise<{ isAuthorized: boolean; role?: 'editor' | 'admin' | 'super_admin' }> {
   if (!supabase) return { isAuthorized: false };
   try {
+    // 1. Authoritative check via Postgres SECURITY DEFINER function has_role
+    const { data: isAdmin, error: adminErr } = await supabase.rpc('has_role', { required_role: 'admin' });
+    if (!adminErr && isAdmin === true) {
+      return { isAuthorized: true, role: 'admin' };
+    }
+
+    const { data: isEditor, error: editorErr } = await supabase.rpc('has_role', { required_role: 'editor' });
+    if (!editorErr && isEditor === true) {
+      return { isAuthorized: true, role: 'editor' };
+    }
+
+    // 2. Direct table fallback if user has direct select access
     const { data, error } = await supabase
       .from('user_roles')
       .select('role')
