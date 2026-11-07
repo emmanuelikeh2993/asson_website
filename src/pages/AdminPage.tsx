@@ -390,15 +390,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
 
           <div className="overflow-hidden rounded-2xl border border-border-light bg-surface-card shadow-card">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full text-left border-collapse text-xs" aria-label="Student Submissions Moderation Queue">
+                <caption className="sr-only">Uploaded Academic Materials & Submissions Moderation Table</caption>
                 <thead>
                   <tr className="border-b border-border-light bg-surface-bg font-bold text-text-muted">
-                    <th className="py-3.5 px-4">Course</th>
-                    <th className="py-3.5 px-4">Material Title</th>
-                    <th className="py-3.5 px-4">Contributor / Reference</th>
-                    <th className="py-3.5 px-4">Type & Session</th>
-                    <th className="py-3.5 px-4">Status</th>
-                    <th className="py-3.5 px-4 text-right">Document Actions</th>
+                    <th scope="col" className="py-3.5 px-4">Course</th>
+                    <th scope="col" className="py-3.5 px-4">Material Title</th>
+                    <th scope="col" className="py-3.5 px-4">Contributor / Reference</th>
+                    <th scope="col" className="py-3.5 px-4">Type & Session</th>
+                    <th scope="col" className="py-3.5 px-4">Status</th>
+                    <th scope="col" className="py-3.5 px-4 text-right">Document Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-light/60">
@@ -507,14 +508,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
 
           <div className="overflow-hidden rounded-2xl border border-border-light bg-surface-card shadow-card">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full text-left border-collapse text-xs" aria-label="Platform Security and Administrative Audit Logs">
+                <caption className="sr-only">Platform Activity and Administrative Audit Logs</caption>
                 <thead>
                   <tr className="border-b border-border-light bg-surface-bg font-bold text-text-muted">
-                    <th className="py-3.5 px-4">Administrator / User</th>
-                    <th className="py-3.5 px-4">Action</th>
-                    <th className="py-3.5 px-4">Target Entity</th>
-                    <th className="py-3.5 px-4">Details</th>
-                    <th className="py-3.5 px-4 text-right">Timestamp</th>
+                    <th scope="col" className="py-3.5 px-4">Administrator / User</th>
+                    <th scope="col" className="py-3.5 px-4">Action</th>
+                    <th scope="col" className="py-3.5 px-4">Target Entity</th>
+                    <th scope="col" className="py-3.5 px-4">Details</th>
+                    <th scope="col" className="py-3.5 px-4 text-right">Timestamp</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-light/60">

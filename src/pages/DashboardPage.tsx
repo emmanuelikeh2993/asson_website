@@ -71,11 +71,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenSubmit }) =>
                 My Academic Study Locker
               </h1>
               <span className="text-[10px] font-bold bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full">
-                Zero-Login Active
+                Device-Local Storage
               </span>
             </div>
             <p className="text-xs text-emerald-100/80 mt-1">
-              Personal device locker • Department of Statistics, University of Ibadan
+              Your submissions, bookmarks, and downloads are preserved locally on this browser. Zero login or account required.
             </p>
           </div>
         </div>

@@ -32,16 +32,17 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
   return (
     <div className="w-full overflow-hidden rounded-2xl border border-border-light bg-surface-card shadow-card">
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse" aria-label="Academic Resources Catalog">
+          <caption className="sr-only">ASSON UI Academic Course Resources and Examination Papers</caption>
           <thead>
             <tr className="border-b border-border-light bg-surface-bg text-xs font-bold text-text-muted">
-              <th className="py-3 px-4">Course</th>
-              <th className="py-3 px-4">Resource Title</th>
-              <th className="py-3 px-4">Type</th>
-              <th className="py-3 px-4">Session</th>
-              <th className="py-3 px-4">Size</th>
-              <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4 text-right">Actions</th>
+              <th scope="col" className="py-3 px-4">Course</th>
+              <th scope="col" className="py-3 px-4">Resource Title</th>
+              <th scope="col" className="py-3 px-4">Type</th>
+              <th scope="col" className="py-3 px-4">Session</th>
+              <th scope="col" className="py-3 px-4">Size</th>
+              <th scope="col" className="py-3 px-4">Status</th>
+              <th scope="col" className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light/60 text-xs text-text-main">
