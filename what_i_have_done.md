@@ -259,6 +259,20 @@ Confirms 0 TypeScript or packaging errors.
   - Unit tests established with Vitest in `src/__tests__/app.test.ts` (all 3 tests passing).
   - Production build compiled cleanly with 0 TypeScript errors.
 
+### 8.6 Mobile Viewport Overflow & Horizontal Shift Resolution (Commit `40492bf`)
+- **Root Cause Identified**: The mobile top header was packing 10 distinct elements (two department logos, divider, ASSON UI title, UNIBADAN badge, search button, theme toggle, student locker avatar, "+ Submit" button, and hamburger menu) on a single horizontal row, causing the header width to exceed 440px on 360px–390px mobile viewports. This forced the entire document into an unintentional horizontal scroll ("shifting to the left" to reveal the submit button).
+- **Streamlined Mobile Header (WhatsApp / Claude Standard)**:
+  - Preserved a lean 3-action right side on mobile screens: Search icon (34px), "+ Submit" pill (70px), and Menu button (34px).
+  - Moved redundant mobile theme switching and profile avatar to the bottom navigation Settings tab and bottom sheet drawer.
+  - Made the secondary university crest visible on `sm+` screens, leaving a clean, compact ASSON logo on mobile phones.
+  - Reduced total mobile header width to ~245px (comfortably within 360px viewports with zero horizontal overflow).
+- **Strict Viewport Containment**:
+  - Enforced `w-full max-w-full overflow-x-hidden` across the root application shell, hero sections, and main wrappers.
+  - Locked viewport scale (`maximum-scale=1.0, user-scalable=no`).
+  - Added 16px minimum font size for mobile inputs to prevent browser focus auto-zoom.
+  - Replaced side-sliding menu with a native WhatsApp-style bottom sheet (`slide-in-from-bottom`).
+
+
 
 
 
