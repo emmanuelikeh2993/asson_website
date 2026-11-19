@@ -11,7 +11,9 @@ import {
   ArrowRight,
   PlusCircle,
   Bell,
-  Sparkles
+  Sparkles,
+  ArrowUpRight,
+  GraduationCap
 } from 'lucide-react';
 import { AcademicResource, Notice, AcademicLevel } from '../types';
 import { fetchResources, fetchNotices } from '../lib/supabase';
@@ -31,6 +33,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
   const [isLoading, setIsLoading] = useState(true);
   const [previewResource, setPreviewResource] = useState<AcademicResource | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<AcademicLevel | 'All'>('All');
+  const [curriculumLevel, setCurriculumLevel] = useState<'100' | '200' | '300' | '400'>('100');
+  const [curriculumSemester, setCurriculumSemester] = useState<1 | 2 | 'all'>('all');
   const toast = useToast();
 
   useEffect(() => {
@@ -214,49 +218,262 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
         </div>
       </section>
 
-      {/* 4. Curriculum Directory By Level */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
-        <div className="p-5 sm:p-6 rounded-2xl bg-surface-card border border-border-light shadow-2xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-            <div>
-              <h3 className="text-sm sm:text-base font-bold text-text-main">
-                Curriculum Courses Directory
-              </h3>
-              <p className="text-xs text-text-muted">
-                Explore course outlines, tutorial sheets, and lecture notes by level.
-              </p>
-            </div>
-            <Link to="/resources">
-              <span className="text-xs font-semibold text-brand-green hover:underline">
-                View All {COURSES.length} Courses →
-              </span>
-            </Link>
-          </div>
+      {/* 4. Curriculum Directory By Level: 4 Bento Cards (2x2 Grid) + Semester Categorization */}
+      {(() => {
+        const bentoLevels = [
+          {
+            level: '100' as const,
+            name: '100 Level',
+            tag: 'Year 1 Foundation',
+            subtitle: 'Elementary Probability, Calculus & Computing',
+            badgeBg: 'bg-emerald-100/90 text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-200',
+            cardBg: 'bg-[#EBF7F0] dark:bg-emerald-950/20',
+            border: 'border-emerald-200/90 dark:border-emerald-800/80',
+            hoverBorder: 'hover:border-emerald-400 dark:hover:border-emerald-600',
+            pillBg: 'bg-emerald-200/70 text-emerald-900 dark:bg-emerald-900/80 dark:text-emerald-100',
+            courses: COURSES.filter((c) => c.level === '100'),
+          },
+          {
+            level: '200' as const,
+            name: '200 Level',
+            tag: 'Year 2 Intermediate',
+            subtitle: 'Distribution Theory & Survey Sampling',
+            badgeBg: 'bg-sky-100/90 text-sky-900 dark:bg-sky-900/50 dark:text-sky-200',
+            cardBg: 'bg-[#ECF5FB] dark:bg-sky-950/20',
+            border: 'border-sky-200/90 dark:border-sky-800/80',
+            hoverBorder: 'hover:border-sky-400 dark:hover:border-sky-600',
+            pillBg: 'bg-sky-200/70 text-sky-900 dark:bg-sky-900/80 dark:text-sky-100',
+            courses: COURSES.filter((c) => c.level === '200'),
+          },
+          {
+            level: '300' as const,
+            name: '300 Level',
+            tag: 'Year 3 Core Analytics',
+            subtitle: 'Regression, ANOVA & Demography',
+            badgeBg: 'bg-pink-100/90 text-pink-900 dark:bg-pink-900/50 dark:text-pink-200',
+            cardBg: 'bg-[#FDF0F3] dark:bg-pink-950/20',
+            border: 'border-pink-200/90 dark:border-pink-800/80',
+            hoverBorder: 'hover:border-pink-400 dark:hover:border-pink-600',
+            pillBg: 'bg-pink-200/70 text-pink-900 dark:bg-pink-900/80 dark:text-pink-100',
+            courses: COURSES.filter((c) => c.level === '300'),
+          },
+          {
+            level: '400' as const,
+            name: '400 Level',
+            tag: 'Final Year Honours',
+            subtitle: 'Stochastic Processes, Time Series & Project',
+            badgeBg: 'bg-amber-100/90 text-amber-900 dark:bg-amber-900/50 dark:text-amber-200',
+            cardBg: 'bg-[#FEF5E9] dark:bg-amber-950/20',
+            border: 'border-amber-200/90 dark:border-amber-800/80',
+            hoverBorder: 'hover:border-amber-400 dark:hover:border-amber-600',
+            pillBg: 'bg-amber-200/70 text-amber-900 dark:bg-amber-900/80 dark:text-amber-100',
+            courses: COURSES.filter((c) => c.level === '400'),
+          },
+        ];
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-            {[
-              { level: '100', name: '100 Level', desc: 'Foundational Probability & Math' },
-              { level: '200', name: '200 Level', desc: 'Inference & Distribution Theory' },
-              { level: '300', name: '300 Level', desc: 'Regression & Experimental Design' },
-              { level: '400', name: '400 Level', desc: 'Stochastic Processes & Analytics' },
-              { level: 'Postgraduate', name: 'PG & Masters', desc: 'Advanced Biostatistics & Research' },
-            ].map((lvl) => (
+        const activeLevelConfig = bentoLevels.find((b) => b.level === curriculumLevel) || bentoLevels[0];
+        const activeLevelCourses = activeLevelConfig.courses;
+        const firstSemesterCourses = activeLevelCourses.filter((c) => c.semester === 1);
+        const secondSemesterCourses = activeLevelCourses.filter((c) => c.semester === 2);
+
+        return (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden space-y-4">
+            {/* Section Heading */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-base sm:text-xl font-extrabold text-text-main tracking-tight">
+                  Curriculum & Course Outlines
+                </h3>
+                <p className="text-xs text-text-muted mt-0.5">
+                  Select an academic year to explore courses, semester syllabi, and study notes.
+                </p>
+              </div>
               <Link
-                key={lvl.level}
-                to={`/resources?level=${lvl.level}`}
-                className="p-3 rounded-xl border border-border-light hover:border-brand-green/50 hover:bg-emerald-50/30 transition-all text-left group active:scale-[0.98]"
+                to="/resources"
+                className="text-xs font-bold text-brand-green hover:underline flex items-center gap-1 self-start sm:self-auto"
               >
-                <span className="text-xs sm:text-sm font-bold text-text-main group-hover:text-brand-green block">
-                  {lvl.name}
-                </span>
-                <span className="text-[11px] text-text-muted block mt-0.5 line-clamp-1">
-                  {lvl.desc}
-                </span>
+                <span>All Courses Catalog</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+            </div>
+
+            {/* 4 Bento Level Cards (2x2 Grid matching reference inspiration) */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {bentoLevels.map((bento) => {
+                const isSelected = curriculumLevel === bento.level;
+                return (
+                  <button
+                    key={bento.level}
+                    type="button"
+                    onClick={() => {
+                      setCurriculumLevel(bento.level);
+                      setCurriculumSemester('all');
+                    }}
+                    className={`relative p-4 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all duration-200 text-left cursor-pointer flex flex-col justify-between min-h-[125px] sm:min-h-[145px] active:scale-[0.98] ${
+                      bento.cardBg
+                    } ${bento.border} ${bento.hoverBorder} ${
+                      isSelected
+                        ? 'ring-2 ring-brand-green shadow-md scale-[1.01]'
+                        : 'shadow-2xs opacity-95 hover:opacity-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full gap-2">
+                      <span className={`text-[10px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 rounded-full ${bento.badgeBg}`}>
+                        {bento.tag}
+                      </span>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-transform shrink-0 ${bento.pillBg}`}>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <h4 className="text-base sm:text-xl font-extrabold text-text-main tracking-tight">
+                        {bento.name}
+                      </h4>
+                      <p className="text-[11px] sm:text-xs text-text-muted mt-0.5 line-clamp-1">
+                        {bento.subtitle}
+                      </p>
+                      <span className="text-[10px] font-semibold text-text-subtle mt-1 block">
+                        {bento.courses.length} Approved Courses
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Level Semester Drill-Down Box */}
+            <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-surface-card border border-border-light shadow-sm space-y-5 animate-in fade-in duration-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border-light/60">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-xs border ${activeLevelConfig.badgeBg} ${activeLevelConfig.border}`}>
+                    {curriculumLevel}L
+                  </div>
+                  <div>
+                    <h4 className="text-sm sm:text-base font-extrabold text-text-main">
+                      {curriculumLevel} Level Courses & Syllabi
+                    </h4>
+                    <span className="text-[11px] sm:text-xs text-text-muted">
+                      Official course outlines, units, and semester breakdown
+                    </span>
+                  </div>
+                </div>
+
+                {/* Semester Switcher Tabs */}
+                <div className="inline-flex p-1 rounded-xl bg-surface-bg border border-border-light self-start sm:self-auto text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setCurriculumSemester('all')}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      curriculumSemester === 'all'
+                        ? 'bg-brand-green text-white shadow-2xs'
+                        : 'text-text-muted hover:text-text-main'
+                    }`}
+                  >
+                    All Semesters
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurriculumSemester(1)}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      curriculumSemester === 1
+                        ? 'bg-brand-green text-white shadow-2xs'
+                        : 'text-text-muted hover:text-text-main'
+                    }`}
+                  >
+                    First Semester
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurriculumSemester(2)}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      curriculumSemester === 2
+                        ? 'bg-brand-green text-white shadow-2xs'
+                        : 'text-text-muted hover:text-text-main'
+                    }`}
+                  >
+                    Second Semester
+                  </button>
+                </div>
+              </div>
+
+              {/* First Semester Group */}
+              {(curriculumSemester === 'all' || curriculumSemester === 1) && (
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2 text-xs font-bold text-text-muted uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span>First Semester Courses ({firstSemesterCourses.length})</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {firstSemesterCourses.map((c) => (
+                      <Link
+                        key={c.code}
+                        to={`/resources?course=${encodeURIComponent(c.code)}`}
+                        className="p-3.5 rounded-xl border border-border-light bg-surface-bg hover:border-brand-green/60 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/20 transition-all flex items-start justify-between gap-3 group active:scale-[0.99]"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-extrabold px-2 py-0.5 rounded-md bg-surface-card border border-border-light text-brand-deep group-hover:text-brand-green group-hover:border-brand-green/40 transition-colors">
+                              {c.code}
+                            </span>
+                            <span className="text-[10px] font-semibold text-text-subtle font-mono">
+                              {c.units} Units
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-text-main group-hover:text-brand-green transition-colors line-clamp-1">
+                            {c.title}
+                          </p>
+                          <span className="text-[11px] text-text-muted mt-0.5 block">
+                            View outline & study materials
+                          </span>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green group-hover:translate-x-0.5 transition-transform shrink-0 mt-1" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Second Semester Group */}
+              {(curriculumSemester === 'all' || curriculumSemester === 2) && (
+                <div className="space-y-2.5 pt-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-text-muted uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-sky-500" />
+                    <span>Second Semester Courses ({secondSemesterCourses.length})</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {secondSemesterCourses.map((c) => (
+                      <Link
+                        key={c.code}
+                        to={`/resources?course=${encodeURIComponent(c.code)}`}
+                        className="p-3.5 rounded-xl border border-border-light bg-surface-bg hover:border-brand-green/60 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/20 transition-all flex items-start justify-between gap-3 group active:scale-[0.99]"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-extrabold px-2 py-0.5 rounded-md bg-surface-card border border-border-light text-brand-deep group-hover:text-brand-green group-hover:border-brand-green/40 transition-colors">
+                              {c.code}
+                            </span>
+                            <span className="text-[10px] font-semibold text-text-subtle font-mono">
+                              {c.units} Units
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-text-main group-hover:text-brand-green transition-colors line-clamp-1">
+                            {c.title}
+                          </p>
+                          <span className="text-[11px] text-text-muted mt-0.5 block">
+                            View outline & study materials
+                          </span>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green group-hover:translate-x-0.5 transition-transform shrink-0 mt-1" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* 5. Frequently Asked Questions Section */}
       <LandingFaqSection />
