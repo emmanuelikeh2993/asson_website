@@ -23,6 +23,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { AdminPage } from './pages/AdminPage';
 import { TermsPage } from './pages/TermsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
+import { MorePage } from './pages/MorePage';
 import { MOCK_RESOURCES, COURSES } from './lib/mockData';
 import { AcademicResource } from './types';
 import { ToastProvider, useToast } from './components/ui/Toast';
@@ -43,7 +44,7 @@ export function AppContent() {
     if (params.get('submit') === 'true' || location.pathname === '/submit') {
       setIsSubmitOpen(true);
     }
-    if (params.get('settings') === 'true' || location.pathname === '/settings') {
+    if (params.get('settings') === 'true') {
       setIsSettingsOpen(true);
     }
     if (params.get('auth') === 'true' || location.pathname === '/auth' || location.pathname === '/login') {
@@ -175,9 +176,27 @@ export function AppContent() {
               } 
             />
 
+            <Route 
+              path="/more" 
+              element={
+                <MorePage 
+                  onOpenSubmit={() => setIsSubmitOpen(true)} 
+                  onOpenAuth={() => setIsAuthOpen(true)} 
+                />
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <MorePage 
+                  onOpenSubmit={() => setIsSubmitOpen(true)} 
+                  onOpenAuth={() => setIsAuthOpen(true)} 
+                />
+              } 
+            />
+
             {/* Seamless Aliases and Deep-linking Routes */}
             <Route path="/submit" element={<Navigate to="/resources?submit=true" replace />} />
-            <Route path="/settings" element={<Navigate to="/resources?settings=true" replace />} />
             <Route path="/login" element={<Navigate to="/resources?auth=true" replace />} />
             <Route path="/auth" element={<Navigate to="/resources?auth=true" replace />} />
             <Route path="/library" element={<Navigate to="/resources" replace />} />
