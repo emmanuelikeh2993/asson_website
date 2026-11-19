@@ -58,36 +58,34 @@ export const ResourceFilters: React.FC<ResourceFiltersProps> = ({
       </div>
 
       {/* Resource Type Chips */}
-      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border-light/40">
-        <span className="text-xs font-semibold text-text-muted mr-1">Category:</span>
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-2 border-t border-border-light/40 scrollbar-none">
+        <span className="text-xs font-semibold text-text-muted mr-1 shrink-0">Category:</span>
         {types.map((t) => (
           <button
             key={t}
             onClick={() => onTypeChange(t)}
-            className={`text-xs px-3 py-1 rounded-full font-medium transition-all duration-150 active:scale-95 cursor-pointer ${
+            className={`text-xs px-3 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all duration-150 active:scale-95 cursor-pointer shrink-0 ${
               selectedType === t
-                ? 'bg-brand-deep text-white shadow-sm font-bold'
-                : 'bg-surface-bg text-text-muted hover:text-text-main hover:bg-gray-200/60 border border-border-light/60'
+                ? 'bg-brand-green text-white shadow-xs font-bold'
+                : 'bg-surface-bg text-text-muted hover:text-text-main border border-border-light/60'
             }`}
           >
             {t}
           </button>
         ))}
 
-        {/* Verification Filter & Clear All */}
-        <div className="ml-auto flex items-center gap-2">
-          {activeCount > 0 && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={onReset}
-              className="text-xs text-brand-red hover:bg-red-50 hover:text-brand-red h-7 px-2"
-            >
-              <RotateCcw className="w-3 h-3 mr-1" />
-              Reset ({activeCount})
-            </Button>
-          )}
-        </div>
+        {/* Clear All */}
+        {activeCount > 0 && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onReset}
+            className="text-xs text-brand-red hover:bg-red-50 hover:text-brand-red h-7 px-2 shrink-0 ml-auto"
+          >
+            <RotateCcw className="w-3 h-3 mr-1" />
+            Reset
+          </Button>
+        )}
       </div>
     </div>
   );

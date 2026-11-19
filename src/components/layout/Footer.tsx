@@ -135,18 +135,13 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
-        {/* Institutional & Legal Governance Notices (Tier 3 Compliance) */}
-        <div className="pt-6 border-t border-border-light text-[11px] space-y-2.5 text-text-subtle leading-relaxed">
+        {/* Institutional Academic Governance Notice */}
+        <div className="pt-6 border-t border-border-light text-[11px] text-text-subtle leading-relaxed">
           <p>
             <strong className="text-text-muted">Institutional Disclaimer:</strong> ASSON UI is an independent academic resource initiative organized by the Association of Statistics Students of Nigeria (ASSON), University of Ibadan Chapter. It is a student-run service and not an official administrative portal of the University of Ibadan. The University crest is displayed solely to indicate departmental chapter affiliation.
           </p>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-border-light/60">
-            <p>
-              <strong className="text-text-muted">NDPA Privacy Commitment:</strong> We adhere to the Nigeria Data Protection Act (NDPA). Zero tracking cookies, zero marketing analytics, and zero matriculation number harvesting.
-            </p>
-            <p className="shrink-0 text-[10px]">
-              <span className="text-text-muted">Faculty Takedown / Inquiries:</span> <a href="mailto:academic@asson-ui.org" className="text-brand-green hover:underline">academic@asson-ui.org</a>
-            </p>
+          <div className="pt-2 text-[10px] text-text-muted flex items-center justify-between">
+            <span>Faculty Takedown / Inquiries: <a href="mailto:academic@asson-ui.org" className="text-brand-green hover:underline">academic@asson-ui.org</a></span>
           </div>
         </div>
 

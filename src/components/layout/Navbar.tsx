@@ -3,20 +3,14 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   Search,
   PlusCircle,
-  Menu,
-  X,
   BookOpen,
   FileText,
   Bell,
   GraduationCap,
-  HelpCircle,
   User,
-  Sparkles,
-  ArrowRight,
   Sun,
   Moon,
   Settings,
-  Palette,
   Calendar
 } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -33,7 +27,6 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOpenSettings, onOpenAuth }) => {
   const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(() => getCachedStudentProfile());
   const { actualTheme, toggleTheme } = useTheme();
 
@@ -49,8 +42,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
     { name: 'Opportunities', path: '/opportunities', icon: GraduationCap },
     { name: 'Dashboard', path: '/dashboard', icon: User },
   ];
-
-  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
     <>
@@ -122,18 +113,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
             })}
           </nav>
 
-          {/* Right CTA Actions: Lean & uncluttered on mobile like WhatsApp, full on desktop */}
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {/* Right CTA Actions: Quiet, calm and uncluttered like WhatsApp & Claude */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Mobile Search Button */}
             <button
               onClick={onOpenSearch}
-              className="p-1.5 sm:p-2 text-text-muted hover:text-brand-green hover:bg-surface-bg rounded-xl md:hidden min-w-[34px] min-h-[34px] flex items-center justify-center transition-colors"
-              aria-label="Search"
+              className="p-2 text-text-muted hover:text-brand-green hover:bg-surface-bg rounded-xl md:hidden min-w-[38px] min-h-[38px] flex items-center justify-center transition-colors"
+              aria-label="Search past questions and courses"
             >
-              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Search className="w-5 h-5 text-text-muted hover:text-brand-green" />
             </button>
 
-            {/* Quick Theme Switcher Button (Desktop & Tablet only; mobile accesses theme via Settings) */}
+            {/* Quick Theme Switcher Button (Desktop & Tablet only; mobile accesses theme via More) */}
             <button
               type="button"
               onClick={toggleTheme}
@@ -161,7 +152,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
               </button>
             )}
 
-            {/* Student Study Locker Account (Tablet & Desktop; mobile accesses via Settings) */}
+            {/* Student Study Locker Account (Tablet & Desktop; mobile accesses via More) */}
             {onOpenAuth && (
               <button
                 type="button"
@@ -189,173 +180,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
               </button>
             )}
 
-            {/* Submit Resource CTA: Visible & Compact on Mobile, Full on Desktop */}
+            {/* Submit Resource CTA: Desktop & Tablet Only */}
             <Button
               size="sm"
               variant="primary"
               onClick={onOpenSubmit}
-              className="text-xs h-7.5 sm:h-9 px-2 sm:px-3.5 shadow-sm hover:shadow active:scale-95 font-bold shrink-0"
+              className="hidden sm:inline-flex text-xs h-9 px-3.5 shadow-sm hover:shadow active:scale-95 font-bold shrink-0"
             >
-              <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1.5" />
-              <span className="hidden sm:inline">Submit Material</span>
-              <span className="sm:hidden text-[11px]">Submit</span>
+              <PlusCircle className="w-4 h-4 mr-1.5" />
+              <span>Submit Material</span>
             </Button>
-
-            {/* Mobile Hamburger Menu Button */}
-            <button
-              onClick={() => setMobileMenuOpen((prev) => !prev)}
-              className="p-1.5 text-text-muted hover:text-brand-green hover:bg-surface-bg rounded-xl lg:hidden min-w-[34px] min-h-[34px] flex items-center justify-center transition-colors shrink-0"
-              aria-label="Toggle navigation menu"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </div>
       </header>
-
-      {/* Mobile WhatsApp-Style Bottom Sheet Navigation */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
-          {/* Backdrop overlay */}
-          <div
-            onClick={closeMobileMenu}
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-150"
-          />
-
-          {/* Calm Bottom Sheet Panel (WhatsApp / Telegram Mobile Sheet) */}
-          <div className="relative z-10 w-full max-h-[88vh] bg-surface-card rounded-t-3xl shadow-2xl p-5 border-t border-border-light overflow-y-auto animate-in slide-in-from-bottom duration-200 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-            {/* Grab handle indicator */}
-            <div className="w-12 h-1.5 bg-border-light rounded-full mx-auto mb-3" />
-
-            <div>
-              {/* Sheet Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-border-light mb-4">
-                <div className="flex items-center gap-2">
-                  <img src="/logo/asson_logo.png" alt="ASSON" className="w-7 h-7 object-contain" />
-                  <span className="font-bold text-sm text-brand-deep">Menu & Gateways</span>
-                </div>
-                <button
-                  onClick={closeMobileMenu}
-                  className="p-1.5 text-text-muted hover:text-text-main hover:bg-surface-bg rounded-lg active:scale-95 transition-transform"
-                  aria-label="Close menu"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Mobile Navigation Links */}
-              <div className="space-y-1 mb-5">
-                {navLinks.map((link) => {
-                  const Icon = link.icon;
-                  const isActive = location.pathname === link.path;
-                  return (
-                    <Link
-                      key={link.path}
-                      to={link.path}
-                      onClick={closeMobileMenu}
-                      className={`flex items-center justify-between p-3 rounded-xl text-xs font-semibold transition-all duration-150 active:scale-95 ${isActive
-                        ? 'bg-brand-light text-brand-deep font-bold'
-                        : 'text-text-main hover:bg-surface-bg hover:text-brand-green'
-                        }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={`p-1.5 rounded-lg ${isActive ? 'bg-brand-green text-white' : 'bg-surface-bg text-text-muted'}`}>
-                          <Icon className="w-4 h-4" />
-                        </span>
-                        <span>{link.name}</span>
-                      </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-text-subtle" />
-                    </Link>
-                  );
-                })}
-
-                {/* Preferences & Settings in Mobile Sheet */}
-                {onOpenSettings && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      closeMobileMenu();
-                      onOpenSettings();
-                    }}
-                    className="w-full flex items-center justify-between p-3 rounded-xl text-xs font-semibold text-text-main hover:bg-surface-bg hover:text-brand-green transition-all duration-150 active:scale-95 cursor-pointer text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="p-1.5 rounded-lg bg-surface-bg text-text-muted">
-                        <Settings className="w-4 h-4 text-brand-green" />
-                      </span>
-                      <span>Preferences & Settings</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-bg border border-border-light text-text-muted capitalize">
-                        {actualTheme}
-                      </span>
-                      <ArrowRight className="w-3.5 h-3.5 text-text-subtle" />
-                    </div>
-                  </button>
-                )}
-              </div>
-
-              {/* Quick Level Filter Shortcuts */}
-              <div className="p-3 rounded-xl bg-surface-bg border border-border-light mb-4">
-                <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider block mb-2">
-                  Browse by Level
-                </span>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {['100', '200', '300', '400'].map((lvl) => (
-                    <Link
-                      key={lvl}
-                      to={`/resources?level=${lvl}`}
-                      onClick={closeMobileMenu}
-                      className="text-center py-2 px-1 text-xs font-bold rounded-lg bg-surface-card border border-border-light text-brand-deep hover:bg-brand-green hover:text-white transition-all active:scale-90"
-                    >
-                      {lvl}L
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Sheet Bottom Actions */}
-            <div className="pt-3 border-t border-border-light space-y-2">
-              <Button
-                variant="primary"
-                size="md"
-                onClick={() => {
-                  closeMobileMenu();
-                  onOpenSubmit();
-                }}
-                className="w-full justify-center shadow-md font-bold"
-              >
-                <PlusCircle className="w-4 h-4 mr-2" />
-                Submit Academic Material
-              </Button>
-
-              <div className="flex items-center justify-center gap-3 text-[11px] text-text-muted pt-2">
-                <Link to="/terms" onClick={closeMobileMenu} className="hover:text-brand-green transition-colors">
-                  Terms of Service
-                </Link>
-                <span>•</span>
-                <Link to="/privacy" onClick={closeMobileMenu} className="hover:text-brand-green transition-colors">
-                  Privacy Policy
-                </Link>
-              </div>
-
-              <div className="text-center text-[10px] text-text-muted pt-1">
-                Dept. of Statistics • University of Ibadan<br />
-                <span className="text-brand-green font-medium">Facts from Reliable Figures</span>
-                <Link
-                  to="/console"
-                  onClick={closeMobileMenu}
-                  className="inline-block text-text-subtle/30 hover:text-text-muted transition-colors px-1 select-none"
-                  aria-label="Executive Portal"
-                >
-                  •
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };

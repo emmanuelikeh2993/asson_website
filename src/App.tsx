@@ -234,6 +234,7 @@ export function AppContent() {
       <MobileNav 
         onOpenSubmit={() => setIsSubmitOpen(true)} 
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
       />
 
       {/* Global Command Palette Modal (Ctrl+K or /) */}

@@ -71,13 +71,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
             Academic Resource Hub
           </h1>
 
-          {/* Focused Description */}
-          <p className="mt-2 text-xs sm:text-sm text-emerald-100/90 max-w-xl leading-relaxed">
-            Fast, zero-login repository of verified past examination questions, course outlines, and academic announcements for UI Statistics scholars.
-          </p>
-
           {/* Primary Search Bar Trigger */}
-          <div className="w-full max-w-2xl mt-5">
+          <div className="w-full max-w-2xl mt-4 sm:mt-5">
             <button
               onClick={onOpenSearch}
               className="w-full flex items-center justify-between p-2.5 sm:p-3 pl-4 bg-white text-text-main rounded-xl shadow-md hover:shadow-lg transition-all group border border-border-light active:scale-[0.99] cursor-pointer"
