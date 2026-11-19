@@ -13,7 +13,9 @@ import {
   Bell,
   Sparkles,
   ArrowUpRight,
-  GraduationCap
+  GraduationCap,
+  Calendar,
+  Bookmark
 } from 'lucide-react';
 import { AcademicResource, Notice, AcademicLevel } from '../types';
 import { fetchResources, fetchNotices } from '../lib/supabase';
@@ -51,6 +53,14 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
     });
   }, []);
 
+  const currentHour = new Date().getHours();
+  const greeting = currentHour < 12 ? 'Good morning' : currentHour < 17 ? 'Good afternoon' : 'Good evening';
+  const currentDateStr = new Date().toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  });
+
   const urgentNotice = notices.find((n) => n.isUrgent);
 
   // Filter verified past questions by selected level tab
@@ -70,7 +80,16 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
             <span>Association of Statistics Students of Nigeria • University of Ibadan</span>
           </div>
 
-          {/* Clean Headline */}
+          {/* Clean Headline with DCN-Style Dynamic Greeting & Live Date */}
+          <div className="mb-2">
+            <span className="text-[11px] sm:text-xs font-semibold text-emerald-200/80 uppercase tracking-wider block">
+              {currentDateStr}
+            </span>
+            <span className="text-sm sm:text-base font-bold text-emerald-100 block mt-0.5">
+              {greeting}, Statistics Scholar
+            </span>
+          </div>
+
           <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
             Academic Resource Hub
           </h1>
@@ -120,6 +139,64 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
               })}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* 2. DCN-Inspired Quick Action Category Grid (Past Papers, Timetable, Submit, Bookmarks) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
+        <div className="grid grid-cols-4 gap-2.5 sm:gap-4">
+          <Link
+            to="/past-questions"
+            className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-surface-card border border-border-light hover:border-brand-green/60 hover:shadow-2xs transition-all text-center group active:scale-95"
+          >
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-brand-green flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform border border-emerald-200/60 dark:border-emerald-800/60 shadow-2xs">
+              <FileText className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-text-main group-hover:text-brand-green transition-colors">
+              Past Papers
+            </span>
+            <span className="text-[10px] text-text-subtle hidden sm:inline">100L–400L</span>
+          </Link>
+
+          <Link
+            to="/calendar"
+            className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-surface-card border border-border-light hover:border-sky-500/60 hover:shadow-2xs transition-all text-center group active:scale-95"
+          >
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-300 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform border border-sky-200/60 dark:border-sky-800/60 shadow-2xs">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-text-main group-hover:text-sky-600 transition-colors">
+              Timetable
+            </span>
+            <span className="text-[10px] text-text-subtle hidden sm:inline">Tests & Exams</span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={onOpenSubmit}
+            className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-surface-card border border-border-light hover:border-purple-500/60 hover:shadow-2xs transition-all text-center group active:scale-95 cursor-pointer"
+          >
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-300 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform border border-purple-200/60 dark:border-purple-800/60 shadow-2xs">
+              <PlusCircle className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-text-main group-hover:text-purple-600 transition-colors">
+              Submit
+            </span>
+            <span className="text-[10px] text-text-subtle hidden sm:inline">Upload Notes</span>
+          </button>
+
+          <Link
+            to="/dashboard"
+            className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-surface-card border border-border-light hover:border-amber-500/60 hover:shadow-2xs transition-all text-center group active:scale-95"
+          >
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-300 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform border border-amber-200/60 dark:border-amber-800/60 shadow-2xs">
+              <Bookmark className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-text-main group-hover:text-amber-600 transition-colors">
+              Bookmarks
+            </span>
+            <span className="text-[10px] text-text-subtle hidden sm:inline">Saved Library</span>
+          </Link>
         </div>
       </section>
 

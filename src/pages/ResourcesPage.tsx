@@ -384,25 +384,34 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
               </div>
             )
           ) : filteredResources.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-dashed border-border-light bg-surface-card my-4">
-              <div className="w-14 h-14 rounded-full bg-emerald-50 text-brand-green flex items-center justify-center mb-3">
-                <FolderCheck className="w-7 h-7" />
+            /* DCN-Inspired Elevated Soft Empty State (Screenshot 4) */
+            <div className="flex flex-col items-center justify-center p-8 sm:p-14 text-center rounded-3xl border border-border-light bg-surface-card my-4 shadow-sm animate-in fade-in duration-200">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-brand-green flex items-center justify-center mb-4 border border-emerald-200/80 dark:border-emerald-800/80 shadow-2xs">
+                <FilterX className="w-8 h-8" />
               </div>
-              <h3 className="text-sm font-bold text-text-main mb-1">
-                No matching academic materials found
+              <h3 className="text-base sm:text-lg font-extrabold text-text-main mb-1.5 tracking-tight">
+                No materials match your filters
               </h3>
-              <p className="text-xs text-text-muted max-w-sm mb-4">
-                We couldn't find any resources matching your search. Try clearing filters or submit a new material!
+              <p className="text-xs text-text-muted max-w-sm mb-5 leading-relaxed">
+                Try searching with a different course code (e.g. STA 111, MAT 121), or reset your level and category filters.
               </p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button size="sm" variant="outline" onClick={handleResetFilters} className="font-semibold text-xs">
-                  <FilterX className="w-3.5 h-3.5 mr-1.5" />
-                  Clear Filters
-                </Button>
-                <Button size="sm" variant="primary" onClick={onOpenSubmit} className="font-bold text-xs">
-                  <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
-                  Submit This Material
-                </Button>
+              <div className="flex flex-wrap items-center justify-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="px-4 py-2 rounded-full bg-brand-green hover:bg-brand-deep text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                >
+                  <FilterX className="w-3.5 h-3.5" />
+                  <span>Clear All Filters</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenSubmit}
+                  className="px-4 py-2 rounded-full bg-surface-bg border border-border-light hover:border-brand-green text-text-main hover:text-brand-green font-bold text-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>Submit Material</span>
+                </button>
               </div>
             </div>
           ) : viewMode === 'table' ? (
