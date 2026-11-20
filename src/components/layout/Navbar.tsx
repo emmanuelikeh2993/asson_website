@@ -78,19 +78,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
             </div>
           </Link>
 
-          {/* Global Search Bar Trigger (Desktop) */}
-          <div className="flex-1 max-w-md hidden md:block">
+          {/* Global Search Bar Trigger (Desktop - matching Spotlight Trigger) */}
+          <div className="flex-1 max-w-sm hidden md:block">
             <button
               onClick={onOpenSearch}
-              className="w-full flex items-center justify-between px-3.5 py-2 text-xs text-text-muted bg-surface-bg rounded-xl border border-border-light hover:border-brand-green/60 hover:bg-emerald-50/30 transition-all text-left group shadow-xs"
+              className="w-full flex items-center justify-between px-3.5 py-2 text-xs text-zinc-400 bg-white dark:bg-[#13171D] rounded-2xl border border-zinc-200/80 dark:border-zinc-800 hover:border-[#087A3E]/60 transition-all text-left group shadow-xs cursor-pointer"
             >
-              <div className="flex items-center gap-2">
-                <Search className="w-3.5 h-3.5 text-brand-green group-hover:scale-110 transition-transform" />
-                <span>Search STA 211, past questions, notes...</span>
+              <div className="flex items-center gap-2.5">
+                <Search className="w-3.5 h-3.5 text-zinc-400 group-hover:text-[#087A3E] transition-colors" />
+                <span className="text-zinc-500 font-medium">Search</span>
               </div>
-              <kbd className="hidden lg:inline-flex items-center gap-0.5 font-mono text-[10px] bg-white border border-border-light px-1.5 py-0.5 rounded text-text-muted shadow-xs">
-                <span className="text-xs">⌘</span>K
-              </kbd>
+              <div className="flex items-center gap-1.5">
+                <kbd className="hidden lg:inline-flex items-center gap-0.5 font-mono text-[10px] bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-1.5 py-0.5 rounded text-zinc-500 shadow-2xs font-semibold">
+                  ⌘ + K
+                </kbd>
+              </div>
             </button>
           </div>
 

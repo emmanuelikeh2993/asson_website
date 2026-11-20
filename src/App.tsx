@@ -24,6 +24,7 @@ import { AdminPage } from './pages/AdminPage';
 import { TermsPage } from './pages/TermsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { MorePage } from './pages/MorePage';
+import { EnterprisePage } from './pages/EnterprisePage';
 import { MOCK_RESOURCES, COURSES } from './lib/mockData';
 import { AcademicResource } from './types';
 import { ToastProvider, useToast } from './components/ui/Toast';
@@ -50,7 +51,8 @@ export function AppContent() {
       setIsSettingsOpen(true);
     }
     // Check if user arrived from a password recovery link in email
-    if (location.hash && location.hash.includes('type=recovery')) {
+    const hash = location.hash || (typeof window !== 'undefined' ? window.location.hash : '');
+    if (hash && hash.includes('type=recovery')) {
       setAuthInitialTab('new-password');
       setIsAuthOpen(true);
     } else if (params.get('signup') === 'true' || location.pathname === '/signup') {
@@ -172,6 +174,7 @@ export function AppContent() {
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/notices" element={<NoticesPage />} />
             <Route path="/opportunities" element={<OpportunitiesPage />} />
+            <Route path="/enterprise" element={<EnterprisePage />} />
             <Route path="/faqs" element={<FaqPage />} />
             <Route path="/help" element={<HelpPage />} />
             <Route 

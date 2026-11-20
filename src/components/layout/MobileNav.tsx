@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BookOpen, Calendar, Bell, Compass } from 'lucide-react';
+import { Home, BookOpen, Calendar, Bell, SlidersHorizontal } from 'lucide-react';
 
 interface MobileNavProps {
   onOpenSubmit?: () => void;
@@ -16,7 +16,7 @@ export const MobileNav: React.FC<MobileNavProps> = () => {
     { name: 'Resources', path: '/resources', icon: BookOpen },
     { name: 'Calendar', path: '/calendar', icon: Calendar },
     { name: 'Notices', path: '/notices', icon: Bell },
-    { name: 'Explore', path: '/more', icon: Compass },
+    { name: 'More', path: '/more', icon: SlidersHorizontal },
   ];
 
   return (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../components/ui/Toast';
 import { getCachedStudentProfile, studentSignOut } from '../lib/supabase';
@@ -7,42 +7,37 @@ import { UserProfile } from '../types';
 import {
   User,
   GraduationCap,
-  Bookmark,
-  PlusCircle,
-  FileText,
-  Calendar,
   Sun,
   Moon,
   Monitor,
   Zap,
   HardDrive,
   Smartphone,
-  Bell,
-  Sparkles,
-  HelpCircle,
-  ShieldCheck,
   ChevronRight,
   LogOut,
-  ExternalLink,
   Check,
   Download,
-  BookOpen,
-  Users,
   Building2,
   Shield,
-  ArrowUpRight,
+  ShieldCheck,
+  FileText,
+  Sparkles,
+  HelpCircle,
+  Briefcase,
+  Award,
   X
 } from 'lucide-react';
+import { StaffDirectoryModal } from '../components/features/department/StaffDirectoryModal';
+import { ExecutiveCouncilModal } from '../components/features/department/ExecutiveCouncilModal';
 
 interface MorePageProps {
   onOpenSubmit: () => void;
   onOpenAuth: () => void;
 }
 
-export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) => {
+export const MorePage: React.FC<MorePageProps> = ({ onOpenAuth }) => {
   const { theme, setTheme } = useTheme();
   const toast = useToast();
-  const navigate = useNavigate();
 
   const [profile, setProfile] = useState<UserProfile | null>(() => getCachedStudentProfile());
 
@@ -70,6 +65,8 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [cacheSize, setCacheSize] = useState<string>('0.8 KB');
   const [showDeptModal, setShowDeptModal] = useState<boolean>(false);
+  const [showStaffModal, setShowStaffModal] = useState<boolean>(false);
+  const [showExecModal, setShowExecModal] = useState<boolean>(false);
 
   useEffect(() => {
     setProfile(getCachedStudentProfile());
@@ -173,15 +170,15 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 pb-24">
+    <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 pb-24">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-border-light/60">
+      <div className="flex items-center justify-between pb-3 border-b border-border-light/60">
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-text-main tracking-tight">
-            Explore & Preferences
+            More & Settings
           </h1>
           <p className="text-xs text-text-muted mt-0.5">
-            Dept. of Statistics • University of Ibadan
+            Department of Statistics • University of Ibadan
           </p>
         </div>
         <img
@@ -191,23 +188,20 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
         />
       </div>
 
-      {/* 1. TOP PROFILE CARD (Inspired by DCN Explore & Reference Images) */}
-      <div className="rounded-2xl sm:rounded-3xl border border-border-light bg-surface-card p-4 sm:p-5 shadow-sm space-y-3.5 transition-all">
+      {/* 1. STUDENT STUDY LOCKER CARD (Grouped Profile) */}
+      <div className="rounded-2xl border border-border-light bg-surface-card p-4 sm:p-5 shadow-2xs space-y-3.5 transition-all">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            {/* Avatar */}
-            <div className="relative w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-brand-green font-extrabold text-base flex items-center justify-center border-2 border-emerald-300 dark:border-emerald-800 shrink-0 shadow-2xs">
+            <div className="relative w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-brand-green font-extrabold text-base flex items-center justify-center border border-emerald-200/80 dark:border-emerald-800/80 shrink-0">
               {profile ? profile.displayName.charAt(0).toUpperCase() : <User className="w-5 h-5 text-brand-green" />}
-              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-surface-card" />
             </div>
 
-            {/* User Info */}
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm sm:text-base font-extrabold text-text-main truncate block">
+                <span className="text-sm sm:text-base font-bold text-text-main truncate block">
                   {profile ? profile.displayName : 'Guest Statistics Scholar'}
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200 dark:border-emerald-800 shrink-0">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200 dark:border-emerald-800 shrink-0">
                   {profile ? (profile.level ? `${profile.level}L` : 'Scholar') : 'Public'}
                 </span>
               </div>
@@ -232,196 +226,27 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
 
         {/* Action Button */}
         {profile ? (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onOpenAuth}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-surface-bg border border-border-light hover:border-brand-green text-xs font-bold text-text-main hover:text-brand-green transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
-            >
-              <User className="w-4 h-4 text-brand-green" />
-              <span>Manage Study Locker</span>
-            </button>
-            <Link
-              to="/dashboard"
-              className="py-2.5 px-3.5 rounded-xl bg-surface-bg border border-border-light hover:border-brand-green text-xs font-bold text-text-main hover:text-brand-green transition-all shadow-2xs flex items-center justify-center gap-1.5 active:scale-[0.99]"
-              title="Saved Bookmarks"
-            >
-              <Bookmark className="w-4 h-4 text-amber-500" />
-              <span className="hidden sm:inline">Bookmarks</span>
-            </Link>
-          </div>
+          <button
+            type="button"
+            onClick={onOpenAuth}
+            className="w-full py-2.5 px-4 rounded-xl bg-surface-bg border border-border-light hover:border-brand-green text-xs font-bold text-text-main hover:text-brand-green transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <User className="w-4 h-4 text-brand-green" />
+            <span>Manage Study Locker Account</span>
+          </button>
         ) : (
           <button
             type="button"
             onClick={onOpenAuth}
-            className="w-full py-2.5 px-4 rounded-xl bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-all shadow-sm hover:shadow flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+            className="w-full py-2.5 px-4 rounded-xl bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer"
           >
             <span>Sign In to Student Study Locker</span>
           </button>
         )}
       </div>
 
-      {/* 2. ACADEMIC HUB: 3-Tile Row (Direct DCN Explore Structure) */}
-      <div className="space-y-2">
-        <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider px-1">
-          Academic Hub
-        </span>
-        <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5">
-          <Link
-            to="/past-questions"
-            className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-surface-card border border-border-light hover:border-brand-green/60 hover:shadow-2xs transition-all text-center group active:scale-95"
-          >
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-brand-green flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform border border-emerald-200/60 dark:border-emerald-800/60 shadow-2xs">
-              <FileText className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-bold text-text-main group-hover:text-brand-green transition-colors">
-              Past Papers
-            </span>
-            <span className="text-[10px] text-text-muted mt-0.5 hidden sm:inline">100L–400L</span>
-          </Link>
-
-          <Link
-            to="/calendar"
-            className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-surface-card border border-border-light hover:border-sky-500/60 hover:shadow-2xs transition-all text-center group active:scale-95"
-          >
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-300 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform border border-sky-200/60 dark:border-sky-800/60 shadow-2xs">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-bold text-text-main group-hover:text-sky-600 transition-colors">
-              Timetable
-            </span>
-            <span className="text-[10px] text-text-muted mt-0.5 hidden sm:inline">Tests & Exams</span>
-          </Link>
-
-          <button
-            type="button"
-            onClick={onOpenSubmit}
-            className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-surface-card border border-border-light hover:border-purple-500/60 hover:shadow-2xs transition-all text-center group active:scale-95 cursor-pointer"
-          >
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-300 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform border border-purple-200/60 dark:border-purple-800/60 shadow-2xs">
-              <PlusCircle className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-bold text-text-main group-hover:text-purple-600 transition-colors">
-              Submit Note
-            </span>
-            <span className="text-[10px] text-text-muted mt-0.5 hidden sm:inline">Contribute</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. CAMPUS SERVICES: 3x2 Grid (Direct DCN Explore Structure) */}
-      <div className="space-y-2">
-        <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider px-1">
-          Campus Services
-        </span>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
-          <Link
-            to="/opportunities"
-            className="p-3.5 rounded-2xl border border-border-light bg-surface-card hover:border-brand-green/60 hover:shadow-2xs transition-all group flex flex-col justify-between active:scale-[0.99]"
-          >
-            <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-300 flex items-center justify-center mb-2.5 border border-amber-200/60 dark:border-amber-800/60 group-hover:scale-105 transition-transform">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-text-main group-hover:text-brand-green transition-colors block">
-                Scholarships
-              </span>
-              <span className="text-[10px] text-text-muted mt-0.5 line-clamp-1">
-                Internships & Grants
-              </span>
-            </div>
-          </Link>
-
-          <Link
-            to="/notices"
-            className="p-3.5 rounded-2xl border border-border-light bg-surface-card hover:border-brand-green/60 hover:shadow-2xs transition-all group flex flex-col justify-between active:scale-[0.99]"
-          >
-            <div className="w-9 h-9 rounded-xl bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-300 flex items-center justify-center mb-2.5 border border-sky-200/60 dark:border-sky-800/60 group-hover:scale-105 transition-transform">
-              <Bell className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-text-main group-hover:text-brand-green transition-colors block">
-                Notices
-              </span>
-              <span className="text-[10px] text-text-muted mt-0.5 line-clamp-1">
-                Senate & ASSON
-              </span>
-            </div>
-          </Link>
-
-          <Link
-            to="/resources"
-            className="p-3.5 rounded-2xl border border-border-light bg-surface-card hover:border-brand-green/60 hover:shadow-2xs transition-all group flex flex-col justify-between active:scale-[0.99]"
-          >
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-brand-green flex items-center justify-center mb-2.5 border border-emerald-200/60 dark:border-emerald-800/60 group-hover:scale-105 transition-transform">
-              <BookOpen className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-text-main group-hover:text-brand-green transition-colors block">
-                Course Outlines
-              </span>
-              <span className="text-[10px] text-text-muted mt-0.5 line-clamp-1">
-                Approved Syllabi
-              </span>
-            </div>
-          </Link>
-
-          <Link
-            to="/help"
-            className="p-3.5 rounded-2xl border border-border-light bg-surface-card hover:border-brand-green/60 hover:shadow-2xs transition-all group flex flex-col justify-between active:scale-[0.99]"
-          >
-            <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-300 flex items-center justify-center mb-2.5 border border-purple-200/60 dark:border-purple-800/60 group-hover:scale-105 transition-transform">
-              <Users className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-text-main group-hover:text-brand-green transition-colors block">
-                Study Circles
-              </span>
-              <span className="text-[10px] text-text-muted mt-0.5 line-clamp-1">
-                Peer Discussion
-              </span>
-            </div>
-          </Link>
-
-          <Link
-            to="/help"
-            className="p-3.5 rounded-2xl border border-border-light bg-surface-card hover:border-brand-green/60 hover:shadow-2xs transition-all group flex flex-col justify-between active:scale-[0.99]"
-          >
-            <div className="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-300 flex items-center justify-center mb-2.5 border border-teal-200/60 dark:border-teal-800/60 group-hover:scale-105 transition-transform">
-              <HelpCircle className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-text-main group-hover:text-brand-green transition-colors block">
-                Help & FAQs
-              </span>
-              <span className="text-[10px] text-text-muted mt-0.5 line-clamp-1">
-                Library Guidance
-              </span>
-            </div>
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => setShowDeptModal(true)}
-            className="p-3.5 rounded-2xl border border-border-light bg-surface-card hover:border-brand-green/60 hover:shadow-2xs transition-all group flex flex-col justify-between active:scale-[0.99] text-left cursor-pointer"
-          >
-            <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-300 flex items-center justify-center mb-2.5 border border-rose-200/60 dark:border-rose-800/60 group-hover:scale-105 transition-transform">
-              <Building2 className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-text-main group-hover:text-brand-green transition-colors block">
-                Dept Info
-              </span>
-              <span className="text-[10px] text-text-muted mt-0.5 line-clamp-1">
-                HOD & Secretariat
-              </span>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* 4. PREFERENCES: Grouped iOS / DCN Style Card */}
-      <div className="space-y-2">
+      {/* 2. PREFERENCES (Grouped iOS Style Card) */}
+      <div className="space-y-1.5">
         <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider px-1">
           Preferences
         </span>
@@ -438,12 +263,11 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
               </div>
             </div>
 
-            {/* Segmented Theme Switcher */}
             <div className="inline-flex p-1 rounded-xl bg-surface-bg border border-border-light self-start sm:self-auto">
               <button
                 type="button"
                 onClick={() => setTheme('light')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   theme === 'light'
                     ? 'bg-surface-card text-brand-deep shadow-2xs'
                     : 'text-text-muted hover:text-text-main'
@@ -456,7 +280,7 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
               <button
                 type="button"
                 onClick={() => setTheme('dark')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   theme === 'dark'
                     ? 'bg-surface-card text-brand-green shadow-2xs'
                     : 'text-text-muted hover:text-text-main'
@@ -469,7 +293,7 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
               <button
                 type="button"
                 onClick={() => setTheme('system')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   theme === 'system'
                     ? 'bg-surface-card text-brand-green shadow-2xs'
                     : 'text-text-muted hover:text-text-main'
@@ -484,7 +308,7 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
           {/* Academic Level Focus */}
           <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-brand-green flex items-center justify-center shrink-0 border border-emerald-200/60 dark:border-emerald-800/60">
+              <div className="w-8 h-8 rounded-xl bg-surface-bg text-brand-green flex items-center justify-center shrink-0 border border-border-light">
                 <GraduationCap className="w-4 h-4" />
               </div>
               <div>
@@ -493,10 +317,9 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
               </div>
             </div>
 
-            {/* Level Selector Pills */}
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-none self-start sm:self-auto">
-              {(['All', '100', '200', '300', '400', 'Postgraduate'] as const).map((lvl) => {
-                const label = lvl === 'All' ? 'All' : lvl === 'Postgraduate' ? 'PG' : `${lvl}L`;
+              {(['100', '200', '300', '400', 'All'] as const).map((lvl) => {
+                const label = lvl === 'All' ? 'All' : `${lvl}L`;
                 const isSelected = defaultLevel === lvl;
                 return (
                   <button
@@ -524,11 +347,10 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
               </div>
               <div>
                 <span className="font-bold text-text-main block">Campus Data Saver</span>
-                <span className="text-[11px] text-text-muted">Low bandwidth mode for UI campus Wi-Fi</span>
+                <span className="text-[11px] text-text-muted">Low bandwidth mode for UI campus networks</span>
               </div>
             </div>
 
-            {/* Toggle Switch */}
             <button
               type="button"
               role="switch"
@@ -539,7 +361,7 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
               }`}
             >
               <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
                   dataSaver ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
@@ -561,7 +383,7 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
             <button
               type="button"
               onClick={handleClearCache}
-              className="px-3 py-1.5 rounded-lg border border-border-light hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 text-text-muted hover:text-brand-red font-semibold text-xs transition-colors cursor-pointer"
+              className="px-3 py-1 rounded-lg border border-border-light hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 text-text-muted hover:text-brand-red font-semibold text-xs transition-colors cursor-pointer"
             >
               Clear
             </button>
@@ -569,13 +391,130 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
         </div>
       </div>
 
-      {/* 5. APP & ADMINISTRATION: Grouped iOS / DCN Style Card */}
-      <div className="space-y-2">
+      {/* 3. DEPARTMENT & ACADEMIC SERVICES (Grouped iOS Style Card) */}
+      <div className="space-y-1.5">
         <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider px-1">
-          App & Administration
+          Academic & Campus Services
         </span>
         <div className="rounded-2xl border border-border-light bg-surface-card divide-y divide-border-light/60 overflow-hidden shadow-2xs text-xs">
-          {/* Standalone App Status */}
+          {/* Student Enterprise Hub */}
+          <Link
+            to="/enterprise"
+            className="p-3.5 sm:p-4 flex items-center justify-between hover:bg-surface-bg/60 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-surface-bg text-emerald-600 group-hover:text-brand-green flex items-center justify-center shrink-0 border border-border-light">
+                <Briefcase className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold text-text-main group-hover:text-brand-green transition-colors block">
+                  Student Enterprise Hub
+                </span>
+                <span className="text-[11px] text-text-muted">Student-run businesses, consulting & freelance services</span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green transition-transform group-hover:translate-x-0.5" />
+          </Link>
+
+          {/* Academic Staff & Lecturers Sheet Trigger */}
+          <button
+            type="button"
+            onClick={() => setShowStaffModal(true)}
+            className="w-full p-3.5 sm:p-4 flex items-center justify-between hover:bg-surface-bg/60 transition-colors group text-left cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-surface-bg text-brand-green flex items-center justify-center shrink-0 border border-border-light">
+                <GraduationCap className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold text-text-main group-hover:text-brand-green transition-colors block">
+                  Academic Staff & Lecturers
+                </span>
+                <span className="text-[11px] text-text-muted">HOD, Professors, Staff Advisers & Office hours</span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green transition-transform group-hover:translate-x-0.5" />
+          </button>
+
+          {/* ASSON Executive Council & Electorals Trigger */}
+          <button
+            type="button"
+            onClick={() => setShowExecModal(true)}
+            className="w-full p-3.5 sm:p-4 flex items-center justify-between hover:bg-surface-bg/60 transition-colors group text-left cursor-pointer border-t border-border-light/60"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-surface-bg text-brand-green flex items-center justify-center shrink-0 border border-border-light">
+                <Award className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold text-text-main group-hover:text-brand-green transition-colors block">
+                  ASSON Executive Council & Electorals
+                </span>
+                <span className="text-[11px] text-text-muted">Elected student leadership & departmental exco</span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green transition-transform group-hover:translate-x-0.5" />
+          </button>
+
+          {/* Scholarships & Opportunities */}
+          <Link
+            to="/opportunities"
+            className="p-3.5 sm:p-4 flex items-center justify-between hover:bg-surface-bg/60 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-surface-bg text-amber-500 group-hover:text-brand-green flex items-center justify-center shrink-0 border border-border-light">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold text-text-main group-hover:text-brand-green transition-colors block">
+                  Scholarships & Grants
+                </span>
+                <span className="text-[11px] text-text-muted">Internships, research grants, and student funding</span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green transition-transform group-hover:translate-x-0.5" />
+          </Link>
+
+          {/* Help & FAQs */}
+          <Link
+            to="/help"
+            className="p-3.5 sm:p-4 flex items-center justify-between hover:bg-surface-bg/60 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-surface-bg text-teal-600 group-hover:text-brand-green flex items-center justify-center shrink-0 border border-border-light">
+                <HelpCircle className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold text-text-main group-hover:text-brand-green transition-colors block">
+                  Study Help & FAQs
+                </span>
+                <span className="text-[11px] text-text-muted">Repository guidelines & academic questions</span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green transition-transform group-hover:translate-x-0.5" />
+          </Link>
+
+          {/* Department Information Modal Trigger */}
+          <button
+            type="button"
+            onClick={() => setShowDeptModal(true)}
+            className="w-full p-3.5 sm:p-4 flex items-center justify-between hover:bg-surface-bg/60 transition-colors group text-left cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-surface-bg text-brand-green flex items-center justify-center shrink-0 border border-border-light">
+                <Building2 className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold text-text-main group-hover:text-brand-green transition-colors block">
+                  Department Information
+                </span>
+                <span className="text-[11px] text-text-muted">ASSON Secretariat, HOD & Faculty details</span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green transition-transform group-hover:translate-x-0.5" />
+          </button>
+
+          {/* Install Standalone Web App */}
           <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-surface-bg text-text-muted flex items-center justify-center shrink-0 border border-border-light">
@@ -597,14 +536,22 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
               <button
                 type="button"
                 onClick={handleInstallApp}
-                className="px-3 py-1.5 rounded-lg bg-surface-bg border border-border-light hover:border-brand-green text-brand-green font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
+                className="px-3 py-1 rounded-lg bg-surface-bg border border-border-light hover:border-brand-green text-brand-green font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Install</span>
               </button>
             )}
           </div>
+        </div>
+      </div>
 
+      {/* 4. INSTITUTIONAL & LEGAL (Grouped iOS Style Card) */}
+      <div className="space-y-1.5">
+        <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider px-1">
+          Governance & Legal
+        </span>
+        <div className="rounded-2xl border border-border-light bg-surface-card divide-y divide-border-light/60 overflow-hidden shadow-2xs text-xs">
           {/* Terms of Service */}
           <Link
             to="/terms"
@@ -616,9 +563,9 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
               </div>
               <div>
                 <span className="font-bold text-text-main group-hover:text-brand-green transition-colors block">
-                  Terms of Service
+                  Terms of Service & Honor Code
                 </span>
-                <span className="text-[11px] text-text-muted">Academic honor code & usage rules</span>
+                <span className="text-[11px] text-text-muted">Academic integrity and fair-use guidelines</span>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green transition-transform group-hover:translate-x-0.5" />
@@ -637,7 +584,7 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
                 <span className="font-bold text-text-main group-hover:text-brand-green transition-colors block">
                   Privacy Policy & NDPA
                 </span>
-                <span className="text-[11px] text-text-muted">Data protection & cookie principles</span>
+                <span className="text-[11px] text-text-muted">Data protection and student privacy</span>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green transition-transform group-hover:translate-x-0.5" />
@@ -657,7 +604,7 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
                   Executive Admin Portal
                 </span>
                 <span className="text-[11px] text-text-muted">
-                  Material vetting pipeline & departmental console
+                  Material vetting and moderation console
                 </span>
               </div>
             </div>
@@ -717,11 +664,23 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenSubmit, onOpenAuth }) 
         </div>
       )}
 
-      {/* Legal & Version Footer */}
-      <div className="pt-2 text-center space-y-1.5">
-        <div className="text-[11px] text-text-subtle">
-          ASSON UI • University of Ibadan Chapter<br />
-          Facts from Reliable Figures
+      {/* Staff Directory Modal */}
+      <StaffDirectoryModal
+        isOpen={showStaffModal}
+        onClose={() => setShowStaffModal(false)}
+      />
+
+      {/* Executive Council Modal */}
+      <ExecutiveCouncilModal
+        isOpen={showExecModal}
+        onClose={() => setShowExecModal(false)}
+      />
+
+      {/* Institutional Footer */}
+      <div className="pt-2 text-center">
+        <div className="text-[11px] text-text-subtle font-medium">
+          ASSON UI • Department of Statistics<br />
+          Faculty of Science, University of Ibadan
         </div>
       </div>
     </div>

@@ -28,3 +28,13 @@ dist-ssr
 .env.production
 .env.development
 
+# Internal developer notes & audit logs
+docs/
+TECHNICAL_AUDIT.md
+what_i_have_done.md
+project_idea.md
+gemini.md
+*.pdf
+inspect.ps1
+DCN UI/
+

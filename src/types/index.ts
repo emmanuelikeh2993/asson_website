@@ -194,3 +194,53 @@ export interface AuditLog {
   timestamp: string;
 }
 
+export interface StaffMember {
+  id: string;
+  name: string;
+  title: string; // e.g. "Professor", "Dr.", "Head of Department"
+  designation: string; // e.g. "Professor of Biostatistics", "Senior Lecturer"
+  courses: string[]; // e.g. ["STA 111", "STA 311"]
+  office: string; // e.g. "Room 204, Department of Statistics"
+  email?: string;
+  consultationHours?: string; // e.g. "Tuesdays & Thursdays 10:00 AM – 12:00 PM"
+  advisorLevel?: AcademicLevel; // e.g. "200" level staff advisor
+  isHOD?: boolean;
+  imageUrl?: string;
+}
+
+export type EnterpriseCategory =
+  | 'Data & Tech'
+  | 'Academic & Tutorials'
+  | 'Design & Creative'
+  | 'Campus Goods & Food'
+  | 'Fashion & Lifestyle';
+
+export interface EnterpriseListing {
+  id: string;
+  businessName: string;
+  ownerName: string;
+  ownerLevel: AcademicLevel;
+  category: EnterpriseCategory;
+  description: string;
+  whatsapp: string; // phone number e.g. "2348012345678"
+  instagram?: string;
+  imageUrl?: string;
+  status: 'approved' | 'pending' | 'rejected';
+  createdAt: string;
+}
+
+export interface ElectedExecutive {
+  id: string;
+  name: string;
+  office: string; // e.g. "President", "Vice President", "General Secretary", "Academic Director", etc.
+  session: string; // e.g. "2024/2025"
+  level: AcademicLevel; // e.g. "300" | "400"
+  imageUrl?: string;
+  whatsapp?: string;
+  email?: string;
+  bio?: string;
+  orderIndex: number;
+}
+
+
+

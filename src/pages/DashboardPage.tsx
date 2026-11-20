@@ -1,27 +1,42 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MOCK_SUBMISSIONS, MOCK_RESOURCES } from '../lib/mockData';
-import { fetchStudentSubmissions, fetchResources, getCachedStudentProfile, fetchUserBookmarks } from '../lib/supabase';
+import { 
+  fetchStudentSubmissions, 
+  fetchResources, 
+  getCachedStudentProfile, 
+  fetchUserBookmarks 
+} from '../lib/supabase';
 import { StudentSubmission, AcademicResource, UserProfile } from '../types';
-import { Badge } from '../components/ui/Badge';
-import { Button } from '../components/ui/Button';
 import { 
   User, 
   FileText, 
   Bookmark, 
   Clock, 
   CheckCircle2, 
-  AlertCircle, 
   PlusCircle, 
   Download,
   BookOpen,
   History,
   ShieldCheck,
   Settings,
-  LogIn
+  LogIn,
+  Search,
+  Bell,
+  ArrowRight,
+  Building2,
+  Briefcase,
+  Calendar,
+  Award,
+  ChevronRight,
+  ExternalLink,
+  Trash2
 } from 'lucide-react';
 import { formatFileSize, formatDate } from '../lib/utils';
 import { triggerResourceDownload } from '../lib/download';
 import { useToast } from '../components/ui/Toast';
+import { StaffDirectoryModal } from '../components/features/department/StaffDirectoryModal';
+import { ExecutiveCouncilModal } from '../components/features/department/ExecutiveCouncilModal';
 
 interface DashboardPageProps {
   onOpenSubmit: () => void;
@@ -29,12 +44,23 @@ interface DashboardPageProps {
   onOpenAuth?: () => void;
 }
 
-export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenSubmit, onOpenSettings, onOpenAuth }) => {
+export const DashboardPage: React.FC<DashboardPageProps> = ({ 
+  onOpenSubmit, 
+  onOpenSettings, 
+  onOpenAuth 
+}) => {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(() => getCachedStudentProfile());
   const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
   const [bookmarks, setBookmarks] = useState<AcademicResource[]>([]);
   const [downloadHistory, setDownloadHistory] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'submissions' | 'bookmarks' | 'downloads'>('submissions');
+  const [activeTab, setActiveTab] = useState<'bookmarks' | 'submissions' | 'downloads'>('bookmarks');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Quick Access Modals
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [isCouncilModalOpen, setIsCouncilModalOpen] = useState(false);
+
   const toast = useToast();
 
   useEffect(() => {
@@ -51,7 +77,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenSubmit, onOp
           const userBookmarks = allRes.filter((r) => bmarkIds.includes(r.id));
           setBookmarks(userBookmarks);
         } else {
-          setBookmarks(allRes.slice(0, 2));
+          setBookmarks(allRes.slice(0, 3));
         }
       }
     });
@@ -60,248 +86,477 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenSubmit, onOp
     try {
       const history = JSON.parse(localStorage.getItem('asson_downloads') || '[]');
       setDownloadHistory(history);
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, []);
 
-  const handleDownloadBookmark = (res: AcademicResource) => {
+  const handleDownload = (res: AcademicResource) => {
     triggerResourceDownload(res, (title, message) => {
       toast.success(title, message);
     });
   };
 
+  const handleRemoveBookmark = (resId: string) => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('asson_bookmarks') || '[]');
+      const updated = cached.filter((id: string) => id !== resId);
+      localStorage.setItem('asson_bookmarks', JSON.stringify(updated));
+      setBookmarks((prev) => prev.filter((b) => b.id !== resId));
+      toast.success('Removed', 'Resource removed from study bookmarks.');
+    } catch {
+      // ignore
+    }
+  };
+
+  const studentName = profile?.displayName || 'Statistics Scholar';
+  const studentInitial = studentName.charAt(0).toUpperCase();
+
+  const filteredBookmarks = bookmarks.filter((b) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      b.title.toLowerCase().includes(q) ||
+      b.courseCode.toLowerCase().includes(q) ||
+      b.type.toLowerCase().includes(q)
+    );
+  });
+
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6 sm:space-y-8 animate-in fade-in duration-200 w-full max-w-full overflow-hidden">
-      {/* 1. Device Study Locker Banner (Zero-Login Transparency) */}
-      <div className="rounded-3xl bg-gradient-to-r from-brand-deep to-emerald-900 text-white p-6 sm:p-8 shadow-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 font-bold text-xl">
-            {profile ? profile.displayName.charAt(0).toUpperCase() : <User className="w-7 h-7 sm:w-8 sm:h-8" />}
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight">
-                {profile ? `${profile.displayName}'s Study Locker` : 'My Academic Study Locker'}
+    <div className="max-w-4xl mx-auto px-3 sm:px-6 py-6 sm:py-8 space-y-6 pb-24 w-full">
+      {/* ------------------------------------------------------------- */}
+      {/* TOP CARD (IMAGE 2 INSPIRED: MINIMALIST, HIGH-CONTRAST ACCENTS) */}
+      {/* ------------------------------------------------------------- */}
+      <div className="rounded-3xl bg-surface-card border border-border-light p-5 sm:p-7 shadow-lg space-y-5">
+        {/* Top Row: User Greeting, Avatar & Quick Actions */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3.5 min-w-0">
+            {/* Student Avatar with green status ring */}
+            <div className="relative shrink-0">
+              <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-emerald-50 dark:bg-emerald-950/70 border-2 border-brand-green text-brand-green flex items-center justify-center font-black text-lg sm:text-xl shadow-xs">
+                {profile?.avatarUrl ? (
+                  <img 
+                    src={profile.avatarUrl} 
+                    alt={studentName} 
+                    className="w-full h-full rounded-full object-cover" 
+                  />
+                ) : (
+                  studentInitial
+                )}
+              </div>
+              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-brand-green border-2 border-surface-card" />
+            </div>
+
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-extrabold text-text-main truncate">
+                Hello, {studentName}
               </h1>
-              <span className="text-[10px] font-bold bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full">
-                {profile ? `${profile.level}L • Cloud Synchronized` : 'Device-Local Storage'}
+              <p className="text-xs text-text-muted truncate mt-0.5">
+                Department of Statistics • University of Ibadan
+              </p>
+            </div>
+          </div>
+
+          {/* Top Right Quick Controls */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => navigate('/notices')}
+              className="p-2.5 rounded-full bg-surface-bg hover:bg-surface-card border border-border-light text-text-muted hover:text-text-main transition-colors relative cursor-pointer"
+              title="Notices & Announcements"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-green" />
+            </button>
+
+            {onOpenSettings && (
+              <button
+                type="button"
+                onClick={onOpenSettings}
+                className="p-2.5 rounded-full bg-surface-bg hover:bg-surface-card border border-border-light text-text-muted hover:text-text-main transition-colors cursor-pointer"
+                title="Settings & Preferences"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            )}
+
+            {!profile && onOpenAuth && (
+              <button
+                type="button"
+                onClick={onOpenAuth}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-green/10 text-brand-green font-bold text-xs hover:bg-brand-green hover:text-white transition-all cursor-pointer ml-1"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Sync Account</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Search Pill Input (Image 2 Inspired) */}
+        <div className="relative">
+          <Search className="w-4 h-4 text-brand-green absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search your saved past questions, courses, or notes..."
+            className="w-full h-12 rounded-full border border-border-light bg-surface-bg pl-11 pr-4 text-xs sm:text-sm text-text-main placeholder:text-text-subtle focus:border-brand-green focus:outline-none shadow-2xs transition-all"
+          />
+        </div>
+
+        {/* 2 High-Contrast Accent KPI Pills (Image 2 Reference: Lime & Arrow buttons) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          {/* Pill 1: Bookmarks / Saved Resources */}
+          <div 
+            onClick={() => setActiveTab('bookmarks')}
+            className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-800/80 cursor-pointer group hover:border-brand-green transition-all shadow-xs"
+          >
+            <div>
+              <span className="text-xl sm:text-2xl font-black text-brand-deep dark:text-emerald-300 block">
+                {bookmarks.length.toString().padStart(2, '0')}
+              </span>
+              <span className="text-xs font-bold text-brand-green dark:text-emerald-400">
+                Bookmarked Resources
               </span>
             </div>
-            <p className="text-xs text-emerald-100/80 mt-1 max-w-xl leading-relaxed">
-              {profile 
-                ? 'Your bookmarks, download history, and submitted papers are synchronized with your verified student account.'
-                : 'Your submissions, bookmarks, and downloads are preserved locally on this browser. Zero login or account required.'}
-            </p>
+            <button
+              type="button"
+              className="w-9 h-9 rounded-full bg-brand-green text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs cursor-pointer shrink-0"
+              aria-label="View saved bookmarks"
+            >
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Pill 2: Submissions & Contributions */}
+          <div 
+            onClick={() => setActiveTab('submissions')}
+            className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800/60 border border-border-light cursor-pointer group hover:border-brand-green transition-all shadow-xs"
+          >
+            <div>
+              <span className="text-xl sm:text-2xl font-black text-text-main block">
+                {submissions.length.toString().padStart(2, '0')}
+              </span>
+              <span className="text-xs font-bold text-text-muted group-hover:text-brand-green transition-colors">
+                Peer Submissions Logged
+              </span>
+            </div>
+            <button
+              type="button"
+              className="w-9 h-9 rounded-full bg-zinc-800 dark:bg-zinc-700 text-white flex items-center justify-center group-hover:bg-brand-green group-hover:scale-110 transition-all shadow-xs cursor-pointer shrink-0"
+              aria-label="View submitted papers"
+            >
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-          {!profile && onOpenAuth && (
-            <button
-              type="button"
-              onClick={onOpenAuth}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Sign In / Sync</span>
-            </button>
-          )}
-          {onOpenSettings && (
-            <button
-              type="button"
-              onClick={onOpenSettings}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
-              title="Preferences & Settings"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>Preferences</span>
-            </button>
-          )}
-          <Button
-            variant="primary"
-            size="md"
-            onClick={onOpenSubmit}
-            className="bg-white text-brand-deep hover:bg-emerald-50 shrink-0 font-bold text-xs h-10 shadow-md"
-          >
-            <PlusCircle className="w-4 h-4 mr-1.5" />
-            Submit Academic Material
-          </Button>
-        </div>
       </div>
 
-      {/* 2. Stat Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="p-4 sm:p-5 rounded-2xl border border-border-light bg-surface-card shadow-card">
-          <span className="text-[11px] sm:text-xs font-bold text-text-muted uppercase tracking-wider block">Submissions</span>
-          <span className="text-2xl sm:text-3xl font-extrabold text-text-main mt-1 block">{submissions.length}</span>
-          <span className="text-[11px] text-emerald-700 mt-1 block font-medium">Logged & Tracking</span>
-        </div>
-        <div className="p-4 sm:p-5 rounded-2xl border border-border-light bg-surface-card shadow-card">
-          <span className="text-[11px] sm:text-xs font-bold text-text-muted uppercase tracking-wider block">Saved Bookmarks</span>
-          <span className="text-2xl sm:text-3xl font-extrabold text-text-main mt-1 block">{bookmarks.length}</span>
-          <span className="text-[11px] text-text-muted mt-1 block">Quick study links</span>
-        </div>
-        <div className="p-4 sm:p-5 rounded-2xl border border-border-light bg-surface-card shadow-card">
-          <span className="text-[11px] sm:text-xs font-bold text-text-muted uppercase tracking-wider block">Downloads</span>
-          <span className="text-2xl sm:text-3xl font-extrabold text-text-main mt-1 block">{downloadHistory.length}</span>
-          <span className="text-[11px] text-text-muted mt-1 block">Cached to this device</span>
-        </div>
-        <div className="p-4 sm:p-5 rounded-2xl border border-border-light bg-surface-card shadow-card">
-          <span className="text-[11px] sm:text-xs font-bold text-text-muted uppercase tracking-wider block">Access Status</span>
-          <span className="text-xl sm:text-2xl font-bold text-brand-green mt-1 block">Unrestricted</span>
-          <span className="text-[11px] text-text-muted mt-1 block">No login required</span>
-        </div>
+      {/* ------------------------------------------------------------- */}
+      {/* QUICK ACTIONS PILLS (HORIZONTAL SCROLLING)                    */}
+      {/* ------------------------------------------------------------- */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
+        <button
+          type="button"
+          onClick={() => navigate('/resources')}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-zinc-900 text-white dark:bg-zinc-800 dark:hover:bg-zinc-700 font-bold whitespace-nowrap transition-all shadow-xs cursor-pointer hover:bg-zinc-800 shrink-0"
+        >
+          <BookOpen className="w-3.5 h-3.5 text-brand-green" />
+          <span>Past Questions</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsStaffModalOpen(true)}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-surface-card border border-border-light text-text-main font-bold whitespace-nowrap hover:bg-surface-bg transition-all shadow-2xs cursor-pointer shrink-0"
+        >
+          <Building2 className="w-3.5 h-3.5 text-brand-green" />
+          <span>Staff Directory</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/enterprise')}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-surface-card border border-border-light text-text-main font-bold whitespace-nowrap hover:bg-surface-bg transition-all shadow-2xs cursor-pointer shrink-0"
+        >
+          <Briefcase className="w-3.5 h-3.5 text-brand-green" />
+          <span>Enterprise Hub</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsCouncilModalOpen(true)}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-surface-card border border-border-light text-text-main font-bold whitespace-nowrap hover:bg-surface-bg transition-all shadow-2xs cursor-pointer shrink-0"
+        >
+          <Award className="w-3.5 h-3.5 text-brand-green" />
+          <span>Executive Council</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/calendar')}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-surface-card border border-border-light text-text-main font-bold whitespace-nowrap hover:bg-surface-bg transition-all shadow-2xs cursor-pointer shrink-0"
+        >
+          <Calendar className="w-3.5 h-3.5 text-brand-green" />
+          <span>Academic Dates</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenSubmit}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-brand-green text-white font-bold whitespace-nowrap hover:bg-brand-deep transition-all shadow-xs cursor-pointer shrink-0 ml-auto"
+        >
+          <PlusCircle className="w-3.5 h-3.5" />
+          <span>Submit Material</span>
+        </button>
       </div>
 
-      {/* 3. Tab Navigation */}
-      <div>
-        <div className="flex items-center gap-1 sm:gap-2 border-b border-border-light pb-2 overflow-x-auto scrollbar-none">
+      {/* ------------------------------------------------------------- */}
+      {/* PROMINENT ANNOUNCEMENTS CARD (IMAGE 2 WATER MAINTENANCE STYLE) */}
+      {/* ------------------------------------------------------------- */}
+      <div className="rounded-3xl bg-zinc-900 text-white p-5 sm:p-6 shadow-xl space-y-3.5 relative overflow-hidden border border-zinc-800">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-brand-green animate-pulse" />
+            <h2 className="text-sm sm:text-base font-bold text-white">
+              Announcements & Examination Bulletin
+            </h2>
+          </div>
+          <span className="text-[10px] font-mono text-zinc-400 bg-white/10 px-2 py-0.5 rounded-full">
+            2h ago
+          </span>
+        </div>
+
+        <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed max-w-xl">
+          Harmattan Semester Past Questions archive for 100L through 400L with model answers has been compiled and indexed. Download your course packs for offline preparation.
+        </p>
+
+        <div className="pt-1">
           <button
-            onClick={() => setActiveTab('submissions')}
-            className={`text-xs sm:text-sm font-bold px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5 shrink-0 ${
-              activeTab === 'submissions'
-                ? 'bg-brand-light text-brand-deep shadow-xs'
-                : 'text-text-muted hover:text-text-main hover:bg-surface-bg'
-            }`}
+            type="button"
+            onClick={() => navigate('/notices')}
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white text-zinc-900 hover:bg-zinc-100 font-bold text-xs transition-transform active:scale-95 cursor-pointer shadow-md"
           >
-            <Clock className="w-4 h-4" />
-            My Submissions ({submissions.length})
+            <span>Read Notice Board</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------- */}
+      {/* TABS: BOOKMARKS / SUBMISSIONS / DOWNLOADS                     */}
+      {/* ------------------------------------------------------------- */}
+      <div className="space-y-4">
+        {/* Tab Switcher */}
+        <div className="flex items-center gap-2 border-b border-border-light pb-2 text-xs font-bold">
           <button
+            type="button"
             onClick={() => setActiveTab('bookmarks')}
-            className={`text-xs sm:text-sm font-bold px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5 shrink-0 ${
+            className={`pb-2 px-3 border-b-2 cursor-pointer transition-colors ${
               activeTab === 'bookmarks'
-                ? 'bg-brand-light text-brand-deep shadow-xs'
-                : 'text-text-muted hover:text-text-main hover:bg-surface-bg'
+                ? 'border-brand-green text-brand-green'
+                : 'border-transparent text-text-muted hover:text-text-main'
             }`}
           >
-            <Bookmark className="w-4 h-4" />
             Saved Bookmarks ({bookmarks.length})
           </button>
+
           <button
-            onClick={() => setActiveTab('downloads')}
-            className={`text-xs sm:text-sm font-bold px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5 shrink-0 ${
-              activeTab === 'downloads'
-                ? 'bg-brand-light text-brand-deep shadow-xs'
-                : 'text-text-muted hover:text-text-main hover:bg-surface-bg'
+            type="button"
+            onClick={() => setActiveTab('submissions')}
+            className={`pb-2 px-3 border-b-2 cursor-pointer transition-colors ${
+              activeTab === 'submissions'
+                ? 'border-brand-green text-brand-green'
+                : 'border-transparent text-text-muted hover:text-text-main'
             }`}
           >
-            <History className="w-4 h-4" />
-            Recent Downloads ({downloadHistory.length})
+            My Submissions ({submissions.length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('downloads')}
+            className={`pb-2 px-3 border-b-2 cursor-pointer transition-colors ${
+              activeTab === 'downloads'
+                ? 'border-brand-green text-brand-green'
+                : 'border-transparent text-text-muted hover:text-text-main'
+            }`}
+          >
+            Offline Downloads ({downloadHistory.length})
           </button>
         </div>
 
-        {/* Tab 1: Submissions Tracker */}
-        {activeTab === 'submissions' && (
-          <div className="mt-4 space-y-3">
-            {submissions.map((sub) => {
-              const statusVariant = 
-                sub.status === 'Approved' ? 'approved' :
-                sub.status === 'Under Review' ? 'pending' : 'changes-requested';
-
-              return (
-                <div
-                  key={sub.id}
-                  className="p-5 rounded-2xl border border-border-light bg-surface-card shadow-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-                >
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="course">{sub.courseCode}</Badge>
-                      <h4 className="text-sm font-bold text-text-main">{sub.resourceTitle}</h4>
-                      <Badge variant={statusVariant} withIcon>
-                        {sub.status}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-text-muted">
-                      {sub.resourceType} • {sub.session} • Submitted on {formatDate(sub.submittedAt)}
-                    </p>
-                    {sub.feedback && (
-                      <p className="text-xs text-text-main bg-surface-bg p-2.5 rounded-xl border border-border-light/60 mt-2">
-                        <span className="font-bold text-brand-deep">Editorial Status:</span> {sub.feedback}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <span className="text-xs font-mono text-text-muted">
-                      {formatFileSize(sub.fileSizeBytes)}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Tab 2: Bookmarks */}
+        {/* Tab 1: Bookmarks Content */}
         {activeTab === 'bookmarks' && (
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {bookmarks.map((res) => (
-              <div
-                key={res.id}
-                className="p-5 rounded-2xl border border-border-light bg-surface-card shadow-card flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge variant="course">{res.courseCode}</Badge>
-                    <Badge variant="verified" withIcon>Verified</Badge>
-                  </div>
-                  <h4 className="text-xs font-bold text-text-main mb-1 line-clamp-2">
-                    {res.title}
-                  </h4>
-                  <p className="text-[11px] text-text-muted">
-                    {res.session} • {formatFileSize(res.fileSizeBytes)}
-                  </p>
-                </div>
-                <div className="pt-3 border-t border-border-light/60 mt-3 flex justify-end">
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={() => handleDownloadBookmark(res)}
-                    className="text-xs h-8 font-bold"
-                  >
-                    <Download className="w-3.5 h-3.5 mr-1" /> Download
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Tab 3: Recent Downloads */}
-        {activeTab === 'downloads' && (
-          <div className="mt-4 space-y-2">
-            {downloadHistory.length === 0 ? (
-              <div className="p-8 text-center text-xs text-text-muted border border-dashed rounded-2xl bg-surface-card">
-                No materials downloaded yet on this device. Explore past questions and download anytime!
+          <div className="space-y-3">
+            {filteredBookmarks.length === 0 ? (
+              <div className="py-12 text-center rounded-2xl bg-surface-card border border-border-light p-6 space-y-2">
+                <Bookmark className="w-8 h-8 text-text-muted mx-auto opacity-40" />
+                <p className="text-sm font-bold text-text-main">No bookmarks saved yet</p>
+                <p className="text-xs text-text-muted max-w-sm mx-auto">
+                  Browse the Past Questions library and tap the bookmark icon on any paper to save it to your dashboard.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/resources')}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep cursor-pointer mt-2"
+                >
+                  <BookOpen className="w-3.5 h-3.5" /> Explore Library
+                </button>
               </div>
             ) : (
-              downloadHistory.map((item, idx) => (
-                <div
-                  key={`${item.id}-${idx}`}
-                  className="p-4 rounded-xl border border-border-light bg-surface-card flex items-center justify-between text-xs"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="p-2 rounded-lg bg-emerald-50 text-brand-green">
-                      <Download className="w-4 h-4" />
-                    </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {filteredBookmarks.map((res) => (
+                  <div
+                    key={res.id}
+                    className="p-4 rounded-2xl border border-border-light bg-surface-card hover:border-brand-green/60 transition-all flex flex-col justify-between space-y-3 shadow-2xs"
+                  >
                     <div>
-                      <h4 className="font-bold text-text-main">{item.title}</h4>
-                      <span className="text-[11px] text-text-muted">
-                        Course: {item.courseCode} • {formatFileSize(item.fileSizeBytes)}
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200/80 dark:border-emerald-800/80 font-mono">
+                          {res.courseCode}
+                        </span>
+                        <span className="text-[10px] text-text-subtle font-mono">
+                          {res.session} • {res.type}
+                        </span>
+                      </div>
+                      <h3 className="text-xs sm:text-sm font-bold text-text-main line-clamp-2">
+                        {res.title}
+                      </h3>
+                      <p className="text-[11px] text-text-muted mt-1 font-mono">
+                        {formatFileSize(res.fileSizeBytes)} • {res.level}L
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-border-light/60 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDownload(res)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep transition-colors cursor-pointer shadow-2xs"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download PDF</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveBookmark(res.id)}
+                        className="p-1.5 text-text-muted hover:text-red-500 transition-colors cursor-pointer"
+                        title="Remove Bookmark"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 2: Submissions Content */}
+        {activeTab === 'submissions' && (
+          <div className="space-y-3">
+            {submissions.length === 0 ? (
+              <div className="py-12 text-center rounded-2xl bg-surface-card border border-border-light p-6 space-y-2">
+                <FileText className="w-8 h-8 text-text-muted mx-auto opacity-40" />
+                <p className="text-sm font-bold text-text-main">No submissions recorded on this browser</p>
+                <p className="text-xs text-text-muted max-w-sm mx-auto">
+                  Have past questions, test papers or departmental lecture notes? Contribute to help fellow statistics scholars.
+                </p>
+                <button
+                  type="button"
+                  onClick={onOpenSubmit}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep cursor-pointer mt-2"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" /> Submit Material
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {submissions.map((sub) => (
+                  <div
+                    key={sub.id}
+                    className="p-4 rounded-2xl border border-border-light bg-surface-card flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-mono">
+                          {sub.courseCode}
+                        </span>
+                        <span className="text-xs font-bold text-text-main truncate">
+                          {sub.resourceTitle}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-text-muted mt-1 font-mono">
+                        Tracking Ref: <span className="font-bold text-text-main">{sub.referenceCode || sub.id}</span> • {sub.submittedAt}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                          sub.status === 'Approved'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200 dark:border-emerald-800'
+                            : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 border border-amber-200 dark:border-amber-800'
+                        }`}
+                      >
+                        {sub.status}
                       </span>
                     </div>
                   </div>
-                  <span className="text-[11px] text-text-subtle">
-                    {item.downloadedAt ? new Date(item.downloadedAt).toLocaleDateString() : 'Recent'}
-                  </span>
-                </div>
-              ))
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 3: Downloads History */}
+        {activeTab === 'downloads' && (
+          <div className="space-y-3">
+            {downloadHistory.length === 0 ? (
+              <div className="py-12 text-center rounded-2xl bg-surface-card border border-border-light p-6">
+                <History className="w-8 h-8 text-text-muted mx-auto opacity-40 mb-2" />
+                <p className="text-sm font-bold text-text-main">No recent downloads</p>
+                <p className="text-xs text-text-muted">Downloaded past questions will be logged here for offline quick access.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {downloadHistory.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3.5 rounded-2xl border border-border-light bg-surface-card flex items-center justify-between gap-3 text-xs"
+                  >
+                    <div className="min-w-0">
+                      <span className="font-bold text-text-main block truncate">
+                        {item.title}
+                      </span>
+                      <span className="text-[11px] text-text-muted font-mono">
+                        Downloaded {item.date || 'recently'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-brand-green font-mono">
+                      Cached
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
       </div>
+
+      {/* QUICK MODALS */}
+      <StaffDirectoryModal 
+        isOpen={isStaffModalOpen} 
+        onClose={() => setIsStaffModalOpen(false)} 
+      />
+
+      <ExecutiveCouncilModal
+        isOpen={isCouncilModalOpen}
+        onClose={() => setIsCouncilModalOpen(false)}
+      />
     </div>
   );
 };
