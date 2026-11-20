@@ -242,5 +242,17 @@ export interface ElectedExecutive {
   orderIndex: number;
 }
 
+export interface AuthorizedExecutive {
+  id: string;
+  email: string;
+  name: string;
+  office: string;
+  role: 'editor' | 'admin' | 'super_admin';
+  isMaster?: boolean;
+  approvedBy?: string;
+  createdAt: string;
+}
+
+
 
 

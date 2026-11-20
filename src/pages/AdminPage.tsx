@@ -37,6 +37,13 @@ import {
   fetchStaffMembers,
   createStaffMemberInDb,
   deleteStaffMemberInDb,
+  fetchAuthorizedExecutives,
+  addAuthorizedExecutive,
+  revokeAuthorizedExecutive,
+  getExecutivePasskey,
+  updateExecutivePasskey,
+  MASTER_ADMIN_EMAILS,
+  isSupabaseConfigured,
   supabase 
 } from '../lib/supabase';
 import { 
@@ -53,7 +60,8 @@ import {
   AcademicLevel,
   EnterpriseListing,
   ElectedExecutive,
-  StaffMember
+  StaffMember,
+  AuthorizedExecutive
 } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -94,7 +102,11 @@ import {
   Menu,
   Award,
   Phone,
-  Building2
+  Building2,
+  KeyRound,
+  UserCheck,
+  UserX,
+  Copy
 } from 'lucide-react';
 
 interface AdminPageProps {
@@ -112,7 +124,8 @@ type TabKey =
   | 'faqs' 
   | 'enterprise' 
   | 'analytics' 
-  | 'audit';
+  | 'audit'
+  | 'access';
 
 export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
   const toast = useToast();
@@ -228,6 +241,31 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     category: 'Academics' as 'Academics' | 'Resources' | 'ASSON' | 'Submissions'
   });
 
+  // Committee Delegation State
+  const [authorizedExecs, setAuthorizedExecs] = useState<AuthorizedExecutive[]>([]);
+  const [masterPasskey, setMasterPasskey] = useState<string>(() => getExecutivePasskey());
+  const [isPasskeyEditing, setIsPasskeyEditing] = useState(false);
+  const [newPasskeyVal, setNewPasskeyVal] = useState(masterPasskey);
+  const [showPasskeyText, setShowPasskeyText] = useState(false);
+
+  // New Member Form State
+  const [newExecEmail, setNewExecEmail] = useState('');
+  const [newExecName, setNewExecName] = useState('');
+  const [newExecOffice, setNewExecOffice] = useState('Academic Director');
+  const [newExecRole, setNewExecRole] = useState<'admin' | 'editor'>('admin');
+  const [isAddingExec, setIsAddingExec] = useState(false);
+
+  const isMasterAdmin = useMemo(() => {
+    const clean = adminEmail.toLowerCase().trim();
+    return (
+      clean === 'ikehemmanuel70@gmail.com' ||
+      clean === 'ikehemmanuel60@gmail.com' ||
+      clean === 'executive@asson.ui.edu.ng' ||
+      adminRole === 'super_admin' ||
+      sessionStorage.getItem('asson_admin_is_master') === 'true'
+    );
+  }, [adminEmail, adminRole]);
+
   // Load Data on Initial Render
   useEffect(() => {
     fetchStudentSubmissions().then((data) => setSubmissions(data.length > 0 ? data : MOCK_SUBMISSIONS));
@@ -240,7 +278,57 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     fetchEnterpriseListings(true).then((data) => setEnterprises(data));
     fetchElectedExecutives().then((data) => setExecutives(data.length > 0 ? data : MOCK_EXECUTIVES));
     fetchStaffMembers().then((data) => setStaff(data));
+    fetchAuthorizedExecutives().then((data) => setAuthorizedExecs(data));
   }, []);
+
+  const handleAddExecutive = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newExecEmail || !newExecName || !newExecOffice) {
+      toast.error('Missing fields', 'Please enter email, full name, and executive portfolio.');
+      return;
+    }
+    setIsAddingExec(true);
+    const res = await addAuthorizedExecutive({
+      email: newExecEmail,
+      name: newExecName,
+      office: newExecOffice,
+      role: newExecRole
+    });
+    setIsAddingExec(false);
+    if (res.success && res.data) {
+      setAuthorizedExecs(prev => [res.data!, ...prev.filter(x => x.email.toLowerCase() !== newExecEmail.toLowerCase())]);
+      setNewExecEmail('');
+      setNewExecName('');
+      toast.success('Executive Authorized!', `${res.data.name} (${newExecEmail}) can now log in using the shared committee passkey.`);
+    } else {
+      toast.error('Failed to authorize', res.error || 'Check details and try again.');
+    }
+  };
+
+  const handleRevokeExecutive = async (id: string, emailToRevoke: string) => {
+    if (window.confirm(`Revoke executive administration access for ${emailToRevoke}?`)) {
+      const res = await revokeAuthorizedExecutive(id, emailToRevoke);
+      if (res.success) {
+        setAuthorizedExecs(prev => prev.filter(x => x.email.toLowerCase() !== emailToRevoke.toLowerCase()));
+        toast.info('Access Revoked', `Executive privileges for ${emailToRevoke} have been removed.`);
+      } else {
+        toast.error('Cannot revoke', res.error || 'Failed to remove member.');
+      }
+    }
+  };
+
+  const handleSavePasskey = () => {
+    if (newPasskeyVal.length < 6) {
+      toast.error('Passkey too short', 'Passkey must be at least 6 characters.');
+      return;
+    }
+    const ok = updateExecutivePasskey(newPasskeyVal);
+    if (ok) {
+      setMasterPasskey(newPasskeyVal);
+      setIsPasskeyEditing(false);
+      toast.success('Passkey Updated', 'New executive committee passkey saved. Share it with your authorized members.');
+    }
+  };
 
   // Time-aware greeting
   const greeting = useMemo(() => {
@@ -695,7 +783,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
             {/* Email / Username Input */}
             <div>
               <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
-                Email / Username
+                Authorized Executive Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
@@ -704,7 +792,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 <input
                   type="email"
                   required
-                  placeholder="executive@asson.ui.edu.ng"
+                  placeholder="e.g. ikehemmanuel70@gmail.com"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
@@ -715,10 +803,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
               </div>
             </div>
 
-            {/* Password Input with Show/Hide */}
+            {/* Password / Passkey Input with Show/Hide */}
             <div>
               <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
-                Password
+                Committee Passkey / Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
@@ -727,7 +815,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
-                  placeholder="Enter your password"
+                  placeholder="Enter executive passkey"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -738,7 +826,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -775,25 +863,27 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
             </button>
           </form>
 
-          {/* Divider: or continue with */}
-          <div className="relative flex items-center justify-center my-4">
-            <div className="border-t border-zinc-200 dark:border-zinc-800 w-full" />
-            <span className="bg-white dark:bg-[#13171D] px-3 text-[11px] uppercase tracking-wider text-zinc-400 absolute font-medium">
-              or continue with
-            </span>
-          </div>
-
-          {/* Quick Demo Access Button */}
-          <div className="grid grid-cols-1 gap-2">
-            <button
-              type="button"
-              onClick={handleDemoLogin}
-              className="w-full py-2.5 px-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              <ShieldCheck className="w-4 h-4 text-[#087A3E]" />
-              <span>One-Click Executive Demo Access</span>
-            </button>
-          </div>
+          {/* Quick Demo Access Button (Strictly isolated to offline local developer environments) */}
+          {(!isSupabaseConfigured && import.meta.env.DEV) && (
+            <>
+              <div className="relative flex items-center justify-center my-4">
+                <div className="border-t border-zinc-200 dark:border-zinc-800 w-full" />
+                <span className="bg-white dark:bg-[#13171D] px-3 text-[11px] uppercase tracking-wider text-zinc-400 absolute font-medium">
+                  offline demo mode
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  type="button"
+                  onClick={handleDemoLogin}
+                  className="w-full py-2.5 px-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <ShieldCheck className="w-4 h-4 text-[#087A3E]" />
+                  <span>One-Click Executive Demo Access (Dev Only)</span>
+                </button>
+              </div>
+            </>
+          )}
 
           {/* Bottom Watermark */}
           <div className="text-center pt-2 text-[10px] text-zinc-400">
@@ -1089,6 +1179,27 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   </div>
                   <span className="text-[10px] text-zinc-400 font-mono">
                     {auditLogs.length}
+                  </span>
+                </button>
+
+                {/* Committee Delegation & Access */}
+                <button
+                  onClick={() => {
+                    setActiveTab('access');
+                    setIsMobileSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-colors cursor-pointer ${
+                    activeTab === 'access'
+                      ? 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-900 dark:text-white font-bold'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 hover:text-zinc-900'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <ShieldCheck className={`w-4 h-4 ${activeTab === 'access' ? 'text-[#087A3E]' : ''}`} />
+                    <span>Committee & Access</span>
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold">
+                    {authorizedExecs.length}
                   </span>
                 </button>
               </div>
@@ -2251,6 +2362,288 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                           </td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ------------------------------------------------------------- */}
+          {/* TAB 10: COMMITTEE DELEGATION & ACCESS (MASTER ADMIN)          */}
+          {/* ------------------------------------------------------------- */}
+          {activeTab === 'access' && (
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-zinc-200/80 dark:border-zinc-800">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-brand-green text-[11px] font-bold border border-emerald-200 dark:border-emerald-800 mb-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Institutional Executive Governance
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
+                    Committee Delegation & Access Control
+                  </h2>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Manage approved committee emails and the shared executive passkey. Only emails on this list can log in to the administration console.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-brand-deep dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-2xs">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    <span>{isMasterAdmin ? 'Master Admin Mode (Emmanuel Ikeh)' : 'Committee Member View'}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Grid: Shared Passkey Card & Explainer */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1. Shared Executive Passkey Card */}
+                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#13171D] p-5 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center border border-amber-200 dark:border-amber-900">
+                        <KeyRound className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                          Shared Executive Passkey
+                        </h3>
+                        <span className="text-[11px] text-zinc-500">Universal password for all 15 committee members</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {!isPasskeyEditing ? (
+                    <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-zinc-800 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-bold tracking-wider text-zinc-900 dark:text-zinc-100">
+                          {showPasskeyText ? masterPasskey : '••••••••••••••••'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowPasskeyText(!showPasskeyText)}
+                          className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
+                          title={showPasskeyText ? "Hide passkey" : "Reveal passkey"}
+                        >
+                          {showPasskeyText ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+
+                      {isMasterAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewPasskeyVal(masterPasskey);
+                            setIsPasskeyEditing(true);
+                          }}
+                          className="px-2.5 py-1 rounded-lg text-xs font-bold text-[#087A3E] hover:bg-emerald-50 dark:hover:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 cursor-pointer"
+                        >
+                          Change
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={newPasskeyVal}
+                        onChange={(e) => setNewPasskeyVal(e.target.value)}
+                        placeholder="Enter new master passkey (min 6 chars)"
+                        className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono font-bold text-zinc-900 dark:text-white focus:outline-none focus:border-[#087A3E]"
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleSavePasskey}
+                          className="px-3 py-1.5 rounded-lg bg-[#087A3E] text-white text-xs font-bold hover:bg-[#066131] cursor-pointer"
+                        >
+                          Save New Passkey
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsPasskeyEditing(false)}
+                          className="px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-600 hover:bg-zinc-100 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    💡 <strong>Tenure Handoff:</strong> When your executive session ends after 9–10 months, change this passkey and clear the email list to seamlessly hand over access to the next administration.
+                  </p>
+                </div>
+
+                {/* 2. How it works guide */}
+                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#13171D] p-5 shadow-xs space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-brand-green flex items-center justify-center border border-emerald-200 dark:border-emerald-800">
+                      <UserCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                        How Committee Login Works
+                      </h3>
+                      <span className="text-[11px] text-zinc-500">Security + Personal Accountability</span>
+                    </div>
+                  </div>
+
+                  <ul className="text-xs text-zinc-600 dark:text-zinc-300 space-y-2 list-disc list-inside leading-relaxed">
+                    <li>Your 15 committee members go to <code className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[11px] font-mono">/console</code>.</li>
+                    <li>They enter their <strong>distinct email</strong> (approved below) + the <strong>shared committee passkey</strong>.</li>
+                    <li>Because each member uses their own email, every past question they approve, announcement they post, or feedback they reply to is <strong>permanently stamped with their personal name</strong> in the Audit Trail!</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* 3. Add Committee Member Form (Master Admin Only) */}
+              {isMasterAdmin && (
+                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#13171D] p-5 sm:p-6 shadow-xs space-y-4">
+                  <div className="flex items-center gap-2">
+                    <PlusCircle className="w-4 h-4 text-[#087A3E]" />
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                      Authorize New Committee Member
+                    </h3>
+                  </div>
+
+                  <form onSubmit={handleAddExecutive} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                    <div>
+                      <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                        Member's Email *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="e.g. director@gmail.com"
+                        value={newExecEmail}
+                        onChange={(e) => setNewExecEmail(e.target.value)}
+                        className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-surface-bg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#087A3E]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                        Full Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Adebayo Ogunlesi"
+                        value={newExecName}
+                        onChange={(e) => setNewExecName(e.target.value)}
+                        className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-surface-bg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#087A3E]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                        Office / Portfolio *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Academic Director"
+                        value={newExecOffice}
+                        onChange={(e) => setNewExecOffice(e.target.value)}
+                        className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-surface-bg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#087A3E]"
+                      />
+                    </div>
+
+                    <div className="flex flex-col justify-end">
+                      <button
+                        type="submit"
+                        disabled={isAddingExec}
+                        className="w-full py-2 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>{isAddingExec ? 'Authorizing...' : 'Authorize Member'}</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* 4. Approved Executive Allowlist Table */}
+              <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#13171D] overflow-hidden shadow-xs">
+                <div className="p-4 bg-zinc-50/60 dark:bg-zinc-900/60 border-b border-zinc-200/70 dark:border-zinc-800 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                      Approved Executive Council Members ({authorizedExecs.length})
+                    </h3>
+                    <p className="text-[11px] text-zinc-500">Only these emails can access the administration dashboard with the shared passkey.</p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-zinc-200/80 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-500 font-bold">
+                        <th className="py-3 px-4">Member / Portfolio</th>
+                        <th className="py-3 px-4">Approved Email</th>
+                        <th className="py-3 px-4">Access Level</th>
+                        <th className="py-3 px-4">Approved By</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80 text-zinc-800 dark:text-zinc-200">
+                      {authorizedExecs.map((exec) => {
+                        const isMaster = exec.isMaster || MASTER_ADMIN_EMAILS.includes(exec.email.toLowerCase());
+                        return (
+                          <tr key={exec.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                            <td className="py-3.5 px-4 font-semibold">
+                              <div className="flex items-center gap-2.5">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
+                                  isMaster 
+                                    ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-300' 
+                                    : 'bg-emerald-50 dark:bg-emerald-950 text-brand-green border border-emerald-200'
+                                }`}>
+                                  {exec.name.charAt(0)}
+                                </div>
+                                <div>
+                                  <span className="font-bold text-zinc-900 dark:text-white block">{exec.name}</span>
+                                  <span className="text-[11px] text-zinc-500">{exec.office}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 font-mono font-medium text-zinc-700 dark:text-zinc-300">
+                              {exec.email}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              {isMaster ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                                  <Award className="w-3 h-3 text-amber-600" /> Master Admin
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200 dark:border-emerald-800">
+                                  <ShieldCheck className="w-3 h-3" /> Committee Member
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 text-zinc-500 text-[11px]">
+                              {exec.approvedBy || 'Emmanuel Ikeh'}
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              {isMaster ? (
+                                <span className="text-[11px] text-zinc-400 italic">Protected</span>
+                              ) : isMasterAdmin ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRevokeExecutive(exec.id, exec.email)}
+                                  className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-950/40 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                                  title="Revoke admin access"
+                                >
+                                  <UserX className="w-3 h-3" />
+                                  <span>Revoke</span>
+                                </button>
+                              ) : (
+                                <span className="text-[11px] text-zinc-400">Authorized</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

@@ -1,31 +1,55 @@
 import { AcademicResource, Course, Notice, Opportunity, FAQItem, StudentSubmission, AuditLog, CalendarEvent, StaffMember, EnterpriseListing, ElectedExecutive } from '../types';
 
-// Official University of Ibadan Department of Statistics Course Catalog
+// Official University of Ibadan Department of Statistics Course Catalog (Aligned with 2025/2026 Course Forms)
 export const COURSES: Course[] = [
-  // 100 Level
-  { code: 'STA 111', title: 'Probability I: Elementary Principles & Combinatorics', level: '100', semester: 1, units: 3 },
-  { code: 'STA 112', title: 'Descriptive Statistics & Exploratory Data Analysis', level: '100', semester: 1, units: 2 },
-  { code: 'STA 121', title: 'Statistical Inference I: Foundation Concepts', level: '100', semester: 2, units: 3 },
-  { code: 'STA 131', title: 'Statistical Computing I: Introduction to R & Spreadsheets', level: '100', semester: 2, units: 2 },
-  { code: 'MAT 111', title: 'Algebra & Elementary Trigonometry', level: '100', semester: 1, units: 3 },
-  { code: 'MAT 121', title: 'Calculus I: Differential & Integral Calculus', level: '100', semester: 1, units: 3 },
-  { code: 'MAT 141', title: 'Analytical Geometry & Vectors', level: '100', semester: 2, units: 3 },
-  { code: 'CSC 101', title: 'Introduction to Computer Science & Problem Solving', level: '100', semester: 1, units: 3 },
+  // -------------------------------------------------------------
+  // 100 Level (37 Units Registered - UI Department of Statistics)
+  // -------------------------------------------------------------
+  { code: 'STA 111', title: 'Descriptive Statistics', level: '100', semester: 1, units: 3 },
+  { code: 'STA 112', title: 'Probability I', level: '100', semester: 1, units: 3 },
+  { code: 'STA 121', title: 'Statistical Inference I', level: '100', semester: 2, units: 3 },
+  { code: 'STA 122', title: 'Statistical Computing I', level: '100', semester: 2, units: 3 },
+  { code: 'MTH 101', title: 'Elementary Mathematics I (Algebra and Trigonometry)', level: '100', semester: 1, units: 2 },
+  { code: 'MTH 102', title: 'Elementary Mathematics II (Calculus)', level: '100', semester: 2, units: 2 },
+  { code: 'MTH 103', title: 'Elementary Mathematics III (Vectors, Geometry and Dynamics)', level: '100', semester: 1, units: 2 },
+  { code: 'COS 101', title: 'Introduction to Computing Sciences', level: '100', semester: 1, units: 3 },
+  { code: 'PHY 101', title: 'General Physics I', level: '100', semester: 1, units: 2 },
+  { code: 'PHY 102', title: 'General Physics II', level: '100', semester: 2, units: 2 },
+  { code: 'PHY 103', title: 'General Physics III', level: '100', semester: 1, units: 2 },
+  { code: 'GST 111', title: 'Communication in English I', level: '100', semester: 1, units: 2 },
+  { code: 'GST 112', title: 'Nigerian Peoples and Culture', level: '100', semester: 2, units: 2 },
+  { code: 'GES 107', title: 'Reproductive Health, STIs, Drugs and Mankind', level: '100', semester: 1, units: 1 },
+  { code: 'GES 108', title: 'Introduction to French', level: '100', semester: 2, units: 1 },
+  { code: 'MAT 142', title: 'Introduction to Actuarial Mathematics', level: '100', semester: 2, units: 4 },
 
-  // 200 Level
-  { code: 'STA 211', title: 'Probability II: Distribution Theory & Multivariate Random Variables', level: '200', semester: 1, units: 3 },
-  { code: 'STA 212', title: 'Statistical Inference II: Estimation Theory & Hypothesis Testing', level: '200', semester: 1, units: 3 },
-  { code: 'STA 221', title: 'Sampling Techniques & Survey Methodology I', level: '200', semester: 2, units: 3 },
-  { code: 'STA 231', title: 'Statistical Computing II: Data Wrangling & Simulation in R', level: '200', semester: 2, units: 2 },
-  { code: 'STA 241', title: 'Mathematics for Statisticians (Linear Algebra & Matrix Operations)', level: '200', semester: 1, units: 3 },
-  { code: 'MAT 211', title: 'Real Analysis I: Sequences, Series & Continuity', level: '200', semester: 1, units: 3 },
-  { code: 'MAT 221', title: 'Ordinary Differential Equations & Applications', level: '200', semester: 2, units: 3 },
-  { code: 'CSC 221', title: 'Object-Oriented Programming (Python / C++)', level: '200', semester: 2, units: 3 },
+  // -------------------------------------------------------------
+  // 200 Level (41 Units Registered - UI Department of Statistics)
+  // -------------------------------------------------------------
+  { code: 'STA 211', title: 'Probability II', level: '200', semester: 1, units: 3 },
+  { code: 'STA 219', title: 'Statistical Consulting', level: '200', semester: 1, units: 2 },
+  { code: 'STA 231', title: 'Statistical Computing II', level: '200', semester: 1, units: 2 },
+  { code: 'STA 202', title: 'Statistics for Physical Science & Engineering', level: '200', semester: 1, units: 3 },
+  { code: 'STA 212', title: 'Introduction to Social & Economic Statistics', level: '200', semester: 2, units: 3 },
+  { code: 'STA 221', title: 'Statistical Inference II', level: '200', semester: 2, units: 3 },
+  { code: 'STA 224', title: 'Introduction to Statistical Machine Learning', level: '200', semester: 2, units: 2 },
+  { code: 'STA 225', title: 'Data Visualization', level: '200', semester: 2, units: 2 },
+  { code: 'STA 299', title: 'Industrial Attachment', level: '200', semester: 2, units: 3 },
+  { code: 'MTH 204', title: 'Linear Algebra I', level: '200', semester: 1, units: 2 },
+  { code: 'MTH 207', title: 'Real Analysis I', level: '200', semester: 1, units: 2 },
+  { code: 'MTH 202', title: 'Elementary Differential Equations', level: '200', semester: 2, units: 2 },
+  { code: 'MTH 209', title: 'Introduction to Numerical Analysis', level: '200', semester: 2, units: 2 },
+  { code: 'COS 201', title: 'Computer Programming I', level: '200', semester: 1, units: 3 },
+  { code: 'ENT 211', title: 'Entrepreneurship and Innovation', level: '200', semester: 1, units: 2 },
+  { code: 'GST 212', title: 'Philosophy, Logic and Human Existence', level: '200', semester: 2, units: 2 },
+  { code: 'GES 201', title: 'Use of English II', level: '200', semester: 1, units: 2 },
+  { code: 'GES 103', title: 'Government, Society & the Economy', level: '200', semester: 1, units: 1 },
 
+  // -------------------------------------------------------------
   // 300 Level
-  { code: 'STA 311', title: 'Probability III: Measure-Theoretic Foundations & Limit Theorems', level: '300', semester: 1, units: 3 },
-  { code: 'STA 312', title: 'Statistical Inference III: Likelihood Theory & Asymptotics', level: '300', semester: 1, units: 3 },
-  { code: 'STA 321', title: 'Design and Analysis of Experiments I: ANOVA & Block Designs', level: '300', semester: 1, units: 3 },
+  // -------------------------------------------------------------
+  { code: 'STA 311', title: 'Probability III: Limit Theorems & Foundations', level: '300', semester: 1, units: 3 },
+  { code: 'STA 312', title: 'Statistical Inference III: Likelihood Theory', level: '300', semester: 1, units: 3 },
+  { code: 'STA 321', title: 'Design and Analysis of Experiments I', level: '300', semester: 1, units: 3 },
   { code: 'STA 322', title: 'Regression Analysis & Linear Models', level: '300', semester: 2, units: 3 },
   { code: 'STA 331', title: 'Demography & Social Statistics Methods', level: '300', semester: 2, units: 3 },
   { code: 'STA 332', title: 'Operations Research & Mathematical Programming', level: '300', semester: 2, units: 3 },
@@ -33,11 +57,13 @@ export const COURSES: Course[] = [
   { code: 'STA 351', title: 'Biometrical Methods & Epidemiology', level: '300', semester: 2, units: 3 },
   { code: 'STA 399', title: 'SIWES / Industrial Work Experience Scheme (6 Months)', level: '300', semester: 2, units: 6 },
 
+  // -------------------------------------------------------------
   // 400 Level
-  { code: 'STA 411', title: 'Probability IV: Advanced Stochastic Processes & Markov Chains', level: '400', semester: 1, units: 3 },
-  { code: 'STA 412', title: 'Advanced Statistical Inference: Bayesian Analysis & Decision Theory', level: '400', semester: 1, units: 3 },
+  // -------------------------------------------------------------
+  { code: 'STA 411', title: 'Probability IV: Advanced Stochastic Processes', level: '400', semester: 1, units: 3 },
+  { code: 'STA 412', title: 'Advanced Statistical Inference: Bayesian Analysis', level: '400', semester: 1, units: 3 },
   { code: 'STA 421', title: 'Time Series Analysis & Forecasting (ARIMA & GARCH)', level: '400', semester: 2, units: 3 },
-  { code: 'STA 422', title: 'Multivariate Statistical Analysis (PCA, Factor Analysis & MANOVA)', level: '400', semester: 1, units: 3 },
+  { code: 'STA 422', title: 'Multivariate Statistical Analysis (PCA & MANOVA)', level: '400', semester: 1, units: 3 },
   { code: 'STA 431', title: 'Econometric Methods & Simultaneous Equation Models', level: '400', semester: 2, units: 3 },
   { code: 'STA 432', title: 'Quality Control & Industrial Statistics', level: '400', semester: 2, units: 2 },
   { code: 'STA 441', title: 'Survival Analysis & Reliability Theory', level: '400', semester: 2, units: 3 },
@@ -242,7 +268,7 @@ export const MOCK_ENTERPRISES: EnterpriseListing[] = [
     ownerName: 'Emmanuel Danjuma',
     ownerLevel: '300',
     category: 'Academic & Tutorials',
-    description: 'One-on-one and group revision tutorials for STA 111, STA 121, STA 211, and MAT 121 calculus.',
+    description: 'One-on-one and group revision tutorials for STA 111, STA 121, STA 211, and MTH 102 calculus.',
     whatsapp: '2348023456789',
     imageUrl: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80',
     status: 'approved',

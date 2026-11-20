@@ -34,7 +34,10 @@ export const MobileNav: React.FC<MobileNavProps> = () => {
           <Link
             key={tab.path}
             to={tab.path}
-            className="flex flex-col items-center justify-center flex-1 py-1 px-1 transition-transform active:scale-95 group"
+            onClick={() => {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            }}
+            className="flex flex-col items-center justify-center flex-1 py-1 px-1 transition-transform active:scale-95 group cursor-pointer"
           >
             {/* DCN Expert Signature Active Pill Capsule around Icon */}
             <div

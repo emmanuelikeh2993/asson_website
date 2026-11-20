@@ -126,6 +126,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
               <Search className="w-5 h-5 text-text-muted hover:text-brand-green" />
             </button>
 
+            {/* Mobile Submit Button: 1-Tap Access for Easy Material Upload */}
+            <button
+              type="button"
+              onClick={onOpenSubmit}
+              className="inline-flex sm:hidden items-center gap-1 px-2.5 py-1.5 rounded-xl bg-brand-green text-white hover:bg-brand-deep font-bold text-xs shadow-2xs active:scale-95 transition-all cursor-pointer shrink-0"
+              aria-label="Submit Material"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>Submit</span>
+            </button>
+
             {/* Quick Theme Switcher Button (Desktop & Tablet only; mobile accesses theme via More) */}
             <button
               type="button"

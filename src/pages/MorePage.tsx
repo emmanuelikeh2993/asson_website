@@ -25,6 +25,7 @@ import {
   HelpCircle,
   Briefcase,
   Award,
+  PlusCircle,
   X
 } from 'lucide-react';
 import { StaffDirectoryModal } from '../components/features/department/StaffDirectoryModal';
@@ -35,7 +36,7 @@ interface MorePageProps {
   onOpenAuth: () => void;
 }
 
-export const MorePage: React.FC<MorePageProps> = ({ onOpenAuth }) => {
+export const MorePage: React.FC<MorePageProps> = ({ onOpenAuth, onOpenSubmit }) => {
   const { theme, setTheme } = useTheme();
   const toast = useToast();
 
@@ -397,6 +398,26 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenAuth }) => {
           Academic & Campus Services
         </span>
         <div className="rounded-2xl border border-border-light bg-surface-card divide-y divide-border-light/60 overflow-hidden shadow-2xs text-xs">
+          {/* Submit Academic Material Action */}
+          <button
+            type="button"
+            onClick={onOpenSubmit}
+            className="w-full p-3.5 sm:p-4 flex items-center justify-between hover:bg-surface-bg/60 transition-colors group text-left cursor-pointer bg-emerald-50/40 dark:bg-emerald-950/20"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-brand-green text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <PlusCircle className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold text-text-main group-hover:text-brand-green transition-colors block">
+                  Submit Academic Material
+                </span>
+                <span className="text-[11px] text-text-muted">Upload missing past questions, lecture notes or tutorials</span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-brand-green transition-transform group-hover:translate-x-0.5" />
+          </button>
+
           {/* Student Enterprise Hub */}
           <Link
             to="/enterprise"

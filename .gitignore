@@ -27,10 +27,13 @@ dist-ssr
 .env
 .env.production
 .env.development
+.env.local
+.env*.local
 
 # Internal developer notes & audit logs
 docs/
 TECHNICAL_AUDIT.md
+SECURITY_AUDIT_REPORT.md
 what_i_have_done.md
 project_idea.md
 gemini.md

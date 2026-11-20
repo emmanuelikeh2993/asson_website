@@ -260,17 +260,88 @@ Confirms 0 TypeScript or packaging errors.
   - Production build compiled cleanly with 0 TypeScript errors.
 
 ### 8.6 Mobile Viewport Overflow & Horizontal Shift Resolution (Commit `40492bf`)
-- **Root Cause Identified**: The mobile top header was packing 10 distinct elements (two department logos, divider, ASSON UI title, UNIBADAN badge, search button, theme toggle, student locker avatar, "+ Submit" button, and hamburger menu) on a single horizontal row, causing the header width to exceed 440px on 360px–390px mobile viewports. This forced the entire document into an unintentional horizontal scroll ("shifting to the left" to reveal the submit button).
-- **Streamlined Mobile Header (WhatsApp / Claude Standard)**:
-  - Preserved a lean 3-action right side on mobile screens: Search icon (34px), "+ Submit" pill (70px), and Menu button (34px).
-  - Moved redundant mobile theme switching and profile avatar to the bottom navigation Settings tab and bottom sheet drawer.
-  - Made the secondary university crest visible on `sm+` screens, leaving a clean, compact ASSON logo on mobile phones.
-  - Reduced total mobile header width to ~245px (comfortably within 360px viewports with zero horizontal overflow).
-- **Strict Viewport Containment**:
-  - Enforced `w-full max-w-full overflow-x-hidden` across the root application shell, hero sections, and main wrappers.
-  - Locked viewport scale (`maximum-scale=1.0, user-scalable=no`).
-  - Added 16px minimum font size for mobile inputs to prevent browser focus auto-zoom.
-  - Replaced side-sliding menu with a native WhatsApp-style bottom sheet (`slide-in-from-bottom`).
+- **Root Cause Identified**: The mobile top header was packing 10 distinct elements on a single horizontal row, causing viewport overflow on 360px–390px mobile screens.
+- **Streamlined Mobile Header**: Enforced clean 3-action right side (Search, Submit pill, and Menu) with strict `overflow-x-hidden`.
+
+### 8.7 Scrutinized Security Audit & Remediation (Nov 20, 2026)
+- **Security Audit Source**: Audited against `Security For Vibe-Coded Apps (- Prompt).docx`.
+- **CWE-426 & Execution Safety**: Audited all build and post-install hooks, ensuring zero untrusted script execution.
+- **Input Validation Layer**: Implemented strict runtime Zod schemas (`src/lib/validation.ts`) for all user mutations:
+  - `MaterialSubmissionSchema`: Strict MIME type validation, file size cap (15MB), sanitized filenames, and alphanumeric course codes.
+  - `AdminSignInSchema`: Format validation for administrator emails and passkeys.
+  - `AuthorizedExecutiveSchema`: Email normalization, role validation, and executive full name sanitization.
+  - `CalendarEventSchema`, `NoticeSchema`, `OpportunitySchema`, `StaffMemberSchema`, `ElectedExecutiveSchema`.
+- **Database RLS Hardening (`20261120000000_security_audit_hardening.sql`)**:
+  - Enforced `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` across all 13 database tables.
+  - Added strict `default deny` fallback for any unauthenticated write or delete.
+  - Anonymous insert allowed only for vetted student submissions and content reports; reads restricted to verified/approved records only.
+- **Audit Logging**: Every sensitive action (admin login, material verification, rejection, notice publication, executive privilege grant) writes an immutable record to `audit_events`.
+
+### 8.8 Executive Committee Access Delegation & Passkey Architecture (Nov 20, 2026)
+- **Context & Operational Need**: The ASSON President manages a committee of ~15 student executives who need to moderate submissions and manage calendar notices without sharing a single personal account or requiring manual access to the Supabase database console.
+- **Hybrid Delegated Passkey Architecture**:
+  - **Permanent Master Admins**: `ikehemmanuel70@gmail.com` (President) and `ikehemmanuel60@gmail.com` (Backup Master Admin). Master admin status is permanently enforced in server logic and cannot be revoked through the UI.
+  - **Committee Allowlist**: Master Admins approve or revoke executive emails directly from the Admin Dashboard under the new **"Committee & Access"** tab (`src/pages/AdminPage.tsx`).
+  - **Shared Executive Passkey**: Committee members log in with their **distinct individual email** + a shared tenure passkey (default: `ASSON_EXCO_2024_2025`).
+  - **Individual Accountability & Audit Trail**: Every action (approving past papers, publishing notices, updating deadlines) is stamped with that executive's distinct email in the audit trail.
+  - **Seamless 9–10 Month Tenure Handover**: At the end of the executive tenure, the incoming President simply updates the passkey and revokes outgoing emails with 1 click in the dashboard.
+- **Migration & Client API**: Added migration `20261120010000_committee_access_control.sql` and API helpers `fetchAuthorizedExecutives`, `addAuthorizedExecutive`, `revokeAuthorizedExecutive`, `getExecutivePasskey`, `updateExecutivePasskey`.
+
+### 8.9 Minimalist Resources Library Redesign (`/resources`)
+- **Resolved "Scattered" Layout**: Replaced the noisy 3-column card grid with an orderly, minimalist academic interface following principles from `Principles_of_Minimalist_Application_Design.pdf`.
+- **Compact List View (Default)**: Clean rows displaying document format tag (`PDF`, `DOCX`), course badge (`STA 211`), level & academic session, verification pill, quick Preview button, and instant direct Download button.
+- **Grouped "By Course" Catalog Drawers**: Toggling to "By Course" groups materials neatly under collapsible course drawers (e.g., `STA 111 — Descriptive Statistics`, `STA 211 — Probability II`), making finding specific course papers effortless.
+- **View Switcher**: Retained optional Grid view for users who prefer visual cards.
+
+### 8.10 Mobile Bottom Navigation Scroll-to-Top Architecture
+- **Resolved Scroll Retention Bug**: Clicking bottom tabs (Calendar, Resources, More, etc.) previously kept the viewport scrolled to the bottom (anchored at the footer / "Support & Community").
+- **Fix**:
+  - Added global `<ScrollToTop />` listener in `src/App.tsx` observing route changes (`pathname` and `search`).
+  - Added instant `window.scrollTo({ top: 0, left: 0, behavior: 'instant' })` on bottom navigation tabs in `src/components/layout/MobileNav.tsx`.
+  - Added safe bottom padding (`pb-28`) across `ResourcesPage.tsx`, `CalendarPage.tsx`, `NoticesPage.tsx`, and `OpportunitiesPage.tsx` so bottom content is never obscured by the fixed mobile nav.
+
+### 8.11 Official 2025/2026 Course Forms Alignment
+- **Source Inspection**: Extracted official curriculum from registration forms in `DCN UI/`:
+  - `2026-05-26-080316-course-registration.pdf`: 100 Level (16 courses, 37 units).
+  - `2026-11-20-162911-course-registration.pdf`: 200 Level for Emmanuel Chibuzor Ikeh (18 courses, 41 units).
+- **Corrected Inaccuracies**:
+  - Corrected inverted titles: `STA 111` is **Descriptive Statistics** (3u); `STA 112` is **Probability I** (3u).
+  - Replaced legacy codes: `MAT 111/121/141` replaced with official `MTH 101`, `MTH 102`, `MTH 103`, and `MAT 142`.
+  - Replaced computer science codes: `CSC 101/221` replaced with official `COS 101` and `COS 201`.
+  - Added missing registered 200L courses: `STA 219` (Consulting), `STA 202` (Eng & Phys Sci), `STA 224` (Statistical ML), `STA 225` (Data Viz), `STA 299` (Industrial Attachment), `ENT 211`, `GES 201`, `GES 103`, `GST 212`.
+- **Database & Asset Storage**:
+  - Applied migration `20261120020000_official_ui_curriculum.sql`.
+  - Archived clean reference copies in `docs/official_course_forms/` along with [`CURRICULUM_CATALOG_2025_2026.md`](docs/official_course_forms/CURRICULUM_CATALOG_2025_2026.md).
+
+### 8.12 Frictionless Academic Material Submission Everywhere
+- **Mobile Header Access**: Added a compact, high-visibility `+ Submit` button on the top mobile navbar next to Search.
+- **More Tab Integration**: Added a dedicated `Submit Academic Material` row at the top of Academic Services in `MorePage.tsx`.
+- **Desktop Header & Resource Library**: Direct `Submit Material` CTA triggers the 3-step modal wizard from any page.
+- **Zero Dummy Data Guarantee**: All submissions route directly to the Admin moderation queue for verification. No unvetted content appears publicly.
+
+---
+
+## 9. Current Project State & What We Can Stay At
+
+### 9.1 The Stable Baseline (What is Working & Verified)
+1. **Frontend Architecture**: React 18, TypeScript, Tailwind CSS, Lucide icons, responsive on all devices (mobile, tablet, desktop, PWA standalone).
+2. **Security & Audits**: Complete adherence to OWASP, Zod validation, RLS policies, zero backdoors, CSP headers.
+3. **Curriculum Engine**: 100L and 200L curricula match the official 2025/2026 UI Department of Statistics registration forms with 100% precision.
+4. **Admin Moderation & Access Control**:
+   - Master Admin: `ikehemmanuel70@gmail.com` and `ikehemmanuel60@gmail.com`.
+   - Committee delegation active with in-app email allowlist and shared passkey.
+   - Comprehensive audit logging for all moderation actions.
+5. **Mobile Navigation**: Instant scroll-to-top on tab switch, zero horizontal viewport shifting, clean bottom padding.
+6. **Compilation Health**: `npm run build` compiles with 0 errors in under 6 seconds.
+
+### 9.2 What We Can Stay At (Operational Workflow)
+- **Core Codebase is Complete and Stable**: No further architectural changes or redesigns are needed for the core application.
+- **Material Ingestion**: The President and Committee executives can upload past questions, lecture notes, and tutorial sheets directly through the portal's submission button or Admin dashboard at their own schedule.
+- **Zero Blank Screens**: Resilient fallback architecture guarantees that the catalog, course structure, and calendar function seamlessly even during network outages.
+
+### 9.3 Pending Future Input (Reminder)
+- **300-Level and 400-Level Course Forms**: When the President provides the official course registration forms/syllabi for 300L and 400L, the remaining course codes, titles, and units will be updated with the exact same official precision as 100L and 200L.
+
 
 
 

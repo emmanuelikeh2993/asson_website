@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { MOCK_RESOURCES, COURSES } from '../lib/mockData';
 import { fetchResources, fetchCourses, submitContentReport } from '../lib/supabase';
 import { AcademicResource, AcademicLevel, ResourceType, VerificationStatus, Course } from '../types';
@@ -15,9 +15,21 @@ import {
   BookOpen,
   FilterX,
   PlusCircle,
-  X
+  X,
+  List,
+  Grid,
+  Layers,
+  FileText,
+  Download,
+  Eye,
+  Flag,
+  CheckCircle2,
+  FolderOpen,
+  ArrowUpRight
 } from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
+import { formatFileSize } from '../lib/utils';
+import { triggerResourceDownload } from '../lib/download';
 
 interface ResourcesPageProps {
   initialType?: ResourceType | 'All';
@@ -25,6 +37,8 @@ interface ResourcesPageProps {
   subtitle?: string;
   onOpenSubmit: () => void;
 }
+
+type ViewMode = 'list' | 'grouped' | 'grid';
 
 export const ResourcesPage: React.FC<ResourcesPageProps> = ({
   initialType = 'All',
@@ -46,6 +60,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
   const [selectedType, setSelectedType] = useState<ResourceType | 'All'>(initialType);
   const [selectedVerification, setSelectedVerification] = useState<VerificationStatus | 'All'>('All');
   const [selectedCourse, setSelectedCourse] = useState<string | 'All'>(courseParam || 'All');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const [selectedResource, setSelectedResource] = useState<AcademicResource | null>(null);
   const [isDrivePreviewOpen, setIsDrivePreviewOpen] = useState(false);
@@ -55,6 +70,13 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
   const handleOpenPreview = (res: AcademicResource) => {
     setSelectedResource(res);
     setIsDrivePreviewOpen(true);
+  };
+
+  const handleDownload = (e: React.MouseEvent, res: AcademicResource) => {
+    e.stopPropagation();
+    triggerResourceDownload(res, (t, message) => {
+      toast.success(t, message);
+    });
   };
 
   useEffect(() => {
@@ -128,44 +150,101 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
     });
   }, [resources, debouncedSearch, selectedLevel, selectedType, selectedVerification, selectedCourse]);
 
+  // Resources grouped by Course Code
+  const groupedResources = useMemo(() => {
+    const map = new Map<string, { course: Course | undefined; items: AcademicResource[] }>();
+    filteredResources.forEach((res) => {
+      const code = res.courseCode;
+      if (!map.has(code)) {
+        const courseObj = courses.find((c) => c.code === code);
+        map.set(code, { course: courseObj, items: [] });
+      }
+      map.get(code)!.items.push(res);
+    });
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredResources, courses]);
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-4">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border-light">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 w-full space-y-5 pb-28">
+      {/* Page Header (Minimalist & Clean) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-light">
         <div>
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="p-1 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-brand-green">
-              <BookOpen className="w-4 h-4" />
-            </span>
-            <h1 className="text-xl sm:text-2xl font-bold text-text-main tracking-tight">
-              {title}
-            </h1>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-brand-green text-[11px] font-bold border border-emerald-200 dark:border-emerald-800 mb-1.5">
+            <BookOpen className="w-3.5 h-3.5" /> Departmental Academic Library
           </div>
-          <p className="text-xs text-text-muted max-w-2xl">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-text-main tracking-tight">
+            {title}
+          </h1>
+          <p className="text-xs text-text-muted mt-0.5 max-w-2xl leading-relaxed">
             {subtitle}
           </p>
         </div>
 
-        <Button
-          size="sm"
-          variant="primary"
-          onClick={onOpenSubmit}
-          className="text-xs h-9 font-bold shrink-0 self-start sm:self-auto"
-        >
-          <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
-          Submit Material
-        </Button>
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          {/* View Mode Switcher */}
+          <div className="inline-flex items-center p-1 rounded-xl bg-surface-card border border-border-light shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'list'
+                  ? 'bg-brand-green text-white shadow-2xs'
+                  : 'text-text-muted hover:text-text-main'
+              }`}
+              title="Compact List View"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">List</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grouped')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'grouped'
+                  ? 'bg-brand-green text-white shadow-2xs'
+                  : 'text-text-muted hover:text-text-main'
+              }`}
+              title="Group by Course"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">By Course</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'grid'
+                  ? 'bg-brand-green text-white shadow-2xs'
+                  : 'text-text-muted hover:text-text-main'
+              }`}
+              title="Card Grid View"
+            >
+              <Grid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Cards</span>
+            </button>
+          </div>
+
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={onOpenSubmit}
+            className="text-xs h-9 font-bold shrink-0 cursor-pointer"
+          >
+            <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
+            Submit
+          </Button>
+        </div>
       </div>
 
-      {/* Single Unified Search Input */}
+      {/* Single Unified Search Input (Refined Minimalist Spotlight Style) */}
       <div className="relative">
         <Search className="w-4 h-4 text-brand-green absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by course code (e.g. STA 211, MAT 121), title, or topic..."
-          className="w-full rounded-xl border border-border-light bg-surface-card pl-10 pr-10 py-2.5 text-xs sm:text-sm text-text-main placeholder:text-text-subtle shadow-2xs focus:border-brand-green focus:outline-none transition-all"
+          placeholder="Search by course code (e.g. STA 211, MTH 101), title, or topic..."
+          className="w-full rounded-2xl border border-border-light bg-surface-card pl-10 pr-10 py-2.5 text-xs sm:text-sm text-text-main placeholder:text-text-subtle shadow-2xs focus:border-brand-green focus:outline-none transition-all"
         />
         {searchQuery && (
           <button
@@ -191,22 +270,28 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
       />
 
       {/* Results Header Status */}
-      <div className="flex items-center justify-between text-xs text-text-muted pt-1">
-        <div>
-          Showing <span className="font-bold text-text-main">{filteredResources.length}</span> material{filteredResources.length === 1 ? '' : 's'}
-          {selectedCourse !== 'All' && <span> for <span className="font-bold text-brand-green">{selectedCourse}</span></span>}
+      <div className="flex items-center justify-between text-xs text-text-muted pt-0.5 px-0.5">
+        <div className="flex items-center gap-2">
+          <span>
+            Showing <span className="font-bold text-text-main">{filteredResources.length}</span> verified material{filteredResources.length === 1 ? '' : 's'}
+          </span>
+          {selectedCourse !== 'All' && (
+            <span className="inline-flex items-center gap-1 font-semibold text-brand-green bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800 text-[11px]">
+              {selectedCourse}
+            </span>
+          )}
         </div>
         {activeFiltersCount > 0 && (
           <button
             onClick={handleResetFilters}
-            className="text-[11px] text-brand-red hover:underline font-semibold cursor-pointer"
+            className="text-[11px] text-brand-red hover:underline font-bold cursor-pointer"
           >
             Reset Filters ({activeFiltersCount})
           </button>
         )}
       </div>
 
-      {/* Resource Grid */}
+      {/* Main Content Area */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           <ResourceCardSkeleton />
@@ -217,34 +302,217 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
           <ResourceCardSkeleton />
         </div>
       ) : filteredResources.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-border-light bg-surface-card my-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-brand-green flex items-center justify-center mb-3 border border-emerald-200/80 dark:border-emerald-800/80">
+        <div className="flex flex-col items-center justify-center p-8 sm:p-14 text-center rounded-3xl border border-border-light bg-surface-card my-4 shadow-2xs space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-brand-green flex items-center justify-center border border-emerald-200/80 dark:border-emerald-800/80">
             <FilterX className="w-6 h-6" />
           </div>
-          <h3 className="text-sm sm:text-base font-bold text-text-main mb-1">
-            No materials match your filters
-          </h3>
-          <p className="text-xs text-text-muted max-w-sm mb-4">
-            Try searching with a course code (e.g. STA 111, MAT 121), or reset your filters.
-          </p>
-          <div className="flex items-center gap-2">
+          <div>
+            <h3 className="text-sm sm:text-base font-bold text-text-main">
+              No materials match your filters
+            </h3>
+            <p className="text-xs text-text-muted max-w-sm mt-1">
+              Try searching with a course code (e.g. STA 111, MTH 101), or reset your filters.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 pt-2">
             <button
               type="button"
               onClick={handleResetFilters}
-              className="px-3.5 py-1.5 rounded-lg bg-brand-green hover:bg-brand-deep text-white font-bold text-xs transition-all cursor-pointer"
+              className="px-3.5 py-1.5 rounded-xl bg-brand-green hover:bg-brand-deep text-white font-bold text-xs transition-all cursor-pointer shadow-2xs"
             >
               Clear Filters
             </button>
             <button
               type="button"
               onClick={onOpenSubmit}
-              className="px-3.5 py-1.5 rounded-lg bg-surface-bg border border-border-light hover:border-brand-green text-text-main hover:text-brand-green font-bold text-xs transition-all cursor-pointer"
+              className="px-3.5 py-1.5 rounded-xl bg-surface-bg border border-border-light hover:border-brand-green text-text-main hover:text-brand-green font-bold text-xs transition-all cursor-pointer"
             >
               Submit Material
             </button>
           </div>
         </div>
+      ) : viewMode === 'list' ? (
+        /* VIEW 1: MINIMALIST STRUCTURED LIST (Raycast / Notion Style) */
+        <div className="rounded-2xl border border-border-light bg-surface-card divide-y divide-border-light/60 overflow-hidden shadow-2xs">
+          {filteredResources.map((res) => {
+            const detailPath = res.type === 'Past Question'
+              ? `/past-questions/${res.id}`
+              : `/resources/${res.id}`;
+
+            return (
+              <div
+                key={res.id}
+                onClick={() => handleOpenPreview(res)}
+                className="group p-3.5 sm:p-4 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer"
+              >
+                {/* Left: Document details */}
+                <div className="flex items-start gap-3.5 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-surface-bg border border-border-light text-brand-green flex flex-col items-center justify-center shrink-0 group-hover:border-brand-green/40 transition-colors">
+                    <FileText className="w-4 h-4 text-brand-green" />
+                    <span className="text-[8px] font-black uppercase text-brand-green tracking-wider leading-none mt-0.5">
+                      {res.fileType || 'PDF'}
+                    </span>
+                  </div>
+
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200 dark:border-emerald-800">
+                        {res.courseCode}
+                      </span>
+                      <span className="text-[10px] font-medium text-text-muted">
+                        {res.level}L • {res.session}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface-bg border border-border-light text-text-subtle">
+                        {res.type}
+                      </span>
+                      {res.verificationStatus === 'Verified' && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span className="hidden sm:inline">Verified</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <Link
+                      to={detailPath}
+                      onClick={(e) => e.stopPropagation()}
+                      className="block group/link"
+                    >
+                      <h3 className="text-xs sm:text-sm font-bold text-text-main group-hover/link:text-brand-green transition-colors truncate">
+                        {res.title}
+                      </h3>
+                    </Link>
+
+                    <p className="text-[11px] text-text-muted truncate">
+                      {res.courseTitle} • {formatFileSize(res.fileSizeBytes)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right: Quick actions */}
+                <div
+                  className="flex items-center gap-2 self-end sm:self-center shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setReportTarget(res)}
+                    className="p-1.5 text-text-subtle hover:text-brand-red rounded-lg transition-colors cursor-pointer"
+                    title="Report issue"
+                  >
+                    <Flag className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPreview(res)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-surface-bg border border-border-light hover:border-brand-green hover:text-brand-green text-text-main transition-colors cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Preview</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => handleDownload(e, res)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-brand-green hover:bg-brand-deep text-white transition-all shadow-2xs active:scale-95 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : viewMode === 'grouped' ? (
+        /* VIEW 2: GROUPED BY COURSE (Institutional Catalog Orderliness) */
+        <div className="space-y-6">
+          {groupedResources.map(([courseCode, group]) => {
+            const courseTitle = group.course?.title || group.items[0]?.courseTitle || 'Departmental Course';
+            const courseLevel = group.course?.level || group.items[0]?.level || '200';
+            const courseUnits = group.course?.units || 3;
+
+            return (
+              <div
+                key={courseCode}
+                className="rounded-2xl border border-border-light bg-surface-card overflow-hidden shadow-2xs"
+              >
+                {/* Course Drawer Header */}
+                <div className="p-3.5 sm:p-4 bg-surface-bg/70 border-b border-border-light/70 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-brand-green text-white shadow-2xs">
+                      {courseCode}
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="text-xs sm:text-sm font-bold text-text-main truncate">
+                        {courseTitle}
+                      </h3>
+                      <span className="text-[10px] text-text-muted">
+                        {courseLevel}L • {courseUnits} Units
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-surface-card border border-border-light text-text-muted shrink-0">
+                    {group.items.length} material{group.items.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+
+                {/* Course Resource List */}
+                <div className="divide-y divide-border-light/60">
+                  {group.items.map((res) => (
+                    <div
+                      key={res.id}
+                      onClick={() => handleOpenPreview(res)}
+                      className="p-3 sm:p-3.5 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20 transition-all flex items-center justify-between gap-3 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <FileText className="w-4 h-4 text-brand-green shrink-0" />
+                        <div className="min-w-0">
+                          <h4 className="text-xs sm:text-sm font-semibold text-text-main truncate">
+                            {res.title}
+                          </h4>
+                          <div className="flex items-center gap-2 text-[10px] text-text-muted mt-0.5">
+                            <span>{res.session}</span>
+                            <span>•</span>
+                            <span>{res.type}</span>
+                            <span>•</span>
+                            <span>{formatFileSize(res.fileSizeBytes)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        className="flex items-center gap-1.5 shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPreview(res)}
+                          className="p-1.5 rounded-lg border border-border-light text-text-muted hover:text-brand-green hover:bg-surface-bg transition-colors"
+                          title="Preview"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDownload(e, res)}
+                          className="px-2.5 py-1 rounded-lg bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-1"
+                        >
+                          <Download className="w-3 h-3" />
+                          <span className="hidden sm:inline">Get</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
+        /* VIEW 3: CARD GRID VIEW */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filteredResources.map((res) => (
             <DownloadCard

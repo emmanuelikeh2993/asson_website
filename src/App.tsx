@@ -31,6 +31,20 @@ import { ToastProvider, useToast } from './components/ui/Toast';
 import { supabase } from './lib/supabase';
 import { FileQuestion, ArrowRight, Home, Search, BookOpen } from 'lucide-react';
 
+function ScrollToTop() {
+  const { pathname, search } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'instant',
+    });
+  }, [pathname, search]);
+
+  return null;
+}
+
 export function AppContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
@@ -327,6 +341,7 @@ export function AppContent() {
 export default function App() {
   return (
     <Router>
+      <ScrollToTop />
       <ThemeProvider>
         <ToastProvider>
           <AppContent />

@@ -20,7 +20,9 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Unhandled platform error:', error, errorInfo);
+    if (import.meta.env.DEV) {
+      console.error('Unhandled platform error:', error, errorInfo);
+    }
   }
 
   private handleReset = () => {
