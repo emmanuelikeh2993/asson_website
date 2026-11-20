@@ -48,7 +48,7 @@ export const ExecutiveCouncilModal: React.FC<ExecutiveCouncilModalProps> = ({ is
                   ASSON Executive Council
                 </h2>
                 <span className="px-2 py-0.5 rounded-full bg-[#087A3E]/10 text-[#087A3E] text-[10px] font-bold">
-                  2024/2025
+                  {executives[0]?.session || '2026/2027'}
                 </span>
               </div>
               <p className="text-xs text-zinc-500">

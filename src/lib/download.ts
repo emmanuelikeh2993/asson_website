@@ -74,7 +74,7 @@ export function triggerResourceDownload(
   } else {
     // Generate official, structured ASSON UI Academic Document
     // Guarantee: The student gets an instant, real, clean academic file on their phone or laptop!
-    const cleanSession = resource.session || '2023/2024';
+    const cleanSession = resource.session || '2026/2027';
     const cleanLevel = resource.level || '200';
     const cleanSemester = resource.semester ? `Semester ${resource.semester}` : 'Harmattan / Rain';
     const cleanDesc = resource.description || 'Official academic study material for departmental curriculum review and examination preparation.';

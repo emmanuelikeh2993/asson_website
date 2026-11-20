@@ -42,7 +42,7 @@ export const TermsPage: React.FC = () => {
           Guidelines governing past question archives, student-contributed lecture outlines, non-commercial fair use, and academic integrity for the Department of Statistics, University of Ibadan.
         </p>
         <div className="flex flex-wrap items-center gap-4 mt-5 pt-4 border-t border-white/15 text-[11px] text-emerald-200/90 font-mono">
-          <span>Effective Date: 2024/2025 Academic Session</span>
+          <span>Effective Date: 2026/2027 Academic Session</span>
           <span>•</span>
           <span>Version: 2.1 (Open Educational Portal)</span>
         </div>

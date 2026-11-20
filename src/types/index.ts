@@ -24,7 +24,7 @@ export interface AcademicResource {
   courseTitle: string;
   level: AcademicLevel;
   semester: 1 | 2;
-  session: string;        // e.g. "2023/2024"
+  session: string;        // e.g. "2026/2027"
   type: ResourceType;
   fileType: 'PDF' | 'DOCX';
   fileSizeBytes: number;
@@ -233,7 +233,7 @@ export interface ElectedExecutive {
   id: string;
   name: string;
   office: string; // e.g. "President", "Vice President", "General Secretary", "Academic Director", etc.
-  session: string; // e.g. "2024/2025"
+  session: string; // e.g. "2026/2027"
   level: AcademicLevel; // e.g. "300" | "400"
   imageUrl?: string;
   whatsapp?: string;

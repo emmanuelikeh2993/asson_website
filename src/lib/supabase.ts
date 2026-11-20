@@ -71,7 +71,7 @@ function mapDbResourceToModel(row: any): AcademicResource {
     courseTitle: row.course_title || 'General Statistics',
     level: row.level || '200',
     semester: (row.semester as 1 | 2) || 1,
-    session: row.session || '2024/2025',
+    session: row.session || '2026/2027',
     type: row.type || 'Past Question',
     fileType: (row.file_type as 'PDF' | 'DOCX') || 'PDF',
     fileSizeBytes: Number(row.file_size_bytes) || 2048000,
@@ -179,7 +179,7 @@ export const DEFAULT_CALENDAR_EVENTS: CalendarEvent[] = [
   },
   {
     id: 'cal-5',
-    title: 'Faculty of Science 2024/2025 First Semester Examinations',
+    title: 'Faculty of Science 2026/2027 First Semester Examinations',
     description: 'Official commencement of degree examinations across all science departments.',
     category: 'Examination',
     startDate: '2027-01-11',
@@ -281,7 +281,7 @@ export async function fetchResources(): Promise<AcademicResource[]> {
               courseTitle: courseMeta.title,
               level: courseMeta.level,
               semester: courseMeta.semester as 1 | 2,
-              session: sub.session || '2024/2025',
+              session: sub.session || '2026/2027',
               type: sub.resource_type || 'Past Question',
               fileType: fPath.endsWith('.docx') ? 'DOCX' : 'PDF',
               fileSizeBytes: Number(sub.file_size_bytes) || 2048000,
@@ -403,7 +403,7 @@ export async function fetchStudentSubmissions(): Promise<StudentSubmission[]> {
           resourceTitle: row.resource_title || row.title,
           courseCode: row.course_code,
           resourceType: row.resource_type || row.type || 'Past Question',
-          session: row.session || '2024/2025',
+          session: row.session || '2026/2027',
           submittedAt: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : '2026-11-04',
           status: row.status || 'Approved',
           feedback: row.feedback || undefined,
@@ -952,7 +952,7 @@ export const MASTER_ADMIN_EMAILS = [
   'admin@asson.ui.edu.ng'
 ];
 
-export const DEFAULT_EXECUTIVE_PASSKEY = 'ASSON_EXCO_2024_2025';
+export const DEFAULT_EXECUTIVE_PASSKEY = 'ASSON_EXCO_2026_2027';
 
 export function getExecutivePasskey(): string {
   try {
@@ -2094,7 +2094,7 @@ export async function fetchElectedExecutives(): Promise<ElectedExecutive[]> {
           id: d.id,
           name: d.name,
           office: d.office,
-          session: d.session || '2024/2025',
+          session: d.session || '2026/2027',
           level: d.level || '300',
           imageUrl: d.image_url || d.imageUrl,
           whatsapp: d.whatsapp,
@@ -2138,7 +2138,7 @@ export async function createElectedExecutiveInDb(exec: {
   const validation = ElectedExecutiveSchema.safeParse({
     name: exec.name,
     office: exec.office,
-    session: exec.session || '2024/2025',
+    session: exec.session || '2026/2027',
     level: exec.level,
     imageUrl: exec.imageUrl,
     whatsapp: exec.whatsapp,
@@ -2155,7 +2155,7 @@ export async function createElectedExecutiveInDb(exec: {
     id: `exec-${Date.now()}`,
     name: exec.name.trim(),
     office: exec.office.trim(),
-    session: exec.session.trim() || '2024/2025',
+    session: exec.session.trim() || '2026/2027',
     level: exec.level,
     imageUrl: exec.imageUrl?.trim() || undefined,
     whatsapp: exec.whatsapp?.trim() || undefined,

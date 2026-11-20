@@ -41,7 +41,7 @@ export const PrivacyPage: React.FC = () => {
           How ASSON UI protects student privacy through zero-login architecture, anonymous peer submissions, confidential feedback channels, and zero commercial tracking.
         </p>
         <div className="flex flex-wrap items-center gap-4 mt-5 pt-4 border-t border-white/15 text-[11px] text-emerald-200/90 font-mono">
-          <span>Effective: 2024/2025 Session</span>
+          <span>Effective: 2026/2027 Session</span>
           <span>•</span>
           <span>Policy: Privacy by Design & Zero-Surveillance</span>
         </div>

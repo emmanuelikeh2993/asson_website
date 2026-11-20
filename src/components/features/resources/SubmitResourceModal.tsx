@@ -44,7 +44,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
   const [selectedLevelFilter, setSelectedLevelFilter] = useState<AcademicLevel | 'All'>('All');
   const [title, setTitle] = useState('');
   const [resourceType, setResourceType] = useState<ResourceType>('Past Question');
-  const [session, setSession] = useState('2024/2025');
+  const [session, setSession] = useState('2026/2027');
   const [contributorName, setContributorName] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -55,10 +55,10 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   // Suggestions chips for quick tap
-  const popularCourseSuggestions = ['STA 111', 'STA 211', 'STA 231', 'STA 312', 'MAT 121', 'STA 421'];
+  const popularCourseSuggestions = ['STA 111', 'STA 211', 'STA 219', 'MTH 101', 'STA 231', 'STA 312', 'STA 421'];
 
-  // Sessions chips
-  const sessionOptions = ['2024/2025', '2023/2024', '2022/2023', '2021/2022', '2020/2021'];
+  // Sessions chips: Starting from active 2026/2027 administration down through previous sessions
+  const sessionOptions = ['2026/2027', '2025/2026', '2024/2025', '2023/2024', '2022/2023', '2021/2022'];
 
   // Filtered courses for Step 1
   const filteredCourses = useMemo(() => {

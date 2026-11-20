@@ -319,6 +319,17 @@ Confirms 0 TypeScript or packaging errors.
 - **Desktop Header & Resource Library**: Direct `Submit Material` CTA triggers the 3-step modal wizard from any page.
 - **Zero Dummy Data Guarantee**: All submissions route directly to the Admin moderation queue for verification. No unvetted content appears publicly.
 
+### 8.13 Active Session & Executive Passkey Alignment (2026/2027 Tenure)
+- **Tenure Clarification**: The outgoing executive set was the **2025/2026** academic session. The incoming administration (led by President Emmanuel Chibuzor Ikeh) is the **2026/2027** session.
+- **Passkey Update**: Updated the default committee passkey from `ASSON_EXCO_2024_2025` to **`ASSON_EXCO_2026_2027`** in `src/lib/supabase.ts`.
+- **Session Defaults & Chips**:
+  - `SubmitResourceModal.tsx`: Updated default submission session to `2026/2027` and expanded session options chip selector (`2026/2027`, `2025/2026`, `2024/2025`, `2023/2024`, etc.).
+  - `mockData.ts`: Updated `MOCK_EXECUTIVES` to the 2026/2027 session with Emmanuel Chibuzor Ikeh as Executive President.
+  - `ExecutiveCouncilModal.tsx`: Dynamic session pill display defaulting to `2026/2027`.
+  - `AdminPage.tsx`: Default executive creation session set to `2026/2027`.
+  - `PrivacyPage.tsx` & `TermsPage.tsx`: Effective legal session updated to `2026/2027 Academic Session`.
+  - Database migration: Created `20261120030000_update_session_to_2026_2027.sql`.
+
 ---
 
 ## 9. Current Project State & What We Can Stay At

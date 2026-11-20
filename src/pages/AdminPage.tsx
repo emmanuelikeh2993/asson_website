@@ -190,7 +190,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
   const [execForm, setExecForm] = useState({
     name: '',
     office: 'President',
-    session: '2024/2025',
+    session: '2026/2027',
     level: '300' as AcademicLevel,
     imageUrl: '',
     whatsapp: '',
@@ -448,7 +448,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     setExecForm({
       name: '',
       office: 'President',
-      session: '2024/2025',
+      session: '2026/2027',
       level: '300',
       imageUrl: '',
       whatsapp: '',
@@ -2726,7 +2726,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Administration Session</label>
                   <input
                     type="text"
-                    placeholder="e.g. 2024/2025"
+                    placeholder="e.g. 2026/2027"
                     value={execForm.session}
                     onChange={(e) => setExecForm({ ...execForm, session: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"

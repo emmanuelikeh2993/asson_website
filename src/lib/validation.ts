@@ -29,7 +29,7 @@ export const AcademicMaterialSubmissionSchema = z.object({
   session: z
     .string()
     .trim()
-    .regex(/^\d{4}\/\d{4}$/, 'Session must be in YYYY/YYYY format (e.g. 2024/2025)'),
+    .regex(/^\d{4}\/\d{4}$/, 'Session must be in YYYY/YYYY format (e.g. 2026/2027)'),
   resourceType: z.enum([
     'Past Question',
     'Lecture Note',
