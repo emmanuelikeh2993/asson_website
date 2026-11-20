@@ -8,6 +8,7 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  hideHeader?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -16,6 +17,7 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   children,
   maxWidth = 'md',
+  hideHeader = false,
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -59,20 +61,22 @@ export const Modal: React.FC<ModalProps> = ({
         role="dialog"
         aria-modal="true"
       >
-        <div className="sticky top-0 bg-surface-card z-30 flex items-center justify-between px-5 py-4 border-b border-border-light shrink-0">
-          {title && <h3 className="text-base font-bold text-text-main">{title}</h3>}
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl px-2.5 py-1 text-text-muted hover:bg-surface-bg hover:text-text-main transition-colors ml-auto border border-border-light shadow-2xs flex items-center gap-1.5 cursor-pointer text-xs font-medium"
-            aria-label="Close modal"
-            title="Close (Esc)"
-          >
-            <span className="text-[11px] font-semibold text-text-muted">Close</span>
-            <X className="w-4 h-4 text-text-muted" />
-          </button>
-        </div>
-        <div className="overflow-y-auto p-5 sm:p-6 flex-1">{children}</div>
+        {!hideHeader && (
+          <div className="sticky top-0 bg-surface-card z-30 flex items-center justify-between px-5 py-4 border-b border-border-light shrink-0">
+            {title && <h3 className="text-base font-bold text-text-main">{title}</h3>}
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl px-2.5 py-1 text-text-muted hover:bg-surface-bg hover:text-text-main transition-colors ml-auto border border-border-light shadow-2xs flex items-center gap-1.5 cursor-pointer text-xs font-medium"
+              aria-label="Close modal"
+              title="Close (Esc)"
+            >
+              <span className="text-[11px] font-semibold text-text-muted">Close</span>
+              <X className="w-4 h-4 text-text-muted" />
+            </button>
+          </div>
+        )}
+        <div className={cn("overflow-y-auto flex-1", hideHeader ? "p-0" : "p-5 sm:p-6")}>{children}</div>
       </div>
     </div>
   );

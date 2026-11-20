@@ -1340,6 +1340,63 @@ export async function studentSignIn(
   }
 }
 
+export async function studentSignInWithGoogle(): Promise<{ success: boolean; profile?: UserProfile; error?: string }> {
+  if (!supabase) {
+    // Offline / Demo mode fallback
+    const mockProfile: UserProfile = {
+      id: 'google-student-' + Date.now(),
+      displayName: 'Statistics Scholar (Google)',
+      email: 'scholar@stu.ui.edu.ng',
+      level: '200',
+      department: 'Department of Statistics',
+      role: 'student'
+    };
+    localStorage.setItem('asson_student_profile', JSON.stringify(mockProfile));
+    return { success: true, profile: mockProfile };
+  }
+
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`
+      }
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Google sign-in error.' };
+  }
+}
+
+// Listen to OAuth callbacks and session synchronization
+if (supabase) {
+  try {
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const u = session.user;
+        let profile: UserProfile = {
+          id: u.id,
+          displayName: u.user_metadata?.full_name || u.user_metadata?.name || u.user_metadata?.display_name || u.email?.split('@')[0] || 'Statistics Scholar',
+          email: u.email || '',
+          level: (u.user_metadata?.level as AcademicLevel) || '200',
+          department: u.user_metadata?.department || 'Department of Statistics',
+          avatarUrl: u.user_metadata?.avatar_url || undefined,
+          role: 'student'
+        };
+        localStorage.setItem('asson_student_profile', JSON.stringify(profile));
+      } else if (event === 'SIGNED_OUT') {
+        localStorage.removeItem('asson_student_profile');
+      }
+    });
+  } catch {
+    // ignore
+  }
+}
+
 export async function studentSignOut(): Promise<void> {
   if (supabase) {
     try {

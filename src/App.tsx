@@ -34,6 +34,7 @@ export function AppContent() {
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authInitialTab, setAuthInitialTab] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -47,7 +48,11 @@ export function AppContent() {
     if (params.get('settings') === 'true') {
       setIsSettingsOpen(true);
     }
-    if (params.get('auth') === 'true' || location.pathname === '/auth' || location.pathname === '/login') {
+    if (params.get('signup') === 'true' || location.pathname === '/signup') {
+      setAuthInitialTab('signup');
+      setIsAuthOpen(true);
+    } else if (params.get('auth') === 'true' || location.pathname === '/auth' || location.pathname === '/login') {
+      setAuthInitialTab('signin');
       setIsAuthOpen(true);
     }
   }, [location.pathname, location.search]);
@@ -284,10 +289,11 @@ export function AppContent() {
         onClose={() => setIsSettingsOpen(false)}
       />
 
-      {/* Student Study Locker Account Modal (WhatsApp / Spotify-style quiet auth) */}
+      {/* Student Study Locker Account Modal (Classy DCN/Reference Authentication) */}
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
+        initialTab={authInitialTab}
       />
     </div>
   );
