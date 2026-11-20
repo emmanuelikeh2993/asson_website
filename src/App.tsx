@@ -27,6 +27,7 @@ import { MorePage } from './pages/MorePage';
 import { MOCK_RESOURCES, COURSES } from './lib/mockData';
 import { AcademicResource } from './types';
 import { ToastProvider, useToast } from './components/ui/Toast';
+import { supabase } from './lib/supabase';
 import { FileQuestion, ArrowRight, Home, Search, BookOpen } from 'lucide-react';
 
 export function AppContent() {
@@ -34,7 +35,7 @@ export function AppContent() {
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [authInitialTab, setAuthInitialTab] = useState<'signin' | 'signup' | 'forgot'>('signin');
+  const [authInitialTab, setAuthInitialTab] = useState<'signin' | 'signup' | 'forgot' | 'new-password'>('signin');
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -48,14 +49,35 @@ export function AppContent() {
     if (params.get('settings') === 'true') {
       setIsSettingsOpen(true);
     }
-    if (params.get('signup') === 'true' || location.pathname === '/signup') {
+    // Check if user arrived from a password recovery link in email
+    if (location.hash && location.hash.includes('type=recovery')) {
+      setAuthInitialTab('new-password');
+      setIsAuthOpen(true);
+    } else if (params.get('signup') === 'true' || location.pathname === '/signup') {
       setAuthInitialTab('signup');
       setIsAuthOpen(true);
     } else if (params.get('auth') === 'true' || location.pathname === '/auth' || location.pathname === '/login') {
       setAuthInitialTab('signin');
       setIsAuthOpen(true);
     }
-  }, [location.pathname, location.search]);
+  }, [location.pathname, location.search, location.hash]);
+
+  // Listen for Supabase PASSWORD_RECOVERY event
+  useEffect(() => {
+    if (supabase) {
+      try {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+          if (event === 'PASSWORD_RECOVERY') {
+            setAuthInitialTab('new-password');
+            setIsAuthOpen(true);
+          }
+        });
+        return () => subscription.unsubscribe();
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
 
   // Global keydown listener for Command Palette (Ctrl+K or /)
   useEffect(() => {

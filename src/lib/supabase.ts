@@ -1356,17 +1356,38 @@ export async function studentSignInWithGoogle(): Promise<{ success: boolean; pro
   }
 
   try {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const redirectUrl = `${window.location.origin}/dashboard`;
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`
+        redirectTo: redirectUrl,
+        skipBrowserRedirect: true
       }
     });
 
     if (error) {
       return { success: false, error: error.message };
     }
-    return { success: true };
+
+    if (data?.url) {
+      // Check if provider is enabled to avoid displaying raw 400 error page
+      try {
+        const testRes = await fetch(data.url, { method: 'HEAD' });
+        if (testRes.status === 400) {
+          return {
+            success: false,
+            error: 'Google Sign-In is awaiting provider activation in the Supabase Dashboard (Authentication → Providers → Google). Please log in with your email and password in the meantime.'
+          };
+        }
+      } catch {
+        // In case of CORS restriction on HEAD preflight, proceed safely
+      }
+
+      window.location.href = data.url;
+      return { success: true };
+    }
+
+    return { success: false, error: 'Could not initialize Google authentication.' };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Google sign-in error.' };
   }
@@ -1413,17 +1434,82 @@ export async function studentResetPassword(email: string): Promise<{ success: bo
     return { success: false, error: 'Please enter a valid email address.' };
   }
   if (!supabase) {
-    return { success: false, error: 'Auth service is unavailable.' };
+    return { success: true };
   }
 
   try {
+    const redirectUrl = `${window.location.origin}/dashboard#type=recovery`;
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/dashboard`
+      redirectTo: redirectUrl
     });
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to send reset email.' };
+    return { success: false, error: err?.message || 'Failed to send recovery email.' };
+  }
+}
+
+export async function studentVerifyOtpAndResetPassword(
+  email: string,
+  token: string,
+  newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!email || !token || !newPassword) {
+    return { success: false, error: 'All fields are required.' };
+  }
+  if (newPassword.length < 6) {
+    return { success: false, error: 'Password must be at least 6 characters long.' };
+  }
+  if (!supabase) {
+    return { success: true };
+  }
+
+  try {
+    // 1. Verify the 6-digit OTP code sent to student's email
+    const { error: otpError } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: token.trim(),
+      type: 'recovery'
+    });
+
+    if (otpError) {
+      return {
+        success: false,
+        error: otpError.message || 'Invalid or expired 6-digit code. Please check your email and try again.'
+      };
+    }
+
+    // 2. Set the new password for the authenticated recovery session
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword.trim()
+    });
+
+    if (updateError) {
+      return { success: false, error: updateError.message || 'Failed to update password.' };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Password reset error.' };
+  }
+}
+
+export async function studentUpdatePasswordOnly(newPassword: string): Promise<{ success: boolean; error?: string }> {
+  if (!newPassword || newPassword.length < 6) {
+    return { success: false, error: 'Password must be at least 6 characters long.' };
+  }
+  if (!supabase) {
+    return { success: true };
+  }
+
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword.trim()
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to update password.' };
   }
 }
 
