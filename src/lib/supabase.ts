@@ -1094,9 +1094,15 @@ export async function addAuthorizedExecutive(data: {
       });
 
       if (error) {
+        if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
+          return {
+            success: false,
+            error: 'Database table "authorized_executives" is not set up in Supabase yet. Run APPLY_ALL_PENDING_MIGRATIONS.sql in Supabase SQL Editor.'
+          };
+        }
         return {
           success: false,
-          error: 'Authorization requires a verified Master Admin session (sign in via Email OTP or Supabase Password).'
+          error: 'Authorization requires a verified Master Admin session (sign in via 6-Digit Email Code or Supabase Password).'
         };
       }
 
@@ -1132,9 +1138,15 @@ export async function revokeAuthorizedExecutive(id: string, email: string): Prom
     try {
       const { error } = await supabase.from('authorized_executives').delete().eq('email', cleanEmail);
       if (error) {
+        if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
+          return {
+            success: false,
+            error: 'Database table "authorized_executives" is not set up in Supabase yet. Run APPLY_ALL_PENDING_MIGRATIONS.sql in Supabase SQL Editor.'
+          };
+        }
         return {
           success: false,
-          error: 'Revoking access requires a verified Master Admin session (sign in via Email OTP or Supabase Password).'
+          error: 'Revoking access requires a verified Master Admin session (sign in via 6-Digit Email Code or Supabase Password).'
         };
       }
       void supabase.from('audit_events').insert({
@@ -1192,11 +1204,21 @@ export async function sendAdminLoginOtp(email: string): Promise<{ success: boole
     return { success: false, error: 'Email OTP requires an active Supabase connection.' };
   }
 
-  const authorizedList = await fetchAuthorizedExecutives();
   const isMaster = MASTER_ADMIN_EMAILS.includes(cleanEmail);
-  const matchedExec = authorizedList.find(e => e.email.toLowerCase() === cleanEmail);
+  let isAllowed = isMaster;
 
-  if (!isMaster && !matchedExec) {
+  if (!isAllowed) {
+    try {
+      const { data: rpcAllowed, error: rpcErr } = await supabase.rpc('is_authorized_executive_email', {
+        p_email: cleanEmail
+      });
+      if (!rpcErr && rpcAllowed === true) {
+        isAllowed = true;
+      }
+    } catch { }
+  }
+
+  if (!isAllowed) {
     return {
       success: false,
       error: `Access Denied: "${email}" is not on the approved committee list.`
@@ -1283,25 +1305,24 @@ export async function adminSignIn(
     };
   }
 
-  // 1. Check allowlist / Master Admin status
-  const authorizedList = await fetchAuthorizedExecutives();
   const isMaster = MASTER_ADMIN_EMAILS.includes(cleanEmail);
-  const matchedExec = authorizedList.find(e => e.email.toLowerCase() === cleanEmail);
 
-  if (!isMaster && !matchedExec) {
-    return {
-      success: false,
-      error: `Access Denied: "${email}" is not on the approved committee list. Please ask Emmanuel Ikeh (President) to approve your email.`
-    };
-  }
-
-  // 2. Try individual Supabase Auth password first (if executive registered a personal password)
+  // 1. Try individual Supabase Auth password first (if executive has a registered Supabase password)
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
       password: inputSecret
     });
     if (!error && data.user) {
+      const authorizedList = await fetchAuthorizedExecutives();
+      const matchedExec = authorizedList.find(e => e.email.toLowerCase() === cleanEmail);
+      if (!isMaster && !matchedExec) {
+        await supabase.auth.signOut();
+        return {
+          success: false,
+          error: `Access Denied: "${email}" is not on the approved committee list.`
+        };
+      }
       const role = isMaster ? 'super_admin' : (matchedExec?.role || 'admin');
       persistAdminSession({
         email: cleanEmail,
@@ -1314,22 +1335,32 @@ export async function adminSignIn(
     }
   } catch { }
 
-  // 3. Verify against server-side salted SHA-256 committee passkey hash via RPC
+  // 2. Verify allowlist + salted SHA-256 committee passkey hash server-side via SECURITY DEFINER RPC
   try {
     const { data: rpcData, error: rpcError } = await supabase.rpc('verify_executive_login', {
       p_email: cleanEmail,
       p_passkey: inputSecret
     });
 
-    if (!rpcError && rpcData?.success) {
-      const role = rpcData.role || (isMaster ? 'super_admin' : (matchedExec?.role || 'admin'));
+    if (rpcError) {
+      if (rpcError.code === 'PGRST202' || rpcError.message?.includes('schema cache')) {
+        return {
+          success: false,
+          error: 'Database setup pending: please run APPLY_ALL_PENDING_MIGRATIONS.sql in your Supabase SQL Editor first.'
+        };
+      }
+      return { success: false, error: rpcError.message || 'Verification service error.' };
+    }
+
+    if (rpcData?.success) {
+      const role = rpcData.role || (isMaster ? 'super_admin' : 'admin');
       const masterFlag = Boolean(rpcData.isMaster ?? isMaster);
       persistAdminSession({
         email: cleanEmail,
         role,
         isMaster: masterFlag,
-        name: rpcData.name || matchedExec?.name || (masterFlag ? 'Emmanuel Ikeh' : 'Executive Member'),
-        office: rpcData.office || matchedExec?.office || (masterFlag ? 'Executive President / Lead Admin' : 'Executive Council')
+        name: rpcData.name || (masterFlag ? 'Emmanuel Ikeh' : 'Executive Member'),
+        office: rpcData.office || (masterFlag ? 'Executive President / Lead Admin' : 'Executive Council')
       });
       return { success: true, role, isMaster: masterFlag };
     }

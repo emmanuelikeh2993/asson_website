@@ -2,9 +2,53 @@
 -- ASSON UI Student Platform — Zero-Secrets Server-Hashed Passkey & RLS
 -- Fixes CWE-798 / CWE-259 (No hardcoded passwords in Git or frontend):
 -- 1. Removes any plaintext executive passkeys from site_settings
--- 2. Removes overly permissive RLS on authorized_executives
--- 3. Implements salted SHA-256 passkey verification & rotation via RPC
+-- 2. Upgrades has_role() to recognize Master Admins & authorized_executives
+-- 3. Removes overly permissive RLS on authorized_executives
+-- 4. Implements salted SHA-256 passkey verification & rotation via RPC
 -- ====================================================================
+
+-- 0. Upgrade has_role() so Master Admins & approved committee members via Email/OTP
+-- automatically have full RLS permissions across all tables without touching user_roles
+CREATE OR REPLACE FUNCTION public.has_role(required_role user_role_enum)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_jwt_email TEXT := lower(trim(coalesce(auth.jwt() ->> 'email', '')));
+BEGIN
+    IF v_jwt_email IN ('ikehemmanuel70@gmail.com', 'ikehemmanuel60@gmail.com') THEN
+        RETURN TRUE;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM public.user_roles
+        WHERE user_id = auth.uid()
+          AND (
+            role = required_role
+            OR role = 'super_admin'
+            OR (required_role = 'editor' AND role = 'admin')
+          )
+    ) THEN
+        RETURN TRUE;
+    END IF;
+
+    IF v_jwt_email <> '' AND EXISTS (
+        SELECT 1 FROM public.authorized_executives
+        WHERE lower(email) = v_jwt_email
+          AND (
+            role = required_role::text
+            OR role IN ('admin', 'super_admin')
+            OR (required_role = 'editor' AND role = 'editor')
+          )
+    ) THEN
+        RETURN TRUE;
+    END IF;
+
+    RETURN FALSE;
+END;
+$$;
 
 -- 1. Lock down site_settings: ensure RLS is enabled with NO anonymous read access
 ALTER TABLE IF EXISTS public.site_settings ENABLE ROW LEVEL SECURITY;
@@ -36,6 +80,8 @@ ALTER TABLE IF EXISTS public.authorized_executives ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Anyone can check authorized executive status" ON public.authorized_executives;
 DROP POLICY IF EXISTS "Only administrators can manage authorized executives" ON public.authorized_executives;
+DROP POLICY IF EXISTS "Authenticated executives can view allowlist" ON public.authorized_executives;
+DROP POLICY IF EXISTS "Master admins can manage allowlist" ON public.authorized_executives;
 
 CREATE POLICY "Authenticated executives can view allowlist"
     ON public.authorized_executives FOR SELECT
@@ -150,6 +196,15 @@ BEGIN
         );
     END IF;
 
+    INSERT INTO public.audit_events (user_name, actor_email, action, entity, details)
+    VALUES (
+        coalesce(v_exec.name, CASE WHEN v_is_master THEN 'Emmanuel Ikeh' ELSE v_email END),
+        v_email,
+        'LOGIN',
+        'admin_session',
+        format('Executive portal session opened by %s (%s)', v_email, coalesce(v_exec.office, 'Executive Council'))
+    );
+
     RETURN jsonb_build_object(
         'success', TRUE,
         'role', CASE WHEN v_is_master THEN 'super_admin' ELSE coalesce(v_exec.role, 'admin') END,
@@ -247,6 +302,21 @@ BEGIN
 END;
 $$;
 
+-- 6. Helper RPC: Check if a single email is authorized (boolean only, never leaks allowlist)
+CREATE OR REPLACE FUNCTION public.is_authorized_executive_email(p_email TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+    SELECT lower(trim(coalesce(p_email, ''))) IN ('ikehemmanuel70@gmail.com', 'ikehemmanuel60@gmail.com')
+    OR EXISTS (
+        SELECT 1 FROM public.authorized_executives
+        WHERE lower(email) = lower(trim(coalesce(p_email, '')))
+    );
+$$;
+
 GRANT EXECUTE ON FUNCTION public.has_executive_passkey() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.verify_executive_login(TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.set_executive_passkey(TEXT, TEXT, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.is_authorized_executive_email(TEXT) TO anon, authenticated;
