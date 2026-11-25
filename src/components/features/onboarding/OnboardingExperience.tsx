@@ -480,7 +480,7 @@ export const OnboardingExperience: React.FC = () => {
       role="dialog"
       aria-modal="true"
       aria-label="ASSON UI Platform Onboarding"
-      className="fixed inset-0 z-[70] bg-surface-bg text-text-main overflow-y-auto flex flex-col justify-between animate-in fade-in duration-200"
+      className="fixed inset-0 z-[70] bg-surface-card bg-architectural-grid text-text-main overflow-y-auto flex flex-col justify-between animate-in fade-in duration-200"
     >
       {/* Top Minimal Architectural Header */}
       <header className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 flex items-center justify-between gap-3 shrink-0">

@@ -79,3 +79,25 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-hover);
 }
+
+/* Subtle architectural grid inspired by clean editorial SaaS surfaces */
+.bg-architectural-grid {
+  background-image:
+    linear-gradient(to right, rgba(8, 122, 62, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(8, 122, 62, 0.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.dark .bg-architectural-grid {
+  background-image:
+    linear-gradient(to right, rgba(16, 185, 129, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 185, 129, 0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.bg-architectural-grid-dark {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.065) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
