@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, ExternalLink, ShieldCheck } from 'lucide-react';
+import { useOnboarding } from '../../context/OnboardingContext';
 
 export const Footer: React.FC = () => {
+  const { restartOnboarding } = useOnboarding();
   return (
     <footer className="border-t border-border-light bg-surface-card pt-12 pb-16 lg:pb-12 mt-16 text-xs text-text-muted w-full max-w-full overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -69,6 +71,15 @@ export const Footer: React.FC = () => {
                 <Link to="/help" className="hover:text-brand-green font-semibold text-text-main transition-colors">
                   Where to Get Help & Support
                 </Link>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={restartOnboarding}
+                  className="hover:text-brand-green transition-colors cursor-pointer text-left"
+                >
+                  Interactive Platform Tour
+                </button>
               </li>
               <li>
                 <Link to="/faqs" className="hover:text-brand-green transition-colors">

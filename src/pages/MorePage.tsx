@@ -26,8 +26,10 @@ import {
   Briefcase,
   Award,
   PlusCircle,
+  Compass,
   X
 } from 'lucide-react';
+import { useOnboarding } from '../context/OnboardingContext';
 import { StaffDirectoryModal } from '../components/features/department/StaffDirectoryModal';
 import { ExecutiveCouncilModal } from '../components/features/department/ExecutiveCouncilModal';
 
@@ -38,6 +40,7 @@ interface MorePageProps {
 
 export const MorePage: React.FC<MorePageProps> = ({ onOpenAuth, onOpenSubmit }) => {
   const { theme, setTheme } = useTheme();
+  const { restartOnboarding } = useOnboarding();
   const toast = useToast();
 
   const [profile, setProfile] = useState<UserProfile | null>(() => getCachedStudentProfile());
@@ -514,6 +517,26 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenAuth, onOpenSubmit }) 
             </div>
             <ChevronRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green transition-transform group-hover:translate-x-0.5" />
           </Link>
+
+          {/* Interactive Platform Tour Restart */}
+          <button
+            type="button"
+            onClick={restartOnboarding}
+            className="w-full p-3.5 sm:p-4 flex items-center justify-between hover:bg-surface-bg/60 transition-colors group text-left cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-surface-bg text-brand-green flex items-center justify-center shrink-0 border border-border-light">
+                <Compass className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold text-text-main group-hover:text-brand-green transition-colors block">
+                  Platform Guide & Interactive Tour
+                </span>
+                <span className="text-[11px] text-text-muted">Replay the first-time walkthrough & search guide</span>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green transition-transform group-hover:translate-x-0.5" />
+          </button>
 
           {/* Department Information Modal Trigger */}
           <button

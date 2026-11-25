@@ -8,8 +8,10 @@ import { CommandPalette } from './components/features/resources/CommandPalette';
 import { SubmitResourceModal } from './components/features/resources/SubmitResourceModal';
 import { SettingsModal } from './components/features/settings/SettingsModal';
 import { AuthModal } from './components/features/auth/AuthModal';
+import { OnboardingExperience } from './components/features/onboarding/OnboardingExperience';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { ThemeProvider } from './context/ThemeContext';
+import { OnboardingProvider, useOnboarding } from './context/OnboardingContext';
 import { HomePage } from './pages/HomePage';
 import { ResourcesPage } from './pages/ResourcesPage';
 import { ResourceDetailPage } from './pages/ResourceDetailPage';
@@ -54,6 +56,7 @@ export function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
+  const { isOpen: isOnboardingOpen } = useOnboarding();
 
   // Handle direct navigation to submission, settings, or auth modal via query or route
   useEffect(() => {
@@ -97,6 +100,7 @@ export function AppContent() {
 
   // Global keydown listener for Command Palette (Ctrl+K or /)
   useEffect(() => {
+    if (isOnboardingOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't trigger if user is currently typing in an input or textarea
       const target = e.target as HTMLElement;
@@ -115,7 +119,7 @@ export function AppContent() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isOnboardingOpen]);
 
   const handleSelectResource = (resource: AcademicResource) => {
     navigate(`/resources/${resource.id}`);
@@ -127,8 +131,8 @@ export function AppContent() {
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col bg-surface-bg text-text-main selection:bg-brand-light selection:text-brand-deep">
-      {/* Install PWA Prompt Banner for Mobile Devices */}
-      <InstallPwaPrompt />
+      {/* Install PWA Prompt Banner for Mobile Devices (paused during first-visit onboarding) */}
+      {!isOnboardingOpen && <InstallPwaPrompt />}
 
       {/* Top Navbar with ASSON & UI Crest */}
       <Navbar
@@ -334,6 +338,9 @@ export function AppContent() {
         onClose={() => setIsAuthOpen(false)}
         initialTab={authInitialTab}
       />
+
+      {/* First-Visit Interactive Platform Onboarding */}
+      <OnboardingExperience />
     </div>
   );
 }
@@ -344,7 +351,9 @@ export default function App() {
       <ScrollToTop />
       <ThemeProvider>
         <ToastProvider>
-          <AppContent />
+          <OnboardingProvider>
+            <AppContent />
+          </OnboardingProvider>
         </ToastProvider>
       </ThemeProvider>
     </Router>

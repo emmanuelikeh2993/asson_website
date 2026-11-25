@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { MOCK_FAQS } from '../lib/mockData';
 import { fetchFaqs } from '../lib/supabase';
 import { FAQItem } from '../types';
-import { HelpCircle, ChevronDown } from 'lucide-react';
+import { HelpCircle, ChevronDown, Compass } from 'lucide-react';
+import { useOnboarding } from '../context/OnboardingContext';
 
 export const FaqPage: React.FC = () => {
   const [faqs, setFaqs] = useState<FAQItem[]>(MOCK_FAQS);
   const [openIds, setOpenIds] = useState<string[]>([MOCK_FAQS[0].id]);
+  const { restartOnboarding } = useOnboarding();
 
   useEffect(() => {
     fetchFaqs().then((data) => {
@@ -35,6 +37,14 @@ export const FaqPage: React.FC = () => {
         <p className="text-xs sm:text-sm text-text-muted mt-2">
           Find fast answers regarding academic materials, past questions, portal rules, and resource submissions.
         </p>
+        <button
+          type="button"
+          onClick={restartOnboarding}
+          className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-brand-light text-brand-green border border-emerald-200 dark:border-emerald-800 text-xs font-bold hover:opacity-90 transition-all cursor-pointer"
+        >
+          <Compass className="w-3.5 h-3.5" />
+          <span>Restart Platform Guide & Tour</span>
+        </button>
       </div>
 
       {/* Accordion List (inspired by Image 19) */}

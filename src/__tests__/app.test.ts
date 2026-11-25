@@ -1,6 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { formatFileSize, formatDate } from '../lib/utils';
 import { mapDbCalendarEventToModel } from '../lib/supabase';
+import {
+  getOnboardingStatus,
+  saveOnboardingStatus,
+  clearOnboardingStatus,
+  shouldShowOnboardingOnBoot,
+  ONBOARDING_STORAGE_KEY,
+} from '../lib/onboardingStorage';
 
 describe('Format Utilities', () => {
   it('formats file sizes accurately for student bandwidth awareness', () => {
@@ -34,5 +41,74 @@ describe('Calendar Event DB Mapping', () => {
     expect(model.targetLevel).toBe('300');
     expect(model.isConfirmed).toBe(true);
     expect(model.venue).toBe('Department LLT');
+  });
+});
+
+describe('Onboarding Browser Persistence', () => {
+  const store: Record<string, string> = {};
+  const originalWindow = globalThis.window;
+
+  beforeEach(() => {
+    for (const k of Object.keys(store)) delete store[k];
+    (globalThis as any).window = {
+      localStorage: {
+        getItem: (k: string) => (k in store ? store[k] : null),
+        setItem: (k: string, v: string) => {
+          store[k] = String(v);
+        },
+        removeItem: (k: string) => {
+          delete store[k];
+        },
+      },
+    };
+  });
+
+  afterEach(() => {
+    (globalThis as any).window = originalWindow;
+  });
+
+  it('shows onboarding on first visit and persists completion and skip status', () => {
+    expect(getOnboardingStatus()).toBeNull();
+    expect(shouldShowOnboardingOnBoot('/')).toBe(true);
+    expect(shouldShowOnboardingOnBoot('/resources')).toBe(true);
+
+    // Console/admin routes are excluded
+    expect(shouldShowOnboardingOnBoot('/console')).toBe(false);
+    expect(shouldShowOnboardingOnBoot('/admin')).toBe(false);
+
+    // Completing persists across subsequent checks
+    saveOnboardingStatus('completed');
+    expect(getOnboardingStatus()).toBe('completed');
+    expect(shouldShowOnboardingOnBoot('/')).toBe(false);
+
+    // Clearing storage triggers onboarding again on next visit
+    clearOnboardingStatus();
+    expect(store[ONBOARDING_STORAGE_KEY]).toBeUndefined();
+    expect(shouldShowOnboardingOnBoot('/')).toBe(true);
+
+    // Skipping also persists cleanly
+    saveOnboardingStatus('skipped');
+    expect(getOnboardingStatus()).toBe('skipped');
+    expect(shouldShowOnboardingOnBoot('/')).toBe(false);
+  });
+
+  it('handles storage exceptions gracefully without crashing', () => {
+    (globalThis as any).window = {
+      localStorage: {
+        getItem: () => {
+          throw new Error('SecurityError');
+        },
+        setItem: () => {
+          throw new Error('QuotaExceededError');
+        },
+        removeItem: () => {
+          throw new Error('SecurityError');
+        },
+      },
+    };
+
+    expect(() => getOnboardingStatus()).not.toThrow();
+    expect(() => saveOnboardingStatus('skipped')).not.toThrow();
+    expect(() => clearOnboardingStatus()).not.toThrow();
   });
 });

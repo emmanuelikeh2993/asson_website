@@ -109,6 +109,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
           {/* Primary Search Bar Trigger (Matching Spotlight Palette Trigger) */}
           <div className="w-full max-w-2xl mt-4 sm:mt-5">
             <button
+              data-tour="hero-search"
               onClick={onOpenSearch}
               className="w-full flex items-center justify-between p-3 sm:p-3.5 pl-4 bg-white text-zinc-900 rounded-2xl shadow-lg shadow-black/10 hover:shadow-xl transition-all group border border-zinc-200/80 cursor-pointer"
               aria-label="Search past questions or course codes"

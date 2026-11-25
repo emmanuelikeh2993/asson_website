@@ -81,6 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
           {/* Global Search Bar Trigger (Desktop - matching Spotlight Trigger) */}
           <div className="flex-1 max-w-sm hidden md:block">
             <button
+              data-tour="search-trigger"
               onClick={onOpenSearch}
               className="w-full flex items-center justify-between px-3.5 py-2 text-xs text-zinc-400 bg-white dark:bg-[#13171D] rounded-2xl border border-zinc-200/80 dark:border-zinc-800 hover:border-[#087A3E]/60 transition-all text-left group shadow-xs cursor-pointer"
             >
@@ -129,6 +130,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
             {/* Mobile Submit Button: 1-Tap Access for Easy Material Upload */}
             <button
               type="button"
+              data-tour="submit-trigger"
               onClick={onOpenSubmit}
               className="inline-flex sm:hidden items-center gap-1 px-2.5 py-1.5 rounded-xl bg-brand-green text-white hover:bg-brand-deep font-bold text-xs shadow-2xs active:scale-95 transition-all cursor-pointer shrink-0"
               aria-label="Submit Material"
@@ -197,6 +199,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch, onOpenSubmit, onOp
             <Button
               size="sm"
               variant="primary"
+              data-tour="submit-trigger"
               onClick={onOpenSubmit}
               className="hidden sm:inline-flex text-xs h-9 px-3.5 shadow-sm hover:shadow active:scale-95 font-bold shrink-0"
             >

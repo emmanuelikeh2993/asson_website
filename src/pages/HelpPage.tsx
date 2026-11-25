@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { HelpCircle, Mail, MapPin, Clock, Phone, Send, CheckCircle2, AlertCircle, ShieldAlert, Sparkles, MessageSquare } from 'lucide-react';
+import { HelpCircle, Mail, MapPin, Clock, Phone, Send, CheckCircle2, AlertCircle, ShieldAlert, Sparkles, MessageSquare, Compass } from 'lucide-react';
 import { fetchHelpDirectory, submitPrivateFeedback } from '../lib/supabase';
 import { HelpDirectoryItem, FeedbackCategory } from '../types';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/Toast';
+import { useOnboarding } from '../context/OnboardingContext';
 
 export const HelpPage: React.FC = () => {
   const [helpItems, setHelpItems] = useState<HelpDirectoryItem[]>([]);
@@ -20,6 +21,7 @@ export const HelpPage: React.FC = () => {
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   const toast = useToast();
+  const { restartOnboarding } = useOnboarding();
 
   useEffect(() => {
     setIsLoading(true);
@@ -81,6 +83,18 @@ export const HelpPage: React.FC = () => {
         <p className="mt-2 text-xs sm:text-sm text-text-muted leading-relaxed">
           Verified academic advisers, departmental officers, and student welfare contacts for Statistics students at the University of Ibadan.
         </p>
+
+        {/* Restart Interactive Onboarding Guide */}
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={restartOnboarding}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-brand-light text-brand-green hover:bg-emerald-100/80 dark:hover:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-xs font-bold transition-all cursor-pointer active:scale-95"
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span>Restart Interactive Platform Tour</span>
+          </button>
+        </div>
 
         {/* Category Filter Pills */}
         <div className="flex items-center justify-center flex-wrap gap-2 mt-6">
