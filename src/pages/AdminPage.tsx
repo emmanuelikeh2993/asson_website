@@ -40,8 +40,10 @@ import {
   fetchAuthorizedExecutives,
   addAuthorizedExecutive,
   revokeAuthorizedExecutive,
-  getExecutivePasskey,
+  checkExecutivePasskeyConfigured,
   updateExecutivePasskey,
+  sendAdminLoginOtp,
+  verifyAdminLoginOtp,
   MASTER_ADMIN_EMAILS,
   isSupabaseConfigured,
   supabase 
@@ -138,7 +140,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     return sessionStorage.getItem('asson_admin_role') || 'admin';
   });
   const [adminEmail, setAdminEmail] = useState<string>(() => {
-    return sessionStorage.getItem('asson_admin_email') || 'executive@asson.ui.edu.ng';
+    return sessionStorage.getItem('asson_admin_email') || '';
   });
 
   // Login Form State
@@ -148,6 +150,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [otpMode, setOtpMode] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
 
   // Dashboard Navigation State
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
@@ -243,10 +249,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
 
   // Committee Delegation State
   const [authorizedExecs, setAuthorizedExecs] = useState<AuthorizedExecutive[]>([]);
-  const [masterPasskey, setMasterPasskey] = useState<string>(() => getExecutivePasskey());
+  const [isPasskeyConfigured, setIsPasskeyConfigured] = useState<boolean>(false);
   const [isPasskeyEditing, setIsPasskeyEditing] = useState(false);
-  const [newPasskeyVal, setNewPasskeyVal] = useState(masterPasskey);
-  const [showPasskeyText, setShowPasskeyText] = useState(false);
+  const [currentPasskeyVal, setCurrentPasskeyVal] = useState('');
+  const [newPasskeyVal, setNewPasskeyVal] = useState('');
+  const [isSavingPasskey, setIsSavingPasskey] = useState(false);
 
   // New Member Form State
   const [newExecEmail, setNewExecEmail] = useState('');
@@ -258,9 +265,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
   const isMasterAdmin = useMemo(() => {
     const clean = adminEmail.toLowerCase().trim();
     return (
-      clean === 'ikehemmanuel70@gmail.com' ||
-      clean === 'ikehemmanuel60@gmail.com' ||
-      clean === 'executive@asson.ui.edu.ng' ||
+      MASTER_ADMIN_EMAILS.includes(clean) ||
       adminRole === 'super_admin' ||
       sessionStorage.getItem('asson_admin_is_master') === 'true'
     );
@@ -279,6 +284,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     fetchElectedExecutives().then((data) => setExecutives(data.length > 0 ? data : MOCK_EXECUTIVES));
     fetchStaffMembers().then((data) => setStaff(data));
     fetchAuthorizedExecutives().then((data) => setAuthorizedExecs(data));
+    checkExecutivePasskeyConfigured().then((configured) => setIsPasskeyConfigured(configured));
   }, []);
 
   const handleAddExecutive = async (e: React.FormEvent) => {
@@ -317,16 +323,22 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     }
   };
 
-  const handleSavePasskey = () => {
-    if (newPasskeyVal.length < 6) {
-      toast.error('Passkey too short', 'Passkey must be at least 6 characters.');
+  const handleSavePasskey = async () => {
+    if (newPasskeyVal.trim().length < 8) {
+      toast.error('Passkey too short', 'Passkey must be at least 8 characters.');
       return;
     }
-    const ok = updateExecutivePasskey(newPasskeyVal);
-    if (ok) {
-      setMasterPasskey(newPasskeyVal);
+    setIsSavingPasskey(true);
+    const res = await updateExecutivePasskey(newPasskeyVal, currentPasskeyVal || undefined);
+    setIsSavingPasskey(false);
+    if (res.success) {
+      setIsPasskeyConfigured(true);
       setIsPasskeyEditing(false);
-      toast.success('Passkey Updated', 'New executive committee passkey saved. Share it with your authorized members.');
+      setCurrentPasskeyVal('');
+      setNewPasskeyVal('');
+      toast.success('Passkey Encrypted & Saved', 'New committee passkey hash stored safely in Supabase. Share it privately with authorized members.');
+    } else {
+      toast.error('Could Not Update Passkey', res.error || 'Verify your Master Admin session and try again.');
     }
   };
 
@@ -343,7 +355,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     return submissions.filter((s) => s.status === 'Under Review');
   }, [submissions]);
 
-  // Handle Login
+  // Handle Login (Password / Committee Passkey)
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!email.trim()) {
@@ -359,25 +371,55 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     if (res.success) {
       setIsAuthenticated(true);
       setAdminRole(res.role || selectedRole);
-      setAdminEmail(email.trim());
+      setAdminEmail(email.trim().toLowerCase());
+      setPassword('');
       toast.success('Executive Access Granted', `Authenticated as ${res.role?.toUpperCase() || 'ADMIN'}`);
     } else {
+      if (res.needsSetup) {
+        setOtpMode(true);
+      }
       setAuthError(res.error || 'Authentication failed. Please verify credentials.');
     }
   };
 
-  // Demo Fast-Fill
-  const handleDemoLogin = async () => {
-    setEmail('executive@asson.ui.edu.ng');
-    setPassword('assonadmin');
+  // Handle 6-Digit Email OTP Login (Zero hardcoded secrets)
+  const handleSendOtp = async () => {
+    if (!email.trim()) {
+      setAuthError('Enter your executive email address first.');
+      return;
+    }
+    setIsSendingOtp(true);
+    setAuthError(null);
+    const res = await sendAdminLoginOtp(email);
+    setIsSendingOtp(false);
+    if (res.success) {
+      setOtpSent(true);
+      toast.success('Verification Code Sent', `Check ${email.trim()} for your 6-digit login code.`);
+    } else {
+      setAuthError(res.error || 'Could not send login code.');
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode.trim()) {
+      setAuthError('Enter the 6-digit code sent to your email.');
+      return;
+    }
     setIsLoggingIn(true);
-    const res = await adminSignIn('executive@asson.ui.edu.ng', 'assonadmin');
+    setAuthError(null);
+    const res = await verifyAdminLoginOtp(email, otpCode);
     setIsLoggingIn(false);
     if (res.success) {
       setIsAuthenticated(true);
-      setAdminRole('admin');
-      setAdminEmail('executive@asson.ui.edu.ng');
-      toast.success('Executive Demo Granted', 'Logged in as ASSON Executive Administrator');
+      setAdminRole(res.role || 'super_admin');
+      setAdminEmail(email.trim().toLowerCase());
+      setOtpCode('');
+      setOtpSent(false);
+      setOtpMode(false);
+      toast.success('Master Session Verified', 'Signed in securely with 6-digit Email OTP.');
+    } else {
+      setAuthError(res.error || 'Invalid verification code.');
     }
   };
 
@@ -755,134 +797,209 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            {/* Role Dropdown */}
-            <div>
-              <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
-                Role
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                  <User className="w-4 h-4" />
-                </div>
-                <select
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value as any)}
-                  className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-xs font-medium focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all appearance-none cursor-pointer"
-                >
-                  <option value="admin">Executive Administrator</option>
-                  <option value="editor">Academic Editorial Lead</option>
-                  <option value="director">Department Exco Director</option>
-                </select>
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-zinc-400">
-                  <ChevronDown className="w-4 h-4" />
+          {!otpMode ? (
+            <form onSubmit={handleLogin} className="space-y-4">
+              {/* Role Dropdown */}
+              <div>
+                <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                  Role
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <select
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value as any)}
+                    className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-xs font-medium focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="admin">Executive Administrator</option>
+                    <option value="editor">Academic Editorial Lead</option>
+                    <option value="director">Department Exco Director</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-zinc-400">
+                    <ChevronDown className="w-4 h-4" />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Email / Username Input */}
-            <div>
-              <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
-                Authorized Executive Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                  <Mail className="w-4 h-4" />
+              {/* Email / Username Input */}
+              <div>
+                <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                  Authorized Executive Email
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. ikehemmanuel70@gmail.com"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setAuthError(null);
+                    }}
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all"
+                  />
                 </div>
-                <input
-                  type="email"
-                  required
-                  placeholder="e.g. ikehemmanuel70@gmail.com"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
+              </div>
+
+              {/* Password / Passkey Input with Show/Hide */}
+              <div>
+                <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                  Committee Passkey / Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Enter executive passkey or password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setAuthError(null);
+                    }}
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs font-mono focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {/* Switch to 6-Digit Email OTP */}
+                <div className="flex items-center justify-between mt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtpMode(true);
+                      setAuthError(null);
+                    }}
+                    className="text-[11px] font-semibold text-[#087A3E] hover:underline transition-colors cursor-pointer"
+                  >
+                    Sign in with 6-Digit Email Code instead
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toast.info('Passkey Recovery', 'Master Admins can sign in via 6-Digit Email Code to reset the committee passkey.')}
+                    className="text-[11px] text-zinc-500 hover:text-[#087A3E] transition-colors cursor-pointer"
+                  >
+                    Forgot passkey?
+                  </button>
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {authError && (
+                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span className="leading-snug">{authError}</span>
+                </div>
+              )}
+
+              {/* Primary Action Button: ASSON Green with Arrow */}
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full py-3 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50"
+              >
+                <span>{isLoggingIn ? 'Verifying Credentials...' : 'Access Dashboard'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                  Authorized Executive Email
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. ikehemmanuel70@gmail.com"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setAuthError(null);
+                    }}
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all"
+                  />
+                </div>
+              </div>
+
+              {!otpSent ? (
+                <button
+                  type="button"
+                  disabled={isSendingOtp}
+                  onClick={handleSendOtp}
+                  className="w-full py-3 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  <span>{isSendingOtp ? 'Sending 6-Digit Code...' : 'Send 6-Digit Verification Code'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                      6-Digit Verification Code
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      required
+                      placeholder="Enter 6-digit code from your email"
+                      value={otpCode}
+                      onChange={(e) => {
+                        setOtpCode(e.target.value);
+                        setAuthError(null);
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-sm font-mono tracking-widest text-center focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E]"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isLoggingIn}
+                    className="w-full py-3 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                  >
+                    <span>{isLoggingIn ? 'Verifying Code...' : 'Verify & Open Console'}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+
+              {authError && (
+                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span className="leading-snug">{authError}</span>
+                </div>
+              )}
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOtpMode(false);
+                    setOtpSent(false);
                     setAuthError(null);
                   }}
-                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Password / Passkey Input with Show/Hide */}
-            <div>
-              <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
-                Committee Passkey / Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  placeholder="Enter executive passkey"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setAuthError(null);
-                  }}
-                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs font-mono focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer"
+                  className="text-[11px] font-semibold text-zinc-500 hover:text-[#087A3E] cursor-pointer"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  Back to Passkey / Password Sign In
                 </button>
               </div>
-
-              {/* Forgot password link */}
-              <div className="text-right mt-1.5">
-                <button
-                  type="button"
-                  onClick={() => toast.info('Password Recovery', 'Executive password reset tokens are managed by the Department Webmaster.')}
-                  className="text-[11px] text-zinc-500 hover:text-[#087A3E] transition-colors"
-                >
-                  Forgot password?
-                </button>
-              </div>
-            </div>
-
-            {/* Error Message */}
-            {authError && (
-              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span className="leading-snug">{authError}</span>
-              </div>
-            )}
-
-            {/* Primary Action Button: ASSON Green with Arrow */}
-            <button
-              type="submit"
-              disabled={isLoggingIn}
-              className="w-full py-3 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50"
-            >
-              <span>{isLoggingIn ? 'Verifying Credentials...' : 'Access Dashboard'}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
-
-          {/* Quick Demo Access Button (Strictly isolated to offline local developer environments) */}
-          {(!isSupabaseConfigured && import.meta.env.DEV) && (
-            <>
-              <div className="relative flex items-center justify-center my-4">
-                <div className="border-t border-zinc-200 dark:border-zinc-800 w-full" />
-                <span className="bg-white dark:bg-[#13171D] px-3 text-[11px] uppercase tracking-wider text-zinc-400 absolute font-medium">
-                  offline demo mode
-                </span>
-              </div>
-              <div className="grid grid-cols-1 gap-2">
-                <button
-                  type="button"
-                  onClick={handleDemoLogin}
-                  className="w-full py-2.5 px-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
-                >
-                  <ShieldCheck className="w-4 h-4 text-[#087A3E]" />
-                  <span>One-Click Executive Demo Access (Dev Only)</span>
-                </button>
-              </div>
-            </>
+            </form>
           )}
 
           {/* Bottom Watermark */}
@@ -2417,52 +2534,66 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   {!isPasskeyEditing ? (
                     <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-zinc-800 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold tracking-wider text-zinc-900 dark:text-zinc-100">
-                          {showPasskeyText ? masterPasskey : '••••••••••••••••'}
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg ${
+                          isPasskeyConfigured
+                            ? 'bg-emerald-50 dark:bg-emerald-950/50 text-[#087A3E] border border-emerald-200 dark:border-emerald-800'
+                            : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                        }`}>
+                          <Lock className="w-3.5 h-3.5" />
+                          {isPasskeyConfigured
+                            ? 'Active (Server-Side Salted Hash)'
+                            : 'Not Configured Yet — Set Below'}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => setShowPasskeyText(!showPasskeyText)}
-                          className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
-                          title={showPasskeyText ? "Hide passkey" : "Reveal passkey"}
-                        >
-                          {showPasskeyText ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
                       </div>
 
                       {isMasterAdmin && (
                         <button
                           type="button"
                           onClick={() => {
-                            setNewPasskeyVal(masterPasskey);
+                            setCurrentPasskeyVal('');
+                            setNewPasskeyVal('');
                             setIsPasskeyEditing(true);
                           }}
-                          className="px-2.5 py-1 rounded-lg text-xs font-bold text-[#087A3E] hover:bg-emerald-50 dark:hover:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg text-xs font-bold text-[#087A3E] hover:bg-emerald-50 dark:hover:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 cursor-pointer shrink-0"
                         >
-                          Change
+                          {isPasskeyConfigured ? 'Rotate Passkey' : 'Set Passkey'}
                         </button>
                       )}
                     </div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
+                      {isPasskeyConfigured && (
+                        <input
+                          type="password"
+                          value={currentPasskeyVal}
+                          onChange={(e) => setCurrentPasskeyVal(e.target.value)}
+                          placeholder="Current passkey (optional if signed in via Email OTP)"
+                          className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#087A3E]"
+                        />
+                      )}
                       <input
-                        type="text"
+                        type="password"
                         value={newPasskeyVal}
                         onChange={(e) => setNewPasskeyVal(e.target.value)}
-                        placeholder="Enter new master passkey (min 6 chars)"
+                        placeholder="Enter new committee passkey (min 8 chars)"
                         className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono font-bold text-zinc-900 dark:text-white focus:outline-none focus:border-[#087A3E]"
                       />
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
+                          disabled={isSavingPasskey}
                           onClick={handleSavePasskey}
-                          className="px-3 py-1.5 rounded-lg bg-[#087A3E] text-white text-xs font-bold hover:bg-[#066131] cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg bg-[#087A3E] text-white text-xs font-bold hover:bg-[#066131] cursor-pointer disabled:opacity-50"
                         >
-                          Save New Passkey
+                          {isSavingPasskey ? 'Encrypting...' : 'Save New Passkey'}
                         </button>
                         <button
                           type="button"
-                          onClick={() => setIsPasskeyEditing(false)}
+                          onClick={() => {
+                            setIsPasskeyEditing(false);
+                            setCurrentPasskeyVal('');
+                            setNewPasskeyVal('');
+                          }}
                           className="px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-600 hover:bg-zinc-100 cursor-pointer"
                         >
                           Cancel

@@ -26,7 +26,7 @@
 - **Project Name**: `asson_website`
 - **Project URL**: `https://cvhjohbknghlmspoaenr.supabase.co`
 - **Project Ref**: `cvhjohbknghlmspoaenr`
-- **Publishable Key**: `sb_publishable_NMsNixFSbQvLjqXtGpHgxA_uuaBD7w5` (configured in `.env`)
+- **Publishable Key**: `[Stored in .env / Vercel Environment Variables]`
 - **Secret Key**: `[Stored securely in Supabase Dashboard - Project Settings > API]`
 - **Database Status**:
   - All **13 tables** are created and live (`courses`, `resources`, `notices`, `opportunities`, `faqs`, `profiles`, `user_roles`, `submissions`, `bookmarks`, `audit_events`, `content_reports`, `site_settings`, `executive_contacts`).
@@ -155,7 +155,7 @@ npm install
 Create a `.env` file in the project root:
 ```env
 VITE_SUPABASE_URL=https://cvhjohbknghlmspoaenr.supabase.co
-VITE_SUPABASE_ANON_KEY=sb_publishable_NMsNixFSbQvLjqXtGpHgxA_uuaBD7w5
+VITE_SUPABASE_ANON_KEY=<your-supabase-publishable-key>
 VITE_APP_NAME="ASSON UI"
 VITE_APP_URL=http://localhost:3000
 ```
@@ -282,10 +282,10 @@ Confirms 0 TypeScript or packaging errors.
 - **Hybrid Delegated Passkey Architecture**:
   - **Permanent Master Admins**: `ikehemmanuel70@gmail.com` (President) and `ikehemmanuel60@gmail.com` (Backup Master Admin). Master admin status is permanently enforced in server logic and cannot be revoked through the UI.
   - **Committee Allowlist**: Master Admins approve or revoke executive emails directly from the Admin Dashboard under the new **"Committee & Access"** tab (`src/pages/AdminPage.tsx`).
-  - **Shared Executive Passkey**: Committee members log in with their **distinct individual email** + a shared tenure passkey (default: `ASSON_EXCO_2024_2025`).
+  - **Shared Executive Passkey**: Committee members log in with their **distinct individual email** + a shared passkey verified server-side against a salted SHA-256 hash in Supabase (`site_settings`).
   - **Individual Accountability & Audit Trail**: Every action (approving past papers, publishing notices, updating deadlines) is stamped with that executive's distinct email in the audit trail.
-  - **Seamless 9–10 Month Tenure Handover**: At the end of the executive tenure, the incoming President simply updates the passkey and revokes outgoing emails with 1 click in the dashboard.
-- **Migration & Client API**: Added migration `20261120010000_committee_access_control.sql` and API helpers `fetchAuthorizedExecutives`, `addAuthorizedExecutive`, `revokeAuthorizedExecutive`, `getExecutivePasskey`, `updateExecutivePasskey`.
+  - **Seamless 9–10 Month Tenure Handover**: At the end of the executive tenure, the incoming President rotates the passkey and revokes outgoing emails with 1 click in the dashboard.
+- **Migration & Client API**: Added migrations `20261120010000_committee_access_control.sql` & `20261125000000_secure_committee_passkey_rpc.sql`, and API helpers `fetchAuthorizedExecutives`, `addAuthorizedExecutive`, `revokeAuthorizedExecutive`, `checkExecutivePasskeyConfigured`, `updateExecutivePasskey`, `sendAdminLoginOtp`, `verifyAdminLoginOtp`.
 
 ### 8.9 Minimalist Resources Library Redesign (`/resources`)
 - **Resolved "Scattered" Layout**: Replaced the noisy 3-column card grid with an orderly, minimalist academic interface following principles from `Principles_of_Minimalist_Application_Design.pdf`.
@@ -319,9 +319,8 @@ Confirms 0 TypeScript or packaging errors.
 - **Desktop Header & Resource Library**: Direct `Submit Material` CTA triggers the 3-step modal wizard from any page.
 - **Zero Dummy Data Guarantee**: All submissions route directly to the Admin moderation queue for verification. No unvetted content appears publicly.
 
-### 8.13 Active Session & Executive Passkey Alignment (2026/2027 Tenure)
+### 8.13 Active Session Alignment (2026/2027 Tenure)
 - **Tenure Clarification**: The outgoing executive set was the **2025/2026** academic session. The incoming administration (led by President Emmanuel Chibuzor Ikeh) is the **2026/2027** session.
-- **Passkey Update**: Updated the default committee passkey from `ASSON_EXCO_2024_2025` to **`ASSON_EXCO_2026_2027`** in `src/lib/supabase.ts`.
 - **Session Defaults & Chips**:
   - `SubmitResourceModal.tsx`: Updated default submission session to `2026/2027` and expanded session options chip selector (`2026/2027`, `2025/2026`, `2024/2025`, `2023/2024`, etc.).
   - `mockData.ts`: Updated `MOCK_EXECUTIVES` to the 2026/2027 session with Emmanuel Chibuzor Ikeh as Executive President.
@@ -329,6 +328,15 @@ Confirms 0 TypeScript or packaging errors.
   - `AdminPage.tsx`: Default executive creation session set to `2026/2027`.
   - `PrivacyPage.tsx` & `TermsPage.tsx`: Effective legal session updated to `2026/2027 Academic Session`.
   - Database migration: Created `20261120030000_update_session_to_2026_2027.sql`.
+
+### 8.14 Zero-Secrets-in-Git Remediation & Server-Hashed Passkey (Nov 25, 2026)
+- **Root Cause**: Previous commits included hardcoded default passkeys and a dev password fallback inside client-side TypeScript files and documentation, triggering secret-scanning alerts.
+- **Remediation**:
+  - Removed all hardcoded passkey constants (`DEFAULT_EXECUTIVE_PASSKEY`), legacy demo bypass strings, and client-side `localStorage` passkey storage from `src/lib/supabase.ts` and `src/pages/AdminPage.tsx`.
+  - Created PostgreSQL `SECURITY DEFINER` RPC functions in `supabase/migrations/20261125000000_secure_committee_passkey_rpc.sql` (`has_executive_passkey`, `verify_executive_login`, `set_executive_passkey`) storing only a randomly salted SHA-256 hash inside `site_settings` (with zero public read access).
+  - Tightened `authorized_executives` RLS to remove the permissive `OR true` clause.
+  - Added 6-Digit Email OTP login (`sendAdminLoginOtp` / `verifyAdminLoginOtp`) right on `/console` so Master Admins (`ikehemmanuel70@gmail.com` / `ikehemmanuel60@gmail.com`) can authenticate passwordlessly and set/rotate their private committee passkey without touching the Supabase Dashboard.
+  - Scrubbed all literal credentials from SQL migrations and Markdown documentation.
 
 ---
 

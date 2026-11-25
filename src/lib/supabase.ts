@@ -947,28 +947,47 @@ export async function verifyExecutiveRole(userId: string): Promise<{ isAuthorize
 
 export const MASTER_ADMIN_EMAILS = [
   'ikehemmanuel70@gmail.com',
-  'ikehemmanuel60@gmail.com',
-  'executive@asson.ui.edu.ng',
-  'admin@asson.ui.edu.ng'
+  'ikehemmanuel60@gmail.com'
 ];
 
-export const DEFAULT_EXECUTIVE_PASSKEY = 'ASSON_EXCO_2026_2027';
-
-export function getExecutivePasskey(): string {
+export async function checkExecutivePasskeyConfigured(): Promise<boolean> {
+  if (!supabase || !isSupabaseConfigured) return false;
   try {
-    return localStorage.getItem('asson_executive_passkey') || DEFAULT_EXECUTIVE_PASSKEY;
-  } catch {
-    return DEFAULT_EXECUTIVE_PASSKEY;
-  }
+    const { data, error } = await supabase.rpc('has_executive_passkey');
+    if (!error && typeof data === 'boolean') return data;
+  } catch { }
+  return false;
 }
 
-export function updateExecutivePasskey(newKey: string): boolean {
-  if (!newKey || newKey.trim().length < 6) return false;
+export async function updateExecutivePasskey(
+  newKey: string,
+  currentKey?: string
+): Promise<{ success: boolean; error?: string }> {
+  const trimmedNew = newKey.trim();
+  if (trimmedNew.length < 8) {
+    return { success: false, error: 'Committee passkey must be at least 8 characters long.' };
+  }
+  if (!supabase || !isSupabaseConfigured) {
+    return { success: false, error: 'Supabase connection is required to store passkeys securely.' };
+  }
+
+  const actorEmail = sessionStorage.getItem('asson_admin_email') || '';
   try {
-    localStorage.setItem('asson_executive_passkey', newKey.trim());
-    return true;
-  } catch {
-    return false;
+    const { data, error } = await supabase.rpc('set_executive_passkey', {
+      p_new_passkey: trimmedNew,
+      p_actor_email: actorEmail || null,
+      p_current_passkey: currentKey?.trim() || null
+    });
+
+    if (error) {
+      return { success: false, error: error.message || 'Could not update passkey.' };
+    }
+    if (data && data.success === false) {
+      return { success: false, error: data.error || 'Authorization denied.' };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to update passkey.' };
   }
 }
 
@@ -991,16 +1010,6 @@ export const INITIAL_AUTHORIZED_EXECUTIVES: AuthorizedExecutive[] = [
     role: 'super_admin',
     isMaster: true,
     approvedBy: 'System Founder',
-    createdAt: '2026-11-20'
-  },
-  {
-    id: 'auth-exec-3',
-    email: 'executive@asson.ui.edu.ng',
-    name: 'ASSON Executive Council',
-    office: 'Executive Secretariat',
-    role: 'admin',
-    isMaster: false,
-    approvedBy: 'Emmanuel Ikeh',
     createdAt: '2026-11-20'
   }
 ];
@@ -1072,9 +1081,9 @@ export async function addAuthorizedExecutive(data: {
     createdAt: new Date().toISOString().split('T')[0]
   };
 
-  if (supabase) {
+  if (supabase && isSupabaseConfigured) {
     try {
-      await supabase.from('authorized_executives').insert({
+      const { error } = await supabase.from('authorized_executives').insert({
         id: newEntry.id,
         email: cleanEmail,
         name: newEntry.name,
@@ -1084,13 +1093,22 @@ export async function addAuthorizedExecutive(data: {
         approved_by: currentAdmin
       });
 
-      await supabase.from('audit_events').insert({
+      if (error) {
+        return {
+          success: false,
+          error: 'Authorization requires a verified Master Admin session (sign in via Email OTP or Supabase Password).'
+        };
+      }
+
+      void supabase.from('audit_events').insert({
         action: 'CREATE',
         entity: 'authorized_executives',
         details: `Approved executive access for ${newEntry.name} (${cleanEmail} — ${newEntry.office})`,
         actor_email: currentAdmin
       });
-    } catch { }
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Database error authorizing executive.' };
+    }
   }
 
   try {
@@ -1110,16 +1128,24 @@ export async function revokeAuthorizedExecutive(id: string, email: string): Prom
 
   const currentAdmin = sessionStorage.getItem('asson_admin_email') || 'Emmanuel Ikeh (President)';
 
-  if (supabase) {
+  if (supabase && isSupabaseConfigured) {
     try {
-      await supabase.from('authorized_executives').delete().eq('email', cleanEmail);
-      await supabase.from('audit_events').insert({
+      const { error } = await supabase.from('authorized_executives').delete().eq('email', cleanEmail);
+      if (error) {
+        return {
+          success: false,
+          error: 'Revoking access requires a verified Master Admin session (sign in via Email OTP or Supabase Password).'
+        };
+      }
+      void supabase.from('audit_events').insert({
         action: 'DELETE',
         entity: 'authorized_executives',
         details: `Revoked executive access for ${cleanEmail}`,
         actor_email: currentAdmin
       });
-    } catch { }
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Database error revoking executive.' };
+    }
   }
 
   try {
@@ -1131,16 +1157,133 @@ export async function revokeAuthorizedExecutive(id: string, email: string): Prom
   return { success: true };
 }
 
-export async function adminSignIn(email: string, password?: string): Promise<{ success: boolean; role?: string; isMaster?: boolean; error?: string }> {
+function persistAdminSession(params: {
+  email: string;
+  role: string;
+  isMaster: boolean;
+  name: string;
+  office: string;
+}) {
+  sessionStorage.setItem('asson_admin_authenticated', 'true');
+  sessionStorage.setItem('asson_admin_email', params.email);
+  sessionStorage.setItem('asson_admin_role', params.role);
+  sessionStorage.setItem('asson_admin_is_master', params.isMaster ? 'true' : 'false');
+  sessionStorage.setItem('asson_admin_name', params.name);
+  sessionStorage.setItem('asson_admin_office', params.office);
+
+  if (supabase && isSupabaseConfigured) {
+    try {
+      void supabase.from('audit_events').insert({
+        action: 'LOGIN',
+        entity: 'admin_session',
+        details: `Executive portal session opened by ${params.email} (${params.office})`,
+        actor_email: params.email
+      });
+    } catch { }
+  }
+}
+
+export async function sendAdminLoginOtp(email: string): Promise<{ success: boolean; error?: string }> {
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    return { success: false, error: 'Please enter a valid executive email address.' };
+  }
+  if (!supabase || !isSupabaseConfigured) {
+    return { success: false, error: 'Email OTP requires an active Supabase connection.' };
+  }
+
+  const authorizedList = await fetchAuthorizedExecutives();
+  const isMaster = MASTER_ADMIN_EMAILS.includes(cleanEmail);
+  const matchedExec = authorizedList.find(e => e.email.toLowerCase() === cleanEmail);
+
+  if (!isMaster && !matchedExec) {
+    return {
+      success: false,
+      error: `Access Denied: "${email}" is not on the approved committee list.`
+    };
+  }
+
+  try {
+    const { error } = await supabase.auth.signInWithOtp({
+      email: cleanEmail,
+      options: { shouldCreateUser: true }
+    });
+    if (error) {
+      return { success: false, error: error.message || 'Could not send login code.' };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to send login code.' };
+  }
+}
+
+export async function verifyAdminLoginOtp(
+  email: string,
+  token: string
+): Promise<{ success: boolean; role?: string; isMaster?: boolean; error?: string }> {
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanToken = token.trim();
+  if (!cleanEmail || !cleanToken) {
+    return { success: false, error: 'Email and 6-digit verification code are required.' };
+  }
+  if (!supabase || !isSupabaseConfigured) {
+    return { success: false, error: 'Supabase connection is required.' };
+  }
+
+  try {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: cleanEmail,
+      token: cleanToken,
+      type: 'email'
+    });
+
+    if (error || !data.user) {
+      return { success: false, error: error?.message || 'Invalid or expired verification code.' };
+    }
+
+    const authorizedList = await fetchAuthorizedExecutives();
+    const isMaster = MASTER_ADMIN_EMAILS.includes(cleanEmail);
+    const matchedExec = authorizedList.find(e => e.email.toLowerCase() === cleanEmail);
+
+    if (!isMaster && !matchedExec) {
+      await supabase.auth.signOut();
+      return { success: false, error: 'Email is not on the approved executive list.' };
+    }
+
+    const role = isMaster ? 'super_admin' : (matchedExec?.role || 'admin');
+    persistAdminSession({
+      email: cleanEmail,
+      role,
+      isMaster,
+      name: matchedExec?.name || (isMaster ? 'Emmanuel Ikeh' : 'Executive Member'),
+      office: matchedExec?.office || (isMaster ? 'Executive President / Lead Admin' : 'Executive Council')
+    });
+
+    return { success: true, role, isMaster };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Verification failed.' };
+  }
+}
+
+export async function adminSignIn(
+  email: string,
+  password?: string
+): Promise<{ success: boolean; role?: string; isMaster?: boolean; needsSetup?: boolean; error?: string }> {
   if (!email || !password || !email.includes('@')) {
-    return { success: false, error: 'A valid email address and passkey are required.' };
+    return { success: false, error: 'A valid email address and passkey/password are required.' };
   }
 
   const cleanEmail = email.trim().toLowerCase();
-  const inputPasskey = password.trim();
-  const masterPasskey = getExecutivePasskey();
+  const inputSecret = password.trim();
 
-  // 1. Check if email is on the approved list
+  if (!supabase || !isSupabaseConfigured) {
+    return {
+      success: false,
+      error: 'Authentication requires an active Supabase backend connection.'
+    };
+  }
+
+  // 1. Check allowlist / Master Admin status
   const authorizedList = await fetchAuthorizedExecutives();
   const isMaster = MASTER_ADMIN_EMAILS.includes(cleanEmail);
   const matchedExec = authorizedList.find(e => e.email.toLowerCase() === cleanEmail);
@@ -1152,57 +1295,61 @@ export async function adminSignIn(email: string, password?: string): Promise<{ s
     };
   }
 
-  // 2. Validate passkey (either master passkey, default passkey, or dev/password)
-  const isPasskeyMatch =
-    inputPasskey === masterPasskey ||
-    inputPasskey === DEFAULT_EXECUTIVE_PASSKEY ||
-    inputPasskey === 'assonadmin' ||
-    (import.meta.env.DEV && inputPasskey.length >= 4);
+  // 2. Try individual Supabase Auth password first (if executive registered a personal password)
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: cleanEmail,
+      password: inputSecret
+    });
+    if (!error && data.user) {
+      const role = isMaster ? 'super_admin' : (matchedExec?.role || 'admin');
+      persistAdminSession({
+        email: cleanEmail,
+        role,
+        isMaster,
+        name: matchedExec?.name || (isMaster ? 'Emmanuel Ikeh' : 'Executive Member'),
+        office: matchedExec?.office || (isMaster ? 'Executive President / Lead Admin' : 'Executive Council')
+      });
+      return { success: true, role, isMaster };
+    }
+  } catch { }
 
-  if (isPasskeyMatch) {
-    const role = isMaster ? 'super_admin' : (matchedExec?.role || 'admin');
-    sessionStorage.setItem('asson_admin_authenticated', 'true');
-    sessionStorage.setItem('asson_admin_email', cleanEmail);
-    sessionStorage.setItem('asson_admin_role', role);
-    sessionStorage.setItem('asson_admin_is_master', isMaster ? 'true' : 'false');
-    sessionStorage.setItem('asson_admin_name', matchedExec?.name || (isMaster ? 'Emmanuel Ikeh' : 'Executive Member'));
-    sessionStorage.setItem('asson_admin_office', matchedExec?.office || (isMaster ? 'Executive President / Lead Admin' : 'Executive Council'));
+  // 3. Verify against server-side salted SHA-256 committee passkey hash via RPC
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc('verify_executive_login', {
+      p_email: cleanEmail,
+      p_passkey: inputSecret
+    });
 
-    if (supabase) {
-      try {
-        void supabase.from('audit_events').insert({
-          action: 'LOGIN',
-          entity: 'admin_session',
-          details: `Executive portal session opened by ${cleanEmail} (${matchedExec?.office || 'Executive Council'})`,
-          actor_email: cleanEmail
-        });
-      } catch { }
+    if (!rpcError && rpcData?.success) {
+      const role = rpcData.role || (isMaster ? 'super_admin' : (matchedExec?.role || 'admin'));
+      const masterFlag = Boolean(rpcData.isMaster ?? isMaster);
+      persistAdminSession({
+        email: cleanEmail,
+        role,
+        isMaster: masterFlag,
+        name: rpcData.name || matchedExec?.name || (masterFlag ? 'Emmanuel Ikeh' : 'Executive Member'),
+        office: rpcData.office || matchedExec?.office || (masterFlag ? 'Executive President / Lead Admin' : 'Executive Council')
+      });
+      return { success: true, role, isMaster: masterFlag };
     }
 
-    return { success: true, role, isMaster };
-  }
+    if (rpcData?.needsSetup) {
+      return {
+        success: false,
+        needsSetup: true,
+        error: rpcData.error || 'Committee passkey is not set yet. Use "Sign in with 6-Digit Email Code" below as Master Admin to set it.'
+      };
+    }
 
-  // Fallback: Check individual Supabase Auth password if registered
-  if (supabase && isSupabaseConfigured) {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: inputPasskey
-      });
-      if (!error && data.user) {
-        const role = isMaster ? 'super_admin' : (matchedExec?.role || 'admin');
-        sessionStorage.setItem('asson_admin_authenticated', 'true');
-        sessionStorage.setItem('asson_admin_email', cleanEmail);
-        sessionStorage.setItem('asson_admin_role', role);
-        sessionStorage.setItem('asson_admin_is_master', isMaster ? 'true' : 'false');
-        return { success: true, role, isMaster };
-      }
-    } catch { }
-  }
+    if (rpcData?.error) {
+      return { success: false, error: rpcData.error };
+    }
+  } catch { }
 
   return {
     success: false,
-    error: 'Incorrect executive passkey. Please check with Emmanuel Ikeh or your committee lead.'
+    error: 'Incorrect passkey or password. Master Admins can also sign in using a 6-digit Email Code below.'
   };
 }
 

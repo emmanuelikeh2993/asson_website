@@ -31,7 +31,5 @@ ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
     bio = EXCLUDED.bio;
 
--- 3. Update Default Passkey & Session in Site Settings (if present)
-UPDATE public.site_settings 
-SET value = 'ASSON_EXCO_2026_2027' 
-WHERE key = 'executive_passkey' AND (value = 'ASSON_EXCO_2024_2025' OR value IS NULL);
+-- 3. Purge any legacy plaintext passkey setting (hashed passkeys are managed via secure RPC)
+DELETE FROM public.site_settings WHERE key = 'executive_passkey';
