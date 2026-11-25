@@ -132,16 +132,11 @@ type TabKey =
 export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
   const toast = useToast();
 
-  // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem('asson_admin_authenticated') === 'true';
-  });
-  const [adminRole, setAdminRole] = useState<string>(() => {
-    return sessionStorage.getItem('asson_admin_role') || 'admin';
-  });
-  const [adminEmail, setAdminEmail] = useState<string>(() => {
-    return sessionStorage.getItem('asson_admin_email') || '';
-  });
+  // Authentication State (Never trust client sessionStorage alone without server verification)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isVerifyingSession, setIsVerifyingSession] = useState<boolean>(true);
+  const [adminRole, setAdminRole] = useState<string>('editor');
+  const [adminEmail, setAdminEmail] = useState<string>('');
 
   // Login Form State
   const [email, setEmail] = useState('');
@@ -264,15 +259,79 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
 
   const isMasterAdmin = useMemo(() => {
     const clean = adminEmail.toLowerCase().trim();
-    return (
-      MASTER_ADMIN_EMAILS.includes(clean) ||
-      adminRole === 'super_admin' ||
-      sessionStorage.getItem('asson_admin_is_master') === 'true'
-    );
+    return MASTER_ADMIN_EMAILS.includes(clean) && adminRole === 'super_admin';
   }, [adminEmail, adminRole]);
 
-  // Load Data on Initial Render
+  // Verify executive authentication & authorization on the server on mount
   useEffect(() => {
+    let active = true;
+    const verifyServerSession = async () => {
+      if (!supabase || !isSupabaseConfigured) {
+        if (active) setIsVerifyingSession(false);
+        return;
+      }
+
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        const userEmail = user?.email?.trim().toLowerCase() || '';
+        if (error || !userEmail) {
+          // Clear any stale or forged client session markers
+          sessionStorage.removeItem('asson_admin_authenticated');
+          sessionStorage.removeItem('asson_admin_role');
+          sessionStorage.removeItem('asson_admin_is_master');
+          if (active) {
+            setIsAuthenticated(false);
+            setIsVerifyingSession(false);
+          }
+          return;
+        }
+
+        const isMaster = MASTER_ADMIN_EMAILS.includes(userEmail);
+        let isAuthorized = isMaster;
+        let verifiedRole = isMaster ? 'super_admin' : 'editor';
+
+        if (!isAuthorized) {
+          const { data: rpcAllowed } = await supabase.rpc('is_authorized_executive_email', {
+            p_email: userEmail
+          });
+          if (rpcAllowed === true) {
+            isAuthorized = true;
+            const list = await fetchAuthorizedExecutives();
+            const matched = list.find((e) => e.email.toLowerCase() === userEmail);
+            verifiedRole = matched?.role || 'admin';
+          }
+        }
+
+        if (active) {
+          if (isAuthorized) {
+            setAdminEmail(userEmail);
+            setAdminRole(verifiedRole);
+            setIsAuthenticated(true);
+          } else {
+            sessionStorage.removeItem('asson_admin_authenticated');
+            sessionStorage.removeItem('asson_admin_role');
+            sessionStorage.removeItem('asson_admin_is_master');
+            setIsAuthenticated(false);
+          }
+          setIsVerifyingSession(false);
+        }
+      } catch {
+        if (active) {
+          setIsAuthenticated(false);
+          setIsVerifyingSession(false);
+        }
+      }
+    };
+
+    verifyServerSession();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Load sensitive executive datasets ONLY after authentication succeeds
+  useEffect(() => {
+    if (!isAuthenticated) return;
     fetchStudentSubmissions().then((data) => setSubmissions(data.length > 0 ? data : MOCK_SUBMISSIONS));
     fetchAuditLogs().then((data) => setAuditLogs(data.length > 0 ? data : MOCK_AUDIT_LOGS));
     fetchResources().then((data) => setResourcesCount(data.length > 0 ? data.length : MOCK_RESOURCES.length));
@@ -285,7 +344,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     fetchStaffMembers().then((data) => setStaff(data));
     fetchAuthorizedExecutives().then((data) => setAuthorizedExecs(data));
     checkExecutivePasskeyConfigured().then((configured) => setIsPasskeyConfigured(configured));
-  }, []);
+  }, [isAuthenticated]);
 
   const handleAddExecutive = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -763,6 +822,17 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     setCalendarEvents((prev) => prev.filter((c) => c.id !== id));
     toast.info('Date Removed', `Removed "${title}" from academic calendar.`);
   };
+
+  if (isVerifyingSession) {
+    return (
+      <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 bg-[#F8FAFC] dark:bg-[#0A0D10]">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 rounded-full border-2 border-[#087A3E] border-t-transparent animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-zinc-500">Verifying executive session...</p>
+        </div>
+      </div>
+    );
+  }
 
   // ====================================================================
   // SCREEN 1: ADMIN SIGN-IN (OFFICIAL ASSON LOGO + CLEAN WHITE BACKGROUND)
@@ -1273,54 +1343,58 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
               </div>
             </div>
 
-            {/* Group 4: GOVERNANCE */}
-            <div>
-              <span className="px-3 text-[10px] font-bold tracking-widest uppercase text-zinc-400 block mb-2">
-                GOVERNANCE
-              </span>
-              <div className="space-y-0.5">
-                <button
-                  onClick={() => {
-                    setActiveTab('audit');
-                    setIsMobileSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-colors ${
-                    activeTab === 'audit'
-                      ? 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-900 dark:text-white font-bold'
-                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 hover:text-zinc-900'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <History className={`w-4 h-4 ${activeTab === 'audit' ? 'text-[#087A3E]' : ''}`} />
-                    <span>Audit Trail</span>
-                  </div>
-                  <span className="text-[10px] text-zinc-400 font-mono">
-                    {auditLogs.length}
-                  </span>
-                </button>
+            {/* Group 4: GOVERNANCE (Role-Based Access) */}
+            {(adminRole === 'admin' || adminRole === 'super_admin' || isMasterAdmin) && (
+              <div>
+                <span className="px-3 text-[10px] font-bold tracking-widest uppercase text-zinc-400 block mb-2">
+                  GOVERNANCE
+                </span>
+                <div className="space-y-0.5">
+                  <button
+                    onClick={() => {
+                      setActiveTab('audit');
+                      setIsMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-colors ${
+                      activeTab === 'audit'
+                        ? 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-900 dark:text-white font-bold'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 hover:text-zinc-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <History className={`w-4 h-4 ${activeTab === 'audit' ? 'text-[#087A3E]' : ''}`} />
+                      <span>Audit Trail</span>
+                    </div>
+                    <span className="text-[10px] text-zinc-400 font-mono">
+                      {auditLogs.length}
+                    </span>
+                  </button>
 
-                {/* Committee Delegation & Access */}
-                <button
-                  onClick={() => {
-                    setActiveTab('access');
-                    setIsMobileSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-colors cursor-pointer ${
-                    activeTab === 'access'
-                      ? 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-900 dark:text-white font-bold'
-                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 hover:text-zinc-900'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <ShieldCheck className={`w-4 h-4 ${activeTab === 'access' ? 'text-[#087A3E]' : ''}`} />
-                    <span>Committee & Access</span>
-                  </div>
-                  <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold">
-                    {authorizedExecs.length}
-                  </span>
-                </button>
+                  {/* Committee Delegation & Access (Master Admin Only) */}
+                  {isMasterAdmin && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('access');
+                        setIsMobileSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-colors cursor-pointer ${
+                        activeTab === 'access'
+                          ? 'bg-zinc-100 dark:bg-zinc-800/60 text-zinc-900 dark:text-white font-bold'
+                          : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 hover:text-zinc-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <ShieldCheck className={`w-4 h-4 ${activeTab === 'access' ? 'text-[#087A3E]' : ''}`} />
+                        <span>Committee &amp; Access</span>
+                      </div>
+                      <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold">
+                        {authorizedExecs.length}
+                      </span>
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </nav>
         </div>
 
@@ -2436,7 +2510,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
           {/* ------------------------------------------------------------- */}
           {/* TAB 9: AUDIT LOGS (DIRECT VIEW)                               */}
           {/* ------------------------------------------------------------- */}
-          {activeTab === 'audit' && (
+          {activeTab === 'audit' && (adminRole === 'admin' || adminRole === 'super_admin' || isMasterAdmin) && (
             <div className="space-y-4">
               <div>
                 <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
@@ -2487,9 +2561,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
           )}
 
           {/* ------------------------------------------------------------- */}
-          {/* TAB 10: COMMITTEE DELEGATION & ACCESS (MASTER ADMIN)          */}
+          {/* TAB 10: COMMITTEE DELEGATION & ACCESS (MASTER ADMIN ONLY)     */}
           {/* ------------------------------------------------------------- */}
-          {activeTab === 'access' && (
+          {activeTab === 'access' && isMasterAdmin && (
             <div className="space-y-6">
               {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-zinc-200/80 dark:border-zinc-800">
@@ -2622,7 +2696,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   </div>
 
                   <ul className="text-xs text-zinc-600 dark:text-zinc-300 space-y-2 list-disc list-inside leading-relaxed">
-                    <li>Your 15 committee members go to <code className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[11px] font-mono">/console</code>.</li>
+                    <li>Your authorized committee members navigate directly to <code className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[11px] font-mono">/executive</code>.</li>
                     <li>They enter their <strong>distinct email</strong> (approved below) + the <strong>shared committee passkey</strong>.</li>
                     <li>Because each member uses their own email, every past question they approve, announcement they post, or feedback they reply to is <strong>permanently stamped with their personal name</strong> in the Audit Trail!</li>
                   </ul>

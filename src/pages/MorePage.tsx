@@ -19,7 +19,6 @@ import {
   Download,
   Building2,
   Shield,
-  ShieldCheck,
   FileText,
   Sparkles,
   HelpCircle,
@@ -629,27 +628,6 @@ export const MorePage: React.FC<MorePageProps> = ({ onOpenAuth, onOpenSubmit }) 
                   Privacy Policy & NDPA
                 </span>
                 <span className="text-[11px] text-text-muted">Data protection and student privacy</span>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green transition-transform group-hover:translate-x-0.5" />
-          </Link>
-
-          {/* Executive Portal */}
-          <Link
-            to="/console"
-            className="p-3.5 sm:p-4 flex items-center justify-between hover:bg-surface-bg/60 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-brand-green flex items-center justify-center shrink-0 border border-emerald-200/60 dark:border-emerald-800/60">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="font-bold text-text-main group-hover:text-brand-green transition-colors block">
-                  Executive Admin Portal
-                </span>
-                <span className="text-[11px] text-text-muted">
-                  Material vetting and moderation console
-                </span>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-text-subtle group-hover:text-brand-green transition-transform group-hover:translate-x-0.5" />

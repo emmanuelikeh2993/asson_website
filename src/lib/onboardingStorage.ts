@@ -8,7 +8,7 @@ interface StoredOnboardingState {
   updatedAt: number;
 }
 
-const EXCLUDED_BOOT_PATHS = ['/console', '/admin'];
+const EXCLUDED_BOOT_PATHS = ['/executive', '/console', '/admin'];
 
 function readCookieFallback(): OnboardingStatus | null {
   if (typeof document === 'undefined') return null;

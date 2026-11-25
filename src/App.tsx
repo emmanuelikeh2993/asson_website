@@ -208,21 +208,15 @@ export function AppContent() {
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route 
-              path="/console" 
+              path="/executive" 
               element={
                 <AdminPage 
                   onOpenSubmit={() => setIsSubmitOpen(true)} 
                 />
               } 
             />
-            <Route 
-              path="/admin" 
-              element={
-                <AdminPage 
-                  onOpenSubmit={() => setIsSubmitOpen(true)} 
-                />
-              } 
-            />
+            <Route path="/console" element={<Navigate to="/executive" replace />} />
+            <Route path="/admin" element={<Navigate to="/executive" replace />} />
 
             <Route 
               path="/more" 

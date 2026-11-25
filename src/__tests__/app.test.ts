@@ -72,7 +72,8 @@ describe('Onboarding Browser Persistence', () => {
     expect(shouldShowOnboardingOnBoot('/')).toBe(true);
     expect(shouldShowOnboardingOnBoot('/resources')).toBe(true);
 
-    // Console/admin routes are excluded
+    // Executive/console/admin routes are excluded
+    expect(shouldShowOnboardingOnBoot('/executive')).toBe(false);
     expect(shouldShowOnboardingOnBoot('/console')).toBe(false);
     expect(shouldShowOnboardingOnBoot('/admin')).toBe(false);
 
