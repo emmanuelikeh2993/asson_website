@@ -3,6 +3,7 @@ import {
   saveOnboardingStatus,
   shouldShowOnboardingOnBoot,
 } from '../lib/onboardingStorage';
+import { trackEvent } from '../lib/telemetry';
 
 export const TOTAL_ONBOARDING_STEPS = 5;
 
@@ -31,20 +32,23 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const completeOnboarding = useCallback(() => {
     saveOnboardingStatus('completed');
+    trackEvent('onboarding_completed');
     setIsOpen(false);
     setCurrentStep(0);
   }, []);
 
   const skipOnboarding = useCallback(() => {
     saveOnboardingStatus('skipped');
+    trackEvent('onboarding_skipped', { step: currentStep + 1 });
     setIsOpen(false);
     setCurrentStep(0);
-  }, []);
+  }, [currentStep]);
 
   const nextStep = useCallback(() => {
     setCurrentStep((prev) => {
       if (prev >= TOTAL_ONBOARDING_STEPS - 1) {
         saveOnboardingStatus('completed');
+        trackEvent('onboarding_completed');
         setIsOpen(false);
         return 0;
       }

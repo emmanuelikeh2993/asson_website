@@ -486,21 +486,25 @@ export const OnboardingExperience: React.FC = () => {
       <header className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 flex items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-2.5">
           <img
-            src="/logo/asson_logo.png"
+            src="/logo/asson_logo.webp"
             alt="ASSON Logo"
+            width={36}
+            height={36}
             className="w-8 h-8 sm:w-9 sm:h-9 object-contain"
           />
           <span className="w-px h-5 bg-border-light hidden sm:inline-block" />
           <img
-            src="/logo/ui_crest.jpg"
+            src="/logo/ui_crest.webp"
             alt="University of Ibadan Crest"
+            width={32}
+            height={32}
             className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded hidden sm:inline-block"
           />
           <div className="flex flex-col">
             <span className="text-xs sm:text-sm font-extrabold tracking-tight text-brand-deep">
               ASSON UI
             </span>
-            <span className="text-[10px] text-text-muted hidden sm:inline">
+            <span className="text-xs text-text-muted hidden sm:inline">
               Academic Resource Hub
             </span>
           </div>
@@ -642,20 +646,19 @@ export const OnboardingExperience: React.FC = () => {
                       ))}
                     </div>
 
-                    {/* Glowing Hotspot Indicator & Floating Callout Card (Dribbble Reference Motif) */}
+                    {/* Calm Hotspot Indicator & Floating Callout Card */}
                     <div className="mt-4 sm:mt-0 sm:absolute sm:top-4 sm:right-4 flex items-center gap-2.5">
-                      <span className="hidden sm:flex relative w-4 h-4 items-center justify-center">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
+                      <span className="hidden sm:flex relative w-4 h-4 items-center justify-center" aria-hidden="true">
                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white border-2 border-emerald-400" />
                       </span>
                       <div className="rounded-2xl bg-surface-card text-text-main p-3 border border-border-light shadow-xl min-w-[165px]">
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-brand-green block">
+                        <span className="text-xs font-extrabold uppercase tracking-wider text-brand-green block">
                           {activePill.calloutTag}
                         </span>
                         <div className="text-xs font-bold text-text-main mt-0.5">
                           {activePill.calloutTitle}
                         </div>
-                        <div className="text-[10px] text-text-muted mt-0.5 font-mono">
+                        <div className="text-xs text-text-muted mt-0.5 font-mono">
                           {activePill.calloutMeta}
                         </div>
                       </div>

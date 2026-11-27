@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -11,6 +11,9 @@ interface ModalProps {
   hideHeader?: boolean;
 }
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -19,17 +22,62 @@ export const Modal: React.FC<ModalProps> = ({
   maxWidth = 'md',
   hideHeader = false,
 }) => {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
+    if (!isOpen) return;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = 'hidden';
+
+    // Move initial keyboard focus into the dialog cleanly
+    const focusTimer = window.setTimeout(() => {
+      const dialogEl = dialogRef.current;
+      if (!dialogEl) return;
+      const focusable = Array.from(dialogEl.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      } else {
+        dialogEl.focus();
+      }
+    }, 0);
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      if (e.key === 'Tab' && dialogRef.current) {
+        const focusable = Array.from(
+          dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+        );
+        if (focusable.length === 0) {
+          e.preventDefault();
+          dialogRef.current.focus();
+          return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
+
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
+      window.clearTimeout(focusTimer);
       document.body.style.overflow = 'unset';
       window.removeEventListener('keydown', handleKeyDown);
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+        previouslyFocused.focus();
+      }
     };
   }, [isOpen, onClose]);
 
@@ -52,27 +100,34 @@ export const Modal: React.FC<ModalProps> = ({
         aria-hidden="true"
       />
 
-      {/* Modal Dialog with Sticky Header & Scrollable Body */}
+      {/* Modal Dialog with Sticky Header, Focus Trap & Scrollable Body */}
       <div 
+        ref={dialogRef}
+        tabIndex={-1}
         className={cn(
-          "relative w-full max-h-[92vh] flex flex-col rounded-2xl bg-surface-card shadow-modal border border-border-light z-10 animate-in fade-in duration-150 overflow-hidden",
+          "relative w-full max-h-[92vh] flex flex-col rounded-2xl bg-surface-card shadow-modal border border-border-light z-10 animate-in fade-in duration-150 overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-green",
           maxWidthStyles[maxWidth]
         )}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={title && !hideHeader ? titleId : undefined}
       >
         {!hideHeader && (
-          <div className="sticky top-0 bg-surface-card z-30 flex items-center justify-between px-5 py-4 border-b border-border-light shrink-0">
-            {title && <h3 className="text-base font-bold text-text-main">{title}</h3>}
+          <div className="sticky top-0 bg-surface-card z-30 flex items-center justify-between px-5 py-3.5 border-b border-border-light shrink-0">
+            {title && (
+              <h3 id={titleId} className="text-base font-bold text-text-main">
+                {title}
+              </h3>
+            )}
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-2.5 py-1 text-text-muted hover:bg-surface-bg hover:text-text-main transition-colors ml-auto border border-border-light shadow-2xs flex items-center gap-1.5 cursor-pointer text-xs font-medium"
+              className="rounded-xl px-3 py-2 min-h-[44px] text-text-muted hover:bg-surface-bg hover:text-text-main transition-colors ml-auto border border-border-light shadow-2xs flex items-center gap-1.5 cursor-pointer text-xs font-medium"
               aria-label="Close modal"
               title="Close (Esc)"
             >
-              <span className="text-[11px] font-semibold text-text-muted">Close</span>
-              <X className="w-4 h-4 text-text-muted" />
+              <span className="text-xs font-semibold text-text-muted">Close</span>
+              <X className="w-4 h-4 text-text-muted" aria-hidden="true" />
             </button>
           </div>
         )}

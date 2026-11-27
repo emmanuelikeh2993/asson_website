@@ -25,12 +25,12 @@ export const PrivacyPage: React.FC = () => {
       </div>
 
       {/* Header Banner */}
-      <div className="rounded-3xl bg-gradient-to-r from-emerald-950 via-brand-deep to-[#053b21] text-white p-6 sm:p-10 shadow-card">
+      <div className="rounded-3xl bg-brand-deep dark:bg-[#0B231B] text-white p-6 sm:p-10 shadow-card">
         <div className="flex items-center gap-2 mb-3">
           <span className="p-1 rounded-md bg-white/10 text-emerald-300">
-            <Lock className="w-4 h-4" />
+            <Lock className="w-4 h-4" aria-hidden="true" />
           </span>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-200">
+          <span className="text-xs font-bold uppercase tracking-wider text-emerald-200">
             Student Data Protection Standard
           </span>
         </div>

@@ -1,37 +1,73 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { MobileNav } from './components/layout/MobileNav';
 import { Footer } from './components/layout/Footer';
 import { InstallPwaPrompt } from './components/layout/InstallPwaPrompt';
-import { CommandPalette } from './components/features/resources/CommandPalette';
-import { SubmitResourceModal } from './components/features/resources/SubmitResourceModal';
-import { SettingsModal } from './components/features/settings/SettingsModal';
-import { AuthModal } from './components/features/auth/AuthModal';
+import { OfflineBanner } from './components/ui/OfflineBanner';
 import { OnboardingExperience } from './components/features/onboarding/OnboardingExperience';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { ThemeProvider } from './context/ThemeContext';
 import { OnboardingProvider, useOnboarding } from './context/OnboardingContext';
 import { HomePage } from './pages/HomePage';
-import { ResourcesPage } from './pages/ResourcesPage';
-import { ResourceDetailPage } from './pages/ResourceDetailPage';
-import { PastQuestionsPage } from './pages/PastQuestionsPage';
-import { CalendarPage } from './pages/CalendarPage';
-import { NoticesPage } from './pages/NoticesPage';
-import { OpportunitiesPage } from './pages/OpportunitiesPage';
-import { FaqPage } from './pages/FaqPage';
-import { HelpPage } from './pages/HelpPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { AdminPage } from './pages/AdminPage';
-import { TermsPage } from './pages/TermsPage';
-import { PrivacyPage } from './pages/PrivacyPage';
-import { MorePage } from './pages/MorePage';
-import { EnterprisePage } from './pages/EnterprisePage';
 import { MOCK_RESOURCES, COURSES } from './lib/mockData';
 import { AcademicResource } from './types';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import { supabase } from './lib/supabase';
-import { FileQuestion, ArrowRight, Home, Search, BookOpen } from 'lucide-react';
+import { FileQuestion, Home, BookOpen } from 'lucide-react';
+
+const ResourcesPage = lazy(() => import('./pages/ResourcesPage').then((m) => ({ default: m.ResourcesPage })));
+const ResourceDetailPage = lazy(() => import('./pages/ResourceDetailPage').then((m) => ({ default: m.ResourceDetailPage })));
+const PastQuestionsPage = lazy(() => import('./pages/PastQuestionsPage').then((m) => ({ default: m.PastQuestionsPage })));
+const CalendarPage = lazy(() => import('./pages/CalendarPage').then((m) => ({ default: m.CalendarPage })));
+const NoticesPage = lazy(() => import('./pages/NoticesPage').then((m) => ({ default: m.NoticesPage })));
+const OpportunitiesPage = lazy(() => import('./pages/OpportunitiesPage').then((m) => ({ default: m.OpportunitiesPage })));
+const FaqPage = lazy(() => import('./pages/FaqPage').then((m) => ({ default: m.FaqPage })));
+const HelpPage = lazy(() => import('./pages/HelpPage').then((m) => ({ default: m.HelpPage })));
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
+const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })));
+const TermsPage = lazy(() => import('./pages/TermsPage').then((m) => ({ default: m.TermsPage })));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then((m) => ({ default: m.PrivacyPage })));
+const MorePage = lazy(() => import('./pages/MorePage').then((m) => ({ default: m.MorePage })));
+const EnterprisePage = lazy(() => import('./pages/EnterprisePage').then((m) => ({ default: m.EnterprisePage })));
+const CgpaCalculatorPage = lazy(() => import('./pages/CgpaCalculatorPage').then((m) => ({ default: m.CgpaCalculatorPage })));
+
+const CommandPalette = lazy(() => import('./components/features/resources/CommandPalette').then((m) => ({ default: m.CommandPalette })));
+const SubmitResourceModal = lazy(() => import('./components/features/resources/SubmitResourceModal').then((m) => ({ default: m.SubmitResourceModal })));
+const AuthModal = lazy(() => import('./components/features/auth/AuthModal').then((m) => ({ default: m.AuthModal })));
+
+const PageRouteFallback: React.FC = () => (
+  <div
+    role="status"
+    aria-label="Loading page"
+    className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-4 animate-pulse"
+  >
+    <div className="h-7 w-48 rounded-xl bg-surface-card border border-border-light" />
+    <div className="h-4 w-72 max-w-full rounded-lg bg-surface-card border border-border-light" />
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+      <div className="h-32 rounded-2xl bg-surface-card border border-border-light" />
+      <div className="h-32 rounded-2xl bg-surface-card border border-border-light" />
+    </div>
+  </div>
+);
+
+const ROUTE_TITLES: Record<string, string> = {
+  '/': 'ASSON UI — Together for Academic Excellence',
+  '/resources': 'Academic Resource Library — ASSON UI',
+  '/past-questions': 'Past Examination Questions — ASSON UI',
+  '/calendar': 'Academic Calendar & Timetable — ASSON UI',
+  '/notices': 'Official Notices & Communiques — ASSON UI',
+  '/opportunities': 'Scholarships & Opportunities — ASSON UI',
+  '/enterprise': 'Student Enterprise Hub — ASSON UI',
+  '/cgpa-calculator': 'CGPA Calculator — ASSON UI',
+  '/faqs': 'Frequently Asked Questions — ASSON UI',
+  '/help': 'Study Help & Private Feedback — ASSON UI',
+  '/dashboard': 'Student Dashboard — ASSON UI',
+  '/terms': 'Terms of Service & Honor Code — ASSON UI',
+  '/privacy': 'Privacy Policy & NDPA — ASSON UI',
+  '/more': 'More & Preferences — ASSON UI',
+  '/executive': 'Executive Administration Portal — ASSON UI',
+};
 
 function ScrollToTop() {
   const { pathname, search } = useLocation();
@@ -42,6 +78,12 @@ function ScrollToTop() {
       left: 0,
       behavior: 'instant',
     });
+
+    if (ROUTE_TITLES[pathname]) {
+      document.title = ROUTE_TITLES[pathname];
+    } else if (!pathname.startsWith('/resources/') && !pathname.startsWith('/past-questions/')) {
+      document.title = 'Page Not Found — ASSON UI';
+    }
   }, [pathname, search]);
 
   return null;
@@ -50,7 +92,6 @@ function ScrollToTop() {
 export function AppContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authInitialTab, setAuthInitialTab] = useState<'signin' | 'signup' | 'forgot' | 'new-password'>('signin');
   const navigate = useNavigate();
@@ -65,7 +106,7 @@ export function AppContent() {
       setIsSubmitOpen(true);
     }
     if (params.get('settings') === 'true') {
-      setIsSettingsOpen(true);
+      navigate('/more', { replace: true });
     }
     // Check if user arrived from a password recovery link in email
     const hash = location.hash || (typeof window !== 'undefined' ? window.location.hash : '');
@@ -134,18 +175,21 @@ export function AppContent() {
       {/* Install PWA Prompt Banner for Mobile Devices (paused during first-visit onboarding) */}
       {!isOnboardingOpen && <InstallPwaPrompt />}
 
+      {/* Offline Connectivity Banner with Retry */}
+      <OfflineBanner />
+
       {/* Top Navbar with ASSON & UI Crest */}
       <Navbar
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenSubmit={() => setIsSubmitOpen(true)}
-        onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
       />
 
       {/* Main Routed Page Content */}
       <main className="flex-1 pb-16 lg:pb-0">
         <ErrorBoundary>
-          <Routes>
+          <Suspense fallback={<PageRouteFallback />}>
+            <Routes>
             <Route 
               path="/" 
               element={
@@ -193,6 +237,7 @@ export function AppContent() {
             <Route path="/notices" element={<NoticesPage />} />
             <Route path="/opportunities" element={<OpportunitiesPage />} />
             <Route path="/enterprise" element={<EnterprisePage />} />
+            <Route path="/cgpa-calculator" element={<CgpaCalculatorPage />} />
             <Route path="/faqs" element={<FaqPage />} />
             <Route path="/help" element={<HelpPage />} />
             <Route 
@@ -200,7 +245,6 @@ export function AppContent() {
               element={
                 <DashboardPage 
                   onOpenSubmit={() => setIsSubmitOpen(true)} 
-                  onOpenSettings={() => setIsSettingsOpen(true)}
                   onOpenAuth={() => setIsAuthOpen(true)}
                 />
               } 
@@ -227,15 +271,7 @@ export function AppContent() {
                 />
               } 
             />
-            <Route 
-              path="/settings" 
-              element={
-                <MorePage 
-                  onOpenSubmit={() => setIsSubmitOpen(true)} 
-                  onOpenAuth={() => setIsAuthOpen(true)} 
-                />
-              } 
-            />
+            <Route path="/settings" element={<Navigate to="/more" replace />} />
 
             {/* Seamless Aliases and Deep-linking Routes */}
             <Route path="/submit" element={<Navigate to="/resources?submit=true" replace />} />
@@ -255,13 +291,13 @@ export function AppContent() {
                       <FileQuestion className="w-8 h-8" />
                     </div>
                     <div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-text-subtle">
+                      <span className="text-xs font-bold uppercase tracking-wider text-text-subtle">
                         404 Error
                       </span>
                       <h2 className="text-xl sm:text-2xl font-extrabold text-text-main tracking-tight mt-0.5">
                         Page Not Found
                       </h2>
-                      <p className="text-xs text-text-muted mt-1 leading-relaxed">
+                      <p className="text-sm text-text-muted mt-1 leading-relaxed">
                         The requested academic URL does not exist or has been relocated to another section of the catalog.
                       </p>
                     </div>
@@ -269,22 +305,23 @@ export function AppContent() {
                     <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
                       <Link
                         to="/"
-                        className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep transition-all shadow-xs"
+                        className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep transition-all shadow-xs"
                       >
-                        <Home className="w-3.5 h-3.5" /> Return Home
+                        <Home className="w-3.5 h-3.5" aria-hidden="true" /> Return Home
                       </Link>
                       <Link
                         to="/resources"
-                        className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-xs font-semibold hover:bg-neutral-100 transition-colors"
+                        className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                       >
-                        <BookOpen className="w-3.5 h-3.5" /> Course Library
+                        <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> Course Library
                       </Link>
                     </div>
                   </div>
                 </div>
               } 
             />
-          </Routes>
+            </Routes>
+          </Suspense>
         </ErrorBoundary>
       </main>
 
@@ -294,44 +331,49 @@ export function AppContent() {
       {/* Mobile Bottom Sticky Navigation */}
       <MobileNav 
         onOpenSubmit={() => setIsSubmitOpen(true)} 
-        onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
       />
 
       {/* Global Command Palette Modal (Ctrl+K or /) */}
-      <CommandPalette
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        resources={MOCK_RESOURCES}
-        courses={COURSES}
-        onSelectResource={handleSelectResource}
-        onSelectCourse={handleSelectCourse}
-      />
+      {isSearchOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            isOpen={isSearchOpen}
+            onClose={() => setIsSearchOpen(false)}
+            resources={MOCK_RESOURCES}
+            courses={COURSES}
+            onSelectResource={handleSelectResource}
+            onSelectCourse={handleSelectCourse}
+          />
+        </Suspense>
+      )}
 
       {/* Submit Resource Modal */}
-      <SubmitResourceModal
-        isOpen={isSubmitOpen}
-        onClose={() => setIsSubmitOpen(false)}
-        onSuccess={(title) => {
-          toast.success(
-            'Material Submitted Successfully!',
-            `"${title}" is logged under review. Reference saved to your Student Dashboard.`
-          );
-        }}
-      />
-
-      {/* Preferences & Settings Modal (Claude/WhatsApp/Telegram-style) */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-      />
+      {isSubmitOpen && (
+        <Suspense fallback={null}>
+          <SubmitResourceModal
+            isOpen={isSubmitOpen}
+            onClose={() => setIsSubmitOpen(false)}
+            onSuccess={(title) => {
+              toast.success(
+                'Material Submitted Successfully!',
+                `"${title}" is logged under review. Reference saved to your Student Dashboard.`
+              );
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Student Study Locker Account Modal (Classy DCN/Reference Authentication) */}
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        initialTab={authInitialTab}
-      />
+      {isAuthOpen && (
+        <Suspense fallback={null}>
+          <AuthModal
+            isOpen={isAuthOpen}
+            onClose={() => setIsAuthOpen(false)}
+            initialTab={authInitialTab}
+          />
+        </Suspense>
+      )}
 
       {/* First-Visit Interactive Platform Onboarding */}
       <OnboardingExperience />

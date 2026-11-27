@@ -2,6 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { initErrorMonitoring } from './lib/telemetry';
+
+initErrorMonitoring();
 
 // Fail fast / log warning if required environment variables are absent in production
 if (import.meta.env.PROD) {
@@ -22,7 +25,9 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
 if ('serviceWorker' in navigator && (import.meta.env.PROD || window.location.hostname !== 'localhost')) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then((reg) => {
-      console.log('ASSON UI PWA Service Worker active:', reg.scope);
+      if (import.meta.env.DEV) {
+        console.log('ASSON UI PWA Service Worker active:', reg.scope);
+      }
     }).catch(() => {
       // ignore
     });

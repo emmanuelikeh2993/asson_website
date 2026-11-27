@@ -3,7 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo/asson_logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <script>
+      window.addEventListener('load', function () {
+        if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+          var viewport = document.querySelector('meta[name="viewport"]');
+          if (viewport) {
+            var content = viewport.getAttribute('content') || '';
+            if (content.indexOf('maximum-scale=') === -1) {
+              viewport.setAttribute(
+                'content',
+                content + ', maximum-scale=1, user-scalable=no'
+              );
+            }
+          }
+        }
+      });
+    </script>
     <meta name="description" content="Official Academic Resource Hub, Past Examination Questions, Course Outlines and Announcements for Statistics Students, University of Ibadan." />
     <link rel="canonical" href="https://asson-ui.vercel.app/" />
     <title>ASSON UI — Together for Academic Excellence</title>
@@ -39,13 +55,13 @@
     <!-- Preconnect to Google Fonts for Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body class="bg-surface-bg text-text-main antialiased font-sans selection:bg-brand-light selection:text-brand-deep">
     <div id="root">
       <div id="initial-loader" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#F6F8F7;font-family:'Inter',system-ui,-apple-system,sans-serif;z-index:99999;">
         <div style="position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
-          <img src="/logo/asson_logo.png" alt="ASSON UI" style="width:64px;height:64px;object-fit:contain;animation:loaderPulse 1.8s ease-in-out infinite;" />
+          <img src="/logo/asson_logo.webp" alt="ASSON UI" width="64" height="64" style="width:64px;height:64px;object-fit:contain;animation:loaderPulse 1.8s ease-in-out infinite;" />
         </div>
         <div style="font-weight:800;font-size:16px;color:#064B2B;letter-spacing:-0.02em;margin-bottom:6px;">
           ASSON UI
@@ -76,6 +92,12 @@
             0% { opacity: 0; }
             50% { opacity: 1; }
             100% { opacity: 0; }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            #initial-loader *,
+            #initial-loader .loading-dots span {
+              animation: none !important;
+            }
           }
         </style>
       </div>

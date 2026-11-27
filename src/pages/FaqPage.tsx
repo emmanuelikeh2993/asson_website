@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { MOCK_FAQS } from '../lib/mockData';
 import { fetchFaqs } from '../lib/supabase';
 import { FAQItem } from '../types';
-import { HelpCircle, ChevronDown, Compass } from 'lucide-react';
+import { HelpCircle, ChevronDown, Compass, ArrowLeft } from 'lucide-react';
 import { useOnboarding } from '../context/OnboardingContext';
 
 export const FaqPage: React.FC = () => {
@@ -28,21 +29,30 @@ export const FaqPage: React.FC = () => {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       {/* Header */}
       <div className="text-center max-w-xl mx-auto mb-10">
-        <span className="p-2 rounded-full bg-emerald-50 text-brand-green inline-block mb-3">
-          <HelpCircle className="w-6 h-6" />
+        <div className="flex justify-center mb-3">
+          <Link
+            to="/more"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-muted hover:text-brand-green transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>Back to More</span>
+          </Link>
+        </div>
+        <span className="p-2 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-brand-deep dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 inline-block mb-3">
+          <HelpCircle className="w-6 h-6" aria-hidden="true" />
         </span>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight">
           Frequently Asked Questions
         </h1>
-        <p className="text-xs sm:text-sm text-text-muted mt-2">
+        <p className="text-sm text-text-muted mt-2">
           Find fast answers regarding academic materials, past questions, portal rules, and resource submissions.
         </p>
         <button
           type="button"
           onClick={restartOnboarding}
-          className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-brand-light text-brand-green border border-emerald-200 dark:border-emerald-800 text-xs font-bold hover:opacity-90 transition-all cursor-pointer"
+          className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-brand-light text-brand-deep dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold hover:opacity-90 transition-all cursor-pointer"
         >
-          <Compass className="w-3.5 h-3.5" />
+          <Compass className="w-3.5 h-3.5" aria-hidden="true" />
           <span>Restart Platform Guide & Tour</span>
         </button>
       </div>

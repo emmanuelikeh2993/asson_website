@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { formatFileSize, formatDate } from '../lib/utils';
+import { formatFileSize, formatDate, normalizeSearchTerm } from '../lib/utils';
+import {
+  trackEvent,
+  reportError,
+  getTelemetrySnapshot,
+  clearTelemetrySnapshot,
+  setErrorReportSink,
+  type ErrorReportPayload,
+} from '../lib/telemetry';
 import { mapDbCalendarEventToModel } from '../lib/supabase';
 import {
   getOnboardingStatus,
@@ -8,6 +16,12 @@ import {
   shouldShowOnboardingOnBoot,
   ONBOARDING_STORAGE_KEY,
 } from '../lib/onboardingStorage';
+import {
+  isSafeHttpUrl,
+  sanitizeSafeHttpUrl,
+  OpportunitySchema,
+  EnterpriseListingSchema,
+} from '../lib/validation';
 
 describe('Format Utilities', () => {
   it('formats file sizes accurately for student bandwidth awareness', () => {
@@ -111,5 +125,99 @@ describe('Onboarding Browser Persistence', () => {
     expect(() => getOnboardingStatus()).not.toThrow();
     expect(() => saveOnboardingStatus('skipped')).not.toThrow();
     expect(() => clearOnboardingStatus()).not.toThrow();
+  });
+});
+
+describe('Security URL Sanitization & Schema Validation', () => {
+  it('blocks javascript:, data:, and invalid URLs while allowing http/https', () => {
+    expect(isSafeHttpUrl('https://asson-ui.vercel.app/resources')).toBe(true);
+    expect(isSafeHttpUrl('http://localhost:8000')).toBe(true);
+    expect(sanitizeSafeHttpUrl('javascript:alert(1)')).toBeUndefined();
+    expect(sanitizeSafeHttpUrl('data:text/html,<script>alert(1)</script>')).toBeUndefined();
+    expect(sanitizeSafeHttpUrl('vbscript:msgbox(1)')).toBeUndefined();
+    expect(sanitizeSafeHttpUrl('not-a-url')).toBeUndefined();
+  });
+
+  it('rejects unsafe applicationUrl in OpportunitySchema and bad imageUrl in EnterpriseListingSchema', () => {
+    const badOpp = OpportunitySchema.safeParse({
+      title: 'Test Scholarship',
+      provider: 'UI Foundation',
+      category: 'Scholarship',
+      deadline: '2026-12-01',
+      eligibility: 'All Statistics students',
+      description: 'Annual tuition grant for undergraduates.',
+      applicationUrl: 'javascript:alert(document.cookie)',
+      location: 'Nigeria',
+    });
+    expect(badOpp.success).toBe(false);
+
+    const badEnt = EnterpriseListingSchema.safeParse({
+      businessName: 'DataCraft UI',
+      category: 'Data & Tech',
+      description: 'Statistical modeling and R/Python data tutoring.',
+      ownerName: 'Ade Student',
+      ownerLevel: '300',
+      contactPhone: '08012345678',
+      imageUrl: 'data:image/svg+xml,<svg onload=alert(1)>',
+    });
+    expect(badEnt.success).toBe(false);
+
+    const goodEnt = EnterpriseListingSchema.safeParse({
+      businessName: 'DataCraft UI',
+      category: 'Data & Tech',
+      description: 'Statistical modeling and R/Python data tutoring.',
+      ownerName: 'Ade Student',
+      ownerLevel: '300',
+      contactPhone: '08012345678',
+      imageUrl: 'https://cvhjohbknghlmspoaenr.supabase.co/storage/v1/object/public/enterprise-images/enterprises/test.jpg',
+    });
+    expect(goodEnt.success).toBe(true);
+  });
+});
+
+describe('Search Normalization & Privacy Telemetry', () => {
+  beforeEach(() => {
+    clearTelemetrySnapshot();
+    setErrorReportSink(null);
+  });
+
+  afterEach(() => {
+    setErrorReportSink(null);
+  });
+
+  it('normalizes spaces, hyphens, and casing across course search variations', () => {
+    const canonical = normalizeSearchTerm('STA 111');
+    expect(normalizeSearchTerm('STA111')).toBe(canonical);
+    expect(normalizeSearchTerm('sta-111')).toBe(canonical);
+    expect(normalizeSearchTerm('  Sta - 111  ')).toBe(canonical);
+  });
+
+  it('strips sensitive PII keys from telemetry events while keeping safe metrics', () => {
+    trackEvent('search_zero_results', {
+      queryLength: 6,
+      level: '100',
+      email: 'student@ui.edu.ng',
+      matricNumber: '234567',
+      userName: 'Should Be Stripped',
+      token: 'secret-token',
+    });
+
+    const { events } = getTelemetrySnapshot();
+    expect(events).toHaveLength(1);
+    expect(events[0].name).toBe('search_zero_results');
+    expect(events[0].props).toEqual({ queryLength: 6, level: '100' });
+  });
+
+  it('captures runtime exceptions into error telemetry sink without crashing', () => {
+    const captured: ErrorReportPayload[] = [];
+    setErrorReportSink((payload) => captured.push(payload));
+
+    reportError(new Error('Simulated render crash'), 'error_boundary');
+
+    const { errors } = getTelemetrySnapshot();
+    expect(errors).toHaveLength(1);
+    expect(captured).toHaveLength(1);
+    expect(captured[0].source).toBe('error_boundary');
+    expect(captured[0].message).toBe('Simulated render crash');
   });
 });

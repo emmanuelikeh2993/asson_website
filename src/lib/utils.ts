@@ -22,3 +22,11 @@ export function formatDate(dateString: string): string {
   });
 }
 
+/**
+ * Normalizes search input / course identifiers by stripping spaces and punctuation separators
+ * so queries like "STA111" or "STA-111" match "STA 111".
+ */
+export function normalizeSearchTerm(value: string): string {
+  return value.toLowerCase().replace(/[\s-]+/g, '').trim();
+}
+

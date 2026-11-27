@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MOCK_SUBMISSIONS, MOCK_RESOURCES } from '../lib/mockData';
 import { 
   fetchStudentSubmissions, 
@@ -40,13 +40,11 @@ import { ExecutiveCouncilModal } from '../components/features/department/Executi
 
 interface DashboardPageProps {
   onOpenSubmit: () => void;
-  onOpenSettings?: () => void;
   onOpenAuth?: () => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ 
   onOpenSubmit, 
-  onOpenSettings, 
   onOpenAuth 
 }) => {
   const navigate = useNavigate();
@@ -164,21 +162,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               onClick={() => navigate('/notices')}
               className="p-2.5 rounded-full bg-surface-bg hover:bg-surface-card border border-border-light text-text-muted hover:text-text-main transition-colors relative cursor-pointer"
               title="Notices & Announcements"
+              aria-label="Notices and Announcements"
             >
               <Bell className="w-4 h-4" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-green" />
             </button>
 
-            {onOpenSettings && (
-              <button
-                type="button"
-                onClick={onOpenSettings}
-                className="p-2.5 rounded-full bg-surface-bg hover:bg-surface-card border border-border-light text-text-muted hover:text-text-main transition-colors cursor-pointer"
-                title="Settings & Preferences"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-            )}
+            <Link
+              to="/more"
+              className="p-2.5 rounded-full bg-surface-bg hover:bg-surface-card border border-border-light text-text-muted hover:text-text-main transition-colors cursor-pointer"
+              title="Preferences & More"
+              aria-label="Preferences and More"
+            >
+              <Settings className="w-4 h-4" />
+            </Link>
 
             {!profile && onOpenAuth && (
               <button
@@ -318,12 +315,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       <div className="rounded-3xl bg-zinc-900 text-white p-5 sm:p-6 shadow-xl space-y-3.5 relative overflow-hidden border border-zinc-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-brand-green animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-brand-green" aria-hidden="true" />
             <h2 className="text-sm sm:text-base font-bold text-white">
               Announcements & Examination Bulletin
             </h2>
           </div>
-          <span className="text-[10px] font-mono text-zinc-400 bg-white/10 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-mono text-zinc-300 bg-white/10 px-2 py-0.5 rounded-full">
             2h ago
           </span>
         </div>

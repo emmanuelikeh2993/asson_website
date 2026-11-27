@@ -7,28 +7,40 @@ import { Button } from '../components/ui/Button';
 import { Bell, Calendar, Building2, Pin, ArrowRight, Share2, CheckCircle2, MapPin, Clock, Users, ExternalLink, Check } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
+import { sanitizeSafeHttpUrl } from '../lib/validation';
 
 export const NoticesPage: React.FC = () => {
   const [notices, setNotices] = useState<Notice[]>(MOCK_NOTICES);
   const [selectedCategory, setSelectedCategory] = useState<NoticeCategory | 'All'>('All');
   const [activeNotice, setActiveNotice] = useState<Notice | null>(MOCK_NOTICES[0]);
   const [rsvpdNotices, setRsvpdNotices] = useState<Record<string, boolean>>({});
+  const [loadError, setLoadError] = useState(false);
   const toast = useToast();
 
-  useEffect(() => {
-    fetchNotices().then((data) => {
-      if (data && data.length > 0) {
-        setNotices(data);
-        setActiveNotice(data[0]);
+  const loadNotices = () => {
+    setLoadError(false);
+    fetchNotices()
+      .then((data) => {
+        if (data && data.length > 0) {
+          setNotices(data);
+          setActiveNotice(data[0]);
 
-        // Load RSVP status
-        const statuses: Record<string, boolean> = {};
-        data.forEach((n) => {
-          statuses[n.id] = isNoticeRsvpd(n.id);
-        });
-        setRsvpdNotices(statuses);
-      }
-    });
+          const statuses: Record<string, boolean> = {};
+          data.forEach((n) => {
+            statuses[n.id] = isNoticeRsvpd(n.id);
+          });
+          setRsvpdNotices(statuses);
+        } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          setLoadError(true);
+        }
+      })
+      .catch(() => {
+        setLoadError(true);
+      });
+  };
+
+  useEffect(() => {
+    loadNotices();
   }, []);
 
   const handleRsvp = async (n: Notice) => {
@@ -88,11 +100,20 @@ export const NoticesPage: React.FC = () => {
             <Bell className="w-7 h-7" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-base font-bold text-text-main">No Active Announcements</h3>
-            <p className="text-xs text-text-muted max-w-md mx-auto leading-relaxed">
-              There are currently no active public circulars or examination announcements issued. Official communiques from the Department of Statistics and the ASSON Secretariat will be published here in real time.
+            <h3 className="text-base font-bold text-text-main">
+              {loadError ? 'Unable to load announcements' : 'No Active Announcements'}
+            </h3>
+            <p className="text-xs sm:text-sm text-text-muted max-w-md mx-auto leading-relaxed">
+              {loadError
+                ? 'You appear to be offline or the server could not be reached. Check your connection and try again.'
+                : 'There are currently no active public circulars or examination announcements issued. Official communiques from the Department of Statistics and the ASSON Secretariat will be published here in real time.'}
             </p>
           </div>
+          {loadError && (
+            <Button type="button" size="sm" variant="primary" onClick={loadNotices}>
+              Retry
+            </Button>
+          )}
         </div>
       ) : (
         <>
@@ -284,11 +305,11 @@ export const NoticesPage: React.FC = () => {
 
                         {/* RSVP Action */}
                         <div className="flex items-center gap-2 self-start sm:self-auto">
-                          {activeNotice.rsvpUrl ? (
+                          {sanitizeSafeHttpUrl(activeNotice.rsvpUrl) ? (
                             <a
-                              href={activeNotice.rsvpUrl}
+                              href={sanitizeSafeHttpUrl(activeNotice.rsvpUrl)}
                               target="_blank"
-                              rel="noreferrer"
+                              rel="noopener noreferrer"
                               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep transition-colors shadow-2xs"
                             >
                               <span>Register Link</span>

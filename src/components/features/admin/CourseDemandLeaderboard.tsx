@@ -10,8 +10,10 @@ export const CourseDemandLeaderboard: React.FC = () => {
       if (Array.isArray(custom) && custom.length > 0) {
         // Group by courseCode and count
         const counts: Record<string, number> = {};
-        custom.forEach((r: any) => {
-          counts[r.courseCode] = (counts[r.courseCode] || 0) + 1;
+        custom.forEach((r: { courseCode?: string }) => {
+          if (r && typeof r.courseCode === 'string' && r.courseCode) {
+            counts[r.courseCode] = (counts[r.courseCode] || 0) + 1;
+          }
         });
         return Object.entries(counts)
           .map(([code, count]) => {

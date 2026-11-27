@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type User } from '@supabase/supabase-js';
 import {
   COURSES,
   MOCK_RESOURCES,
@@ -29,16 +29,28 @@ import {
   AcademicLevel,
   StaffMember,
   EnterpriseListing,
+  EnterpriseCategory,
   ElectedExecutive,
-  AuthorizedExecutive
+  AuthorizedExecutive,
+  NoticeCategory,
+  OpportunityCategory,
+  HelpCategory,
+  VerificationStatus,
+  SubmissionStatus
 } from '../types';
 import {
   AcademicMaterialSubmissionSchema,
   StudentFeedbackSubmissionSchema,
   EnterpriseListingSchema,
+  NoticeSchema,
+  OpportunitySchema,
+  FaqSchema,
+  CalendarEventSchema,
+  ContentReportSchema,
   StaffMemberSchema,
   ElectedExecutiveSchema,
-  AuthorizedExecutiveSchema
+  AuthorizedExecutiveSchema,
+  sanitizeSafeHttpUrl
 } from './validation';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -55,15 +67,214 @@ export const isSupabaseConfigured = Boolean(
   (supabaseAnonKey.startsWith('ey') || supabaseAnonKey.startsWith('sb_publishable_') || supabaseAnonKey.startsWith('sb_'))
 );
 
+if (!isSupabaseConfigured && import.meta.env.PROD) {
+  throw new Error('Critical configuration error: Required Supabase environment variables are missing.');
+}
+
+function logDevWarning(message: string, err?: unknown) {
+  if (import.meta.env.DEV) {
+    console.warn(message, err);
+  }
+}
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
+
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
 // ====================================================================
-// DATA MAPPERS (Database Snake_Case to Frontend CamelCase)
+// DATABASE ROW TYPES & DATA MAPPERS (Snake_Case to Frontend CamelCase)
 // ====================================================================
 
-function mapDbResourceToModel(row: any): AcademicResource {
+interface DbResourceRow {
+  id: string;
+  title: string;
+  course_code?: string | null;
+  course_title?: string | null;
+  level?: AcademicLevel | null;
+  semester?: number | null;
+  session?: string | null;
+  type?: ResourceType | null;
+  file_type?: string | null;
+  file_size_bytes?: number | string | null;
+  file_path?: string | null;
+  verification_status?: VerificationStatus | null;
+  last_checked_date?: string | null;
+  contributor_name?: string | null;
+  description?: string | null;
+  downloads_count?: number | null;
+}
+
+interface DbCourseRow {
+  code: string;
+  title: string;
+  level: AcademicLevel;
+  semester: number;
+  units?: number | null;
+}
+
+interface DbNoticeRow {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: NoticeCategory;
+  is_urgent?: boolean | null;
+  published_date?: string | null;
+  effective_date?: string | null;
+  deadline?: string | null;
+  issuer?: string | null;
+  is_expired?: boolean | null;
+  event_date?: string | null;
+  event_time?: string | null;
+  venue?: string | null;
+  rsvp_url?: string | null;
+  has_in_app_rsvp?: boolean | null;
+  rsvp_count?: number | string | null;
+}
+
+interface DbCalendarEventRow {
+  id: string;
+  title: string;
+  description?: string | null;
+  category?: CalendarCategory | string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  start_time?: string | null;
+  target_level?: AcademicLevel | string | null;
+  venue?: string | null;
+  is_confirmed?: boolean | null;
+  notice_id?: string | null;
+}
+
+interface DbOpportunityRow {
+  id: string;
+  title: string;
+  provider: string;
+  category: OpportunityCategory;
+  deadline?: string | null;
+  eligibility?: string | null;
+  description?: string | null;
+  application_url?: string | null;
+  location?: string | null;
+  is_verified?: boolean | null;
+  is_expired?: boolean | null;
+  created_at?: string | null;
+}
+
+interface DbFaqRow {
+  id: string;
+  question: string;
+  answer: string;
+  category?: FAQItem['category'] | null;
+}
+
+interface DbSubmissionRow {
+  id: string;
+  resource_title?: string | null;
+  title?: string | null;
+  course_code: string;
+  resource_type?: ResourceType | null;
+  type?: ResourceType | null;
+  session?: string | null;
+  created_at?: string | null;
+  status?: SubmissionStatus | null;
+  feedback?: string | null;
+  file_size_bytes?: number | string | null;
+  file_path?: string | null;
+}
+
+interface DbAuditLogRow {
+  id: string;
+  actor_email?: string | null;
+  user_name?: string | null;
+  action: AuditLog['action'];
+  entity: string;
+  details?: string | null;
+  created_at: string;
+}
+
+interface DbHelpDirectoryRow {
+  id: string;
+  category: HelpCategory;
+  title: string;
+  office_or_person: string;
+  description: string;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  location?: string | null;
+  availability?: string | null;
+  last_verified_date?: string | null;
+  order_index?: number | null;
+}
+
+interface DbAuthorizedExecutiveRow {
+  id: string;
+  email: string;
+  name: string;
+  office: string;
+  role: AuthorizedExecutive['role'];
+  is_master?: boolean | null;
+  approved_by?: string | null;
+  created_at?: string | null;
+}
+
+interface DbEnterpriseRow {
+  id: string;
+  business_name?: string;
+  businessName?: string;
+  owner_name?: string;
+  ownerName?: string;
+  owner_level?: AcademicLevel;
+  ownerLevel?: AcademicLevel;
+  category: EnterpriseCategory;
+  description: string;
+  whatsapp?: string;
+  contact_phone?: string;
+  instagram?: string;
+  instagram_handle?: string;
+  image_url?: string | null;
+  imageUrl?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+}
+
+interface DbElectedExecutiveRow {
+  id: string;
+  name: string;
+  office: string;
+  session?: string | null;
+  level?: AcademicLevel | null;
+  image_url?: string | null;
+  imageUrl?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+  bio?: string | null;
+  order_index?: number | null;
+}
+
+interface DbStaffRow {
+  id: string;
+  name: string;
+  title: string;
+  designation: string;
+  courses?: string[] | null;
+  office: string;
+  email?: string | null;
+  consultation_hours?: string | null;
+  consultationHours?: string | null;
+  advisor_level?: AcademicLevel | null;
+  advisorLevel?: AcademicLevel | null;
+  is_hod?: boolean | null;
+  isHOD?: boolean | null;
+  image_url?: string | null;
+  imageUrl?: string | null;
+}
+
+function mapDbResourceToModel(row: DbResourceRow): AcademicResource {
   return {
     id: row.id,
     title: row.title,
@@ -86,7 +297,7 @@ function mapDbResourceToModel(row: any): AcademicResource {
   };
 }
 
-function mapDbCourseToModel(row: any): Course {
+function mapDbCourseToModel(row: DbCourseRow): Course {
   return {
     code: row.code,
     title: row.title,
@@ -96,7 +307,7 @@ function mapDbCourseToModel(row: any): Course {
   };
 }
 
-function mapDbNoticeToModel(row: any): Notice {
+function mapDbNoticeToModel(row: DbNoticeRow): Notice {
   const isPastDeadline = row.deadline ? new Date(row.deadline) < new Date(new Date().setHours(0, 0, 0, 0)) : false;
   return {
     id: row.id,
@@ -119,16 +330,16 @@ function mapDbNoticeToModel(row: any): Notice {
   };
 }
 
-export function mapDbCalendarEventToModel(row: any): CalendarEvent {
+export function mapDbCalendarEventToModel(row: DbCalendarEventRow): CalendarEvent {
   return {
     id: row.id,
     title: row.title,
     description: row.description || '',
-    category: row.category || 'Academic Milestone',
+    category: (row.category as CalendarCategory) || 'Academic Milestone',
     startDate: row.start_date ? new Date(row.start_date).toISOString().split('T')[0] : '2026-11-20',
     endDate: row.end_date ? new Date(row.end_date).toISOString().split('T')[0] : undefined,
     startTime: row.start_time || undefined,
-    targetLevel: row.target_level || undefined,
+    targetLevel: (row.target_level as AcademicLevel) || undefined,
     venue: row.venue || undefined,
     isConfirmed: Boolean(row.is_confirmed),
     noticeId: row.notice_id || undefined,
@@ -188,7 +399,7 @@ export const DEFAULT_CALENDAR_EVENTS: CalendarEvent[] = [
   }
 ];
 
-function mapDbOpportunityToModel(row: any): Opportunity {
+function mapDbOpportunityToModel(row: DbOpportunityRow): Opportunity {
   const isPastDeadline = row.deadline ? new Date(row.deadline) < new Date(new Date().setHours(0, 0, 0, 0)) : false;
   return {
     id: row.id,
@@ -206,7 +417,7 @@ function mapDbOpportunityToModel(row: any): Opportunity {
   };
 }
 
-function mapDbFaqToModel(row: any): FAQItem {
+function mapDbFaqToModel(row: DbFaqRow): FAQItem {
   return {
     id: row.id,
     question: row.question,
@@ -230,7 +441,7 @@ export async function fetchCourses(): Promise<Course[]> {
         return data.map(mapDbCourseToModel);
       }
     } catch (err) {
-      console.warn('Courses fetch error from Supabase, serving cached seed:', err);
+      logDevWarning('Courses fetch error from Supabase, serving cached seed:', err);
     }
   }
   return COURSES;
@@ -248,72 +459,11 @@ export async function fetchResources(): Promise<AcademicResource[]> {
         list = data.map(mapDbResourceToModel);
       }
     } catch (err) {
-      console.warn('Resources fetch error from Supabase, serving cached seed:', err);
+      logDevWarning('Resources fetch error from Supabase, serving cached seed:', err);
     }
   }
 
-  // Zero Dummy Data: Only genuine approved resources and uploads are served
-  if (supabase) {
-    try {
-      const { data: approvedSubs } = await supabase
-        .from('submissions')
-        .select('*')
-        .eq('status', 'Approved');
-      if (approvedSubs && approvedSubs.length > 0) {
-        const existingTitles = new Set(list.map(r => r.title.toLowerCase().trim()));
-        approvedSubs.forEach((sub: any) => {
-          const subTitle = (sub.resource_title || sub.title || '').trim();
-          if (subTitle && !existingTitles.has(subTitle.toLowerCase())) {
-            const courseMeta = COURSES.find(c => c.code === sub.course_code) || {
-              level: '200',
-              semester: 1,
-              title: 'Departmental Course'
-            };
-            const fPath = sub.file_path || '';
-            const downloadUrl = fPath
-              ? `${supabaseUrl}/storage/v1/object/public/resources/${fPath.replace(/^resources\//, '')}`
-              : '#';
-
-            list.unshift({
-              id: sub.id,
-              title: subTitle,
-              courseCode: sub.course_code || 'STA UNK',
-              courseTitle: courseMeta.title,
-              level: courseMeta.level,
-              semester: courseMeta.semester as 1 | 2,
-              session: sub.session || '2026/2027',
-              type: sub.resource_type || 'Past Question',
-              fileType: fPath.endsWith('.docx') ? 'DOCX' : 'PDF',
-              fileSizeBytes: Number(sub.file_size_bytes) || 2048000,
-              downloadUrl,
-              filePath: fPath,
-              verificationStatus: 'Verified',
-              lastCheckedDate: sub.created_at ? new Date(sub.created_at).toISOString().split('T')[0] : '2026-11-05',
-              contributorName: sub.feedback?.replace(/^Submitted by: /i, '').replace(/^Uploaded by: /i, '') || 'Student Peer Contributor',
-              description: `Uploaded academic material for ${sub.course_code}.`,
-              downloadsCount: 0
-            });
-            existingTitles.add(subTitle.toLowerCase());
-          }
-        });
-      }
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  // Also merge any locally uploaded custom resources
-  try {
-    const local = JSON.parse(localStorage.getItem('asson_custom_resources') || '[]');
-    if (Array.isArray(local) && local.length > 0) {
-      const existingIds = new Set(list.map(r => r.id));
-      const newItems = local.filter((r: any) => !existingIds.has(r.id));
-      list = [...newItems, ...list];
-    }
-  } catch (e) {
-    // ignore
-  }
-
+  // Only verified approved resources from the curated `resources` catalog are served publicly.
   return list;
 }
 
@@ -330,7 +480,7 @@ export async function fetchNotices(): Promise<Notice[]> {
         list = data.map(mapDbNoticeToModel);
       }
     } catch (err) {
-      console.warn('Notices fetch error from Supabase:', err);
+      logDevWarning('Notices fetch error from Supabase:', err);
     }
   }
   return list;
@@ -349,7 +499,7 @@ export async function fetchOpportunities(): Promise<Opportunity[]> {
         list = data.map(mapDbOpportunityToModel);
       }
     } catch (err) {
-      console.warn('Opportunities fetch error from Supabase:', err);
+      logDevWarning('Opportunities fetch error from Supabase:', err);
     }
   }
   return list;
@@ -366,7 +516,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
         return data.map(mapDbCalendarEventToModel);
       }
     } catch (err) {
-      console.warn('Calendar fetch error from Supabase, serving verified academic schedule:', err);
+      logDevWarning('Calendar fetch error from Supabase, serving verified academic schedule:', err);
     }
   }
   return DEFAULT_CALENDAR_EVENTS;
@@ -383,7 +533,7 @@ export async function fetchFaqs(): Promise<FAQItem[]> {
         return data.map(mapDbFaqToModel);
       }
     } catch (err) {
-      console.warn('FAQs fetch error from Supabase, serving cached seed:', err);
+      logDevWarning('FAQs fetch error from Supabase, serving cached seed:', err);
     }
   }
   return MOCK_FAQS;
@@ -398,30 +548,30 @@ export async function fetchStudentSubmissions(): Promise<StudentSubmission[]> {
         .select('*')
         .order('created_at', { ascending: false });
       if (!error && data && data.length > 0) {
-        list = data.map((row: any) => ({
+        list = (data as DbSubmissionRow[]).map((row) => ({
           id: row.id,
-          resourceTitle: row.resource_title || row.title,
+          resourceTitle: row.resource_title || row.title || 'Untitled Material',
           courseCode: row.course_code,
           resourceType: row.resource_type || row.type || 'Past Question',
           session: row.session || '2026/2027',
           submittedAt: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : '2026-11-04',
-          status: row.status || 'Approved',
+          status: row.status || 'Under Review',
           feedback: row.feedback || undefined,
           fileSizeBytes: Number(row.file_size_bytes) || 1500000,
           filePath: row.file_path || undefined,
         }));
       }
     } catch (err) {
-      console.warn('Submissions fetch error from Supabase:', err);
+      logDevWarning('Submissions fetch error from Supabase:', err);
     }
   }
 
-  // Merge any locally tracked submissions submitted on this device
+  // Merge any locally tracked submission receipts submitted on this device
   try {
-    const local = JSON.parse(localStorage.getItem('asson_submissions') || '[]');
+    const local = JSON.parse(localStorage.getItem('asson_submissions') || '[]') as StudentSubmission[];
     if (Array.isArray(local) && local.length > 0) {
       const existingIds = new Set(list.map(s => s.id));
-      const newItems = local.filter((s: any) => !existingIds.has(s.id));
+      const newItems = local.filter((s) => !existingIds.has(s.id));
       list = [...newItems, ...list];
     }
   } catch (e) {
@@ -438,6 +588,33 @@ export interface SubmitResourcePayload {
   resourceType: ResourceType;
   session: string;
   contributorName?: string;
+}
+
+async function hasValidDocumentMagicBytes(file: File): Promise<boolean> {
+  try {
+    const header = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+    const lowerName = file.name.toLowerCase();
+    if (lowerName.endsWith('.pdf')) {
+      return (
+        header[0] === 0x25 &&
+        header[1] === 0x50 &&
+        header[2] === 0x44 &&
+        header[3] === 0x46 &&
+        header[4] === 0x2d
+      );
+    }
+    if (lowerName.endsWith('.docx')) {
+      return (
+        header[0] === 0x50 &&
+        header[1] === 0x4b &&
+        header[2] === 0x03 &&
+        header[3] === 0x04
+      );
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 export async function uploadAndSubmitResource(
@@ -461,22 +638,21 @@ export async function uploadAndSubmitResource(
     return { success: false, submissionId: '', referenceCode: '', message: errorMsg };
   }
 
-  // 2. Validate file type and size (Checklist 8.1: File Upload Security)
+  // 2. Strict file type, MIME, magic-byte signature, and size checks (Checklist 8.1)
   const allowedExtensions = /\.(pdf|docx)$/i;
   const isAllowedExt = allowedExtensions.test(payload.file.name);
   const isAllowedMime = [
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/msword',
-    'application/octet-stream'
-  ].includes(payload.file.type) || isAllowedExt;
+    'application/msword'
+  ].includes(payload.file.type);
 
-  if (!isAllowedExt || !isAllowedMime) {
+  if (!isAllowedExt || !isAllowedMime || !(await hasValidDocumentMagicBytes(payload.file))) {
     return {
       success: false,
       submissionId: '',
       referenceCode: '',
-      message: 'Security policy restriction: Only verified academic PDF or DOCX documents are accepted.'
+      message: 'Security policy restriction: Only verified PDF or DOCX files with valid headers are accepted.'
     };
   }
 
@@ -490,7 +666,7 @@ export async function uploadAndSubmitResource(
     };
   }
 
-  // 3. Collision-resistant safe file path (Checklist 8.2: Disallow overwrite)
+  // 3. Collision-resistant safe file path inside private staging bucket (Checklist 8.2)
   const cleanName = payload.file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
   const safeNonce = Math.random().toString(36).substring(2, 9);
   const filePath = `submissions/${Date.now()}_${safeNonce}_${cleanName}`;
@@ -505,9 +681,9 @@ export async function uploadAndSubmitResource(
     try {
       if (onProgress) onProgress(50);
 
-      // Upload file to Supabase Storage bucket 'resources' (upsert: false prevents overwriting)
+      // Upload unvetted files to private `submissions-pending` bucket (never overwrite)
       const { error: uploadError } = await supabase.storage
-        .from('resources')
+        .from('submissions-pending')
         .upload(filePath, payload.file, {
           cacheControl: '3600',
           upsert: false
@@ -516,12 +692,11 @@ export async function uploadAndSubmitResource(
       if (onProgress) onProgress(75);
 
       if (!uploadError) {
-        // Insert record into Supabase submissions table with reference code (Zero personal matriculation data)
         const contributorInfo = payload.contributorName
-          ? `Uploaded by ${payload.contributorName}`
+          ? `Uploaded by ${payload.contributorName.trim()}`
           : 'Student Peer Contributor';
 
-        // Derive user identity if authenticated session exists (Checklist 4.2)
+        // Derive user identity strictly from verified session if logged in (Checklist 4.2)
         let sessionUserId: string | null = null;
         try {
           const { data: authUser } = await supabase.auth.getUser();
@@ -537,10 +712,10 @@ export async function uploadAndSubmitResource(
             session: payload.session,
             file_path: filePath,
             file_size_bytes: payload.file.size,
-            status: 'Approved',
+            status: 'Under Review',
             reference_code: referenceCode,
             user_id: sessionUserId,
-            feedback: `${contributorInfo} — Submitted to ASSON academic library.`
+            feedback: `${contributorInfo} — Awaiting ASSON Editorial Board verification.`
           })
           .select('id')
           .single();
@@ -550,47 +725,22 @@ export async function uploadAndSubmitResource(
         }
       }
     } catch {
-      // Graceful sanitized handling
+      // Sanitized handling
     }
   }
 
   if (onProgress) onProgress(100);
 
-  // Direct local resource registration so it is immediately searchable & downloadable across all pages
-  const courseMeta = COURSES.find(c => c.code === payload.courseCode) || {
-    level: '200',
-    semester: 1,
-    title: 'Departmental Course'
-  };
-
-  const localResource: AcademicResource = {
-    id: submissionId,
-    title: payload.title.trim(),
-    courseCode: payload.courseCode,
-    courseTitle: courseMeta.title,
-    level: courseMeta.level,
-    semester: courseMeta.semester as 1 | 2,
-    session: payload.session,
-    type: payload.resourceType,
-    fileType: payload.file.name.endsWith('.docx') ? 'DOCX' : 'PDF',
-    fileSizeBytes: payload.file.size,
-    downloadUrl: `${supabaseUrl}/storage/v1/object/public/resources/${filePath}`,
-    filePath,
-    verificationStatus: 'Verified',
-    lastCheckedDate: new Date().toISOString().split('T')[0],
-    contributorName: payload.contributorName || 'Student Peer Contributor',
-    description: `Uploaded academic material for ${payload.courseCode} (${payload.session}) [Receipt: ${referenceCode}].`,
-    downloadsCount: 0
-  };
-
-  try {
-    const existingRes = JSON.parse(localStorage.getItem('asson_custom_resources') || '[]');
-    localStorage.setItem('asson_custom_resources', JSON.stringify([localResource, ...existingRes]));
-  } catch (e) {
-    // ignore
+  if (!remoteSuccess && supabase) {
+    return {
+      success: false,
+      submissionId: '',
+      referenceCode: '',
+      message: 'Could not upload file to review queue right now. Please try again shortly.'
+    };
   }
 
-  // Record submission locally with tracking code
+  // Record only a local receipt tracker for the contributor's dashboard (never pre-approved into public catalog)
   const localSubmission: StudentSubmission = {
     id: submissionId,
     resourceTitle: payload.title.trim(),
@@ -598,19 +748,17 @@ export async function uploadAndSubmitResource(
     resourceType: payload.resourceType,
     session: payload.session,
     submittedAt: new Date().toISOString().split('T')[0],
-    status: 'Approved',
+    status: 'Under Review',
     fileSizeBytes: payload.file.size,
     filePath,
     referenceCode,
-    feedback: 'Published directly to the ASSON UI academic library catalog.'
+    feedback: 'Submitted to ASSON Editorial Board review queue.'
   };
-
-  MOCK_SUBMISSIONS.unshift(localSubmission);
 
   try {
     const existing = JSON.parse(localStorage.getItem('asson_submissions') || '[]');
     localStorage.setItem('asson_submissions', JSON.stringify([localSubmission, ...existing]));
-  } catch (e) {
+  } catch {
     // ignore
   }
 
@@ -618,10 +766,26 @@ export async function uploadAndSubmitResource(
     success: true,
     submissionId,
     referenceCode,
-    message: remoteSuccess
-      ? `Material uploaded and verified! Tracking Receipt: ${referenceCode}`
-      : `Material saved to catalog! Tracking Receipt: ${referenceCode}`
+    message: `Material queued for verification! Tracking Receipt: ${referenceCode}`
   };
+}
+
+export async function getSubmissionPreviewUrl(filePath?: string): Promise<string | null> {
+  if (!filePath) return null;
+  const cleanPath = filePath.replace(/^resources\//, '').replace(/[^a-zA-Z0-9._/-]/g, '');
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase.storage
+      .from('submissions-pending')
+      .createSignedUrl(cleanPath, 120);
+    if (!error && data?.signedUrl) {
+      return sanitizeSafeHttpUrl(data.signedUrl) || null;
+    }
+  } catch { }
+
+  const { data: pubData } = supabase.storage.from('resources').getPublicUrl(cleanPath);
+  return sanitizeSafeHttpUrl(pubData?.publicUrl) || null;
 }
 
 export async function approveSubmissionInDb(
@@ -630,6 +794,33 @@ export async function approveSubmissionInDb(
 ): Promise<{ success: boolean; error?: string }> {
   if (supabase) {
     try {
+      // Verify active server-side admin/editor session
+      const { data: authUser } = await supabase.auth.getUser();
+      if (!authUser?.user) {
+        return { success: false, error: 'Executive session required to approve submissions.' };
+      }
+
+      const targetPath = (submission.filePath || `submissions/${submission.id}.pdf`).replace(/^resources\//, '');
+
+      // Promote file from private `submissions-pending` bucket to public `resources` bucket if present
+      if (submission.filePath) {
+        try {
+          const { data: fileBlob, error: dlError } = await supabase.storage
+            .from('submissions-pending')
+            .download(targetPath);
+          if (!dlError && fileBlob) {
+            await supabase.storage
+              .from('resources')
+              .upload(targetPath, fileBlob, { cacheControl: '3600', upsert: true });
+            await supabase.storage
+              .from('submissions-pending')
+              .remove([targetPath]);
+          }
+        } catch {
+          // File may already reside in resources bucket for legacy rows
+        }
+      }
+
       // 1. Update submissions table in Supabase
       const { error: updateError } = await supabase
         .from('submissions')
@@ -637,8 +828,8 @@ export async function approveSubmissionInDb(
         .eq('id', submissionId);
 
       if (updateError) {
-        console.error('Remote submission approval failed:', updateError.message);
-        return { success: false, error: updateError.message };
+        logDevWarning('Remote submission approval failed:', updateError.message);
+        return { success: false, error: 'Database rejected submission approval. Confirm your executive permissions.' };
       }
 
       // 2. Publish to resources table so paper immediately appears in public catalog
@@ -653,8 +844,8 @@ export async function approveSubmissionInDb(
         semester: 1,
         session: submission.session,
         type: submission.resourceType,
-        file_type: submission.filePath?.endsWith('.docx') ? 'DOCX' : 'PDF',
-        file_path: submission.filePath || `submissions/${submission.id}.pdf`,
+        file_type: targetPath.endsWith('.docx') ? 'DOCX' : 'PDF',
+        file_path: targetPath,
         file_size_bytes: submission.fileSizeBytes || 2500000,
         verification_status: 'Verified',
         contributor_name: 'Student Peer Contributor (Vetted)',
@@ -663,29 +854,26 @@ export async function approveSubmissionInDb(
       });
 
       if (insertError) {
-        console.warn('Resource catalog registration warning:', insertError.message);
+        logDevWarning('Resource catalog registration warning:', insertError.message);
       }
 
-      // 3. Log audit event
-      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Academic Director';
+      // 3. Log audit event (actor_email bound server-side by DB trigger from auth.jwt())
       await supabase.from('audit_events').insert({
         action: 'PUBLISH',
         entity: 'submissions',
-        details: `Approved & published submission ${submission.id}: "${submission.resourceTitle}" (${submission.courseCode})`,
-        actor_email: userEmail
+        details: `Approved & published submission ${submission.id}: "${submission.resourceTitle}" (${submission.courseCode})`
       });
-    } catch (err: any) {
-      console.error('Failed to update remote submission approval:', err);
-      return { success: false, error: err?.message || 'Database connection error during approval.' };
+    } catch (err) {
+      logDevWarning('Failed to update remote submission approval:', err);
+      return { success: false, error: 'Database connection error during approval.' };
     }
   }
 
-  // Update local storage only if remote succeeded or offline
   try {
-    const local = JSON.parse(localStorage.getItem('asson_submissions') || '[]');
-    const updated = local.map((s: any) => s.id === submissionId ? { ...s, status: 'Approved', feedback: 'Approved by ASSON Editorial Board.' } : s);
+    const local = JSON.parse(localStorage.getItem('asson_submissions') || '[]') as StudentSubmission[];
+    const updated = local.map((s) => s.id === submissionId ? { ...s, status: 'Approved', feedback: 'Approved by ASSON Editorial Board.' } : s);
     localStorage.setItem('asson_submissions', JSON.stringify(updated));
-  } catch (e) {
+  } catch {
     // ignore
   }
 
@@ -700,30 +888,28 @@ export async function requestChangesOnSubmissionInDb(
     try {
       const { error } = await supabase
         .from('submissions')
-        .update({ status: 'Changes Requested', feedback: feedbackNote })
+        .update({ status: 'Changes Requested', feedback: feedbackNote.trim() })
         .eq('id', submissionId);
 
       if (error) {
-        return { success: false, error: error.message };
+        return { success: false, error: 'Could not update submission status. Check executive authorization.' };
       }
 
-      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Academic Director';
       await supabase.from('audit_events').insert({
         action: 'UPDATE',
         entity: 'submissions',
-        details: `Changes requested on submission ${submissionId}: "${feedbackNote}"`,
-        actor_email: userEmail
+        details: `Changes requested on submission ${submissionId}: "${feedbackNote.trim()}"`
       });
-    } catch (err: any) {
-      return { success: false, error: err?.message || 'Failed to update submission status.' };
+    } catch {
+      return { success: false, error: 'Failed to update submission status.' };
     }
   }
 
   try {
-    const local = JSON.parse(localStorage.getItem('asson_submissions') || '[]');
-    const updated = local.map((s: any) => s.id === submissionId ? { ...s, status: 'Changes Requested', feedback: feedbackNote } : s);
+    const local = JSON.parse(localStorage.getItem('asson_submissions') || '[]') as StudentSubmission[];
+    const updated = local.map((s) => s.id === submissionId ? { ...s, status: 'Changes Requested', feedback: feedbackNote } : s);
     localStorage.setItem('asson_submissions', JSON.stringify(updated));
-  } catch (e) {
+  } catch {
     // ignore
   }
 
@@ -738,9 +924,9 @@ export async function fetchAuditLogs(): Promise<AuditLog[]> {
         .select('*')
         .order('created_at', { ascending: false });
       if (!error && data && data.length > 0) {
-        return data.map((row: any) => ({
+        return (data as DbAuditLogRow[]).map((row) => ({
           id: row.id,
-          user: row.actor_email || 'ASSON System Admin',
+          user: row.actor_email || row.user_name || 'ASSON System Admin',
           action: row.action,
           entity: row.entity,
           details: row.details || '',
@@ -748,7 +934,7 @@ export async function fetchAuditLogs(): Promise<AuditLog[]> {
         }));
       }
     } catch (err) {
-      console.warn('Audit logs fetch error from Supabase, serving cached seed:', err);
+      logDevWarning('Audit logs fetch error from Supabase, serving cached seed:', err);
     }
   }
   return MOCK_AUDIT_LOGS;
@@ -759,17 +945,27 @@ export async function submitContentReport(
   issueType: string,
   description?: string
 ): Promise<boolean> {
+  const parsed = ContentReportSchema.safeParse({ resourceId, issueType, description });
+  if (!parsed.success) return false;
+
   if (supabase) {
     try {
+      let sessionUserId: string | null = null;
+      try {
+        const { data: authUser } = await supabase.auth.getUser();
+        if (authUser?.user) sessionUserId = authUser.user.id;
+      } catch { }
+
       await supabase.from('content_reports').insert({
-        resource_id: resourceId,
-        issue_type: issueType,
-        description: description || 'Reported by student user via portal',
+        resource_id: parsed.data.resourceId,
+        user_id: sessionUserId,
+        issue_type: parsed.data.issueType,
+        description: parsed.data.description || 'Reported by student user via portal',
         status: 'Open'
       });
       return true;
     } catch (err) {
-      console.warn('Failed to insert content report into Supabase:', err);
+      logDevWarning('Failed to insert content report into Supabase:', err);
     }
   }
   return true;
@@ -778,23 +974,8 @@ export async function submitContentReport(
 export async function incrementDownload(resourceId: string): Promise<void> {
   if (supabase) {
     try {
-      // 1. Try RPC increment if defined
-      const { error: rpcErr } = await supabase.rpc('increment_download_count', { resource_id: resourceId });
-      if (rpcErr) {
-        // Fallback: direct increment
-        const { data } = await supabase
-          .from('resources')
-          .select('downloads_count')
-          .eq('id', resourceId)
-          .single();
-        if (data) {
-          await supabase
-            .from('resources')
-            .update({ downloads_count: (data.downloads_count || 0) + 1 })
-            .eq('id', resourceId);
-        }
-      }
-    } catch (err) {
+      await supabase.rpc('increment_download_count', { resource_id: resourceId });
+    } catch {
       // silently ignore download increment failures
     }
   }
@@ -815,7 +996,7 @@ export async function fetchHelpDirectory(): Promise<HelpDirectoryItem[]> {
         .order('order_index', { ascending: true });
 
       if (!error && data && data.length > 0) {
-        return data.map((row: any) => ({
+        return (data as DbHelpDirectoryRow[]).map((row) => ({
           id: row.id,
           category: row.category,
           title: row.title,
@@ -830,7 +1011,7 @@ export async function fetchHelpDirectory(): Promise<HelpDirectoryItem[]> {
         }));
       }
     } catch (err) {
-      console.warn('Help directory query fallback to verified cache:', err);
+      logDevWarning('Help directory query fallback to verified cache:', err);
     }
   }
   return MOCK_HELP_DIRECTORY;
@@ -960,34 +1141,35 @@ export async function checkExecutivePasskeyConfigured(): Promise<boolean> {
 }
 
 export async function updateExecutivePasskey(
-  newKey: string,
-  currentKey?: string
+  newKey: string
 ): Promise<{ success: boolean; error?: string }> {
   const trimmedNew = newKey.trim();
   if (trimmedNew.length < 8) {
     return { success: false, error: 'Committee passkey must be at least 8 characters long.' };
   }
   if (!supabase || !isSupabaseConfigured) {
-    return { success: false, error: 'Supabase connection is required to store passkeys securely.' };
+    return { success: false, error: 'Supabase connection is required.' };
   }
 
-  const actorEmail = sessionStorage.getItem('asson_admin_email') || '';
   try {
+    const { data: authUser } = await supabase.auth.getUser();
+    if (!authUser?.user) {
+      return { success: false, error: 'Verified Super Admin Supabase session required.' };
+    }
+
     const { data, error } = await supabase.rpc('set_executive_passkey', {
-      p_new_passkey: trimmedNew,
-      p_actor_email: actorEmail || null,
-      p_current_passkey: currentKey?.trim() || null
+      p_new_passkey: trimmedNew
     });
 
     if (error) {
-      return { success: false, error: error.message || 'Could not update passkey.' };
+      return { success: false, error: 'Could not update security key. Verify Super Admin authorization.' };
     }
     if (data && data.success === false) {
       return { success: false, error: data.error || 'Authorization denied.' };
     }
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to update passkey.' };
+  } catch {
+    return { success: false, error: 'Failed to update passkey.' };
   }
 }
 
@@ -1034,14 +1216,14 @@ export async function fetchAuthorizedExecutives(): Promise<AuthorizedExecutive[]
         .order('created_at', { ascending: false });
 
       if (!error && data && data.length > 0) {
-        const remoteMapped: AuthorizedExecutive[] = data.map((d: any) => ({
+        const remoteMapped: AuthorizedExecutive[] = (data as DbAuthorizedExecutiveRow[]).map((d) => ({
           id: d.id,
           email: d.email,
           name: d.name,
           office: d.office,
           role: d.role,
           isMaster: Boolean(d.is_master || MASTER_ADMIN_EMAILS.includes(d.email.toLowerCase())),
-          approvedBy: d.approved_by,
+          approvedBy: d.approved_by || undefined,
           createdAt: d.created_at ? d.created_at.split('T')[0] : '2026-11-20'
         }));
 
@@ -1067,63 +1249,57 @@ export async function addAuthorizedExecutive(data: {
     return { success: false, error: validation.error.issues[0]?.message || 'Invalid committee details.' };
   }
 
-  const cleanEmail = data.email.trim().toLowerCase();
-  const currentAdmin = sessionStorage.getItem('asson_admin_email') || 'Emmanuel Ikeh (President)';
-
-  const newEntry: AuthorizedExecutive = {
-    id: `auth-exec-${Date.now()}`,
-    email: cleanEmail,
-    name: data.name.trim(),
-    office: data.office.trim(),
-    role: data.role,
-    isMaster: false,
-    approvedBy: currentAdmin,
-    createdAt: new Date().toISOString().split('T')[0]
-  };
-
-  if (supabase && isSupabaseConfigured) {
-    try {
-      const { error } = await supabase.from('authorized_executives').insert({
-        id: newEntry.id,
-        email: cleanEmail,
-        name: newEntry.name,
-        office: newEntry.office,
-        role: newEntry.role,
-        is_master: false,
-        approved_by: currentAdmin
-      });
-
-      if (error) {
-        if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
-          return {
-            success: false,
-            error: 'Database table "authorized_executives" is not set up in Supabase yet. Run APPLY_ALL_PENDING_MIGRATIONS.sql in Supabase SQL Editor.'
-          };
-        }
-        return {
-          success: false,
-          error: 'Authorization requires a verified Master Admin session (sign in via 6-Digit Email Code or Supabase Password).'
-        };
-      }
-
-      void supabase.from('audit_events').insert({
-        action: 'CREATE',
-        entity: 'authorized_executives',
-        details: `Approved executive access for ${newEntry.name} (${cleanEmail} — ${newEntry.office})`,
-        actor_email: currentAdmin
-      });
-    } catch (err: any) {
-      return { success: false, error: err?.message || 'Database error authorizing executive.' };
-    }
+  if (!supabase || !isSupabaseConfigured) {
+    return { success: false, error: 'Active Supabase backend connection required.' };
   }
 
-  try {
-    const existing = await fetchAuthorizedExecutives();
-    const updated = [newEntry, ...existing.filter(e => e.email.toLowerCase() !== cleanEmail)];
-    localStorage.setItem('asson_authorized_executives', JSON.stringify(updated));
-  } catch { }
+  const cleanEmail = data.email.trim().toLowerCase();
 
-  return { success: true, data: newEntry };
+  try {
+    const { data: authUser } = await supabase.auth.getUser();
+    const actorEmail = authUser?.user?.email?.trim().toLowerCase();
+    if (!actorEmail) {
+      return { success: false, error: 'Verified Master Admin session required.' };
+    }
+
+    const newEntry: AuthorizedExecutive = {
+      id: `auth-exec-${Date.now()}`,
+      email: cleanEmail,
+      name: data.name.trim(),
+      office: data.office.trim(),
+      role: data.role,
+      isMaster: false,
+      approvedBy: actorEmail,
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+
+    const { error } = await supabase.from('authorized_executives').insert({
+      id: newEntry.id,
+      email: cleanEmail,
+      name: newEntry.name,
+      office: newEntry.office,
+      role: newEntry.role,
+      is_master: false,
+      approved_by: actorEmail
+    });
+
+    if (error) {
+      return {
+        success: false,
+        error: 'Authorization requires a verified Master Admin session (6-Digit Email OTP or Password).'
+      };
+    }
+
+    await supabase.from('audit_events').insert({
+      action: 'CREATE',
+      entity: 'authorized_executives',
+      details: `Approved executive access for ${newEntry.name} (${cleanEmail} — ${newEntry.office})`
+    });
+
+    return { success: true, data: newEntry };
+  } catch {
+    return { success: false, error: 'Database error authorizing executive.' };
+  }
 }
 
 export async function revokeAuthorizedExecutive(id: string, email: string): Promise<{ success: boolean; error?: string }> {
@@ -1131,42 +1307,43 @@ export async function revokeAuthorizedExecutive(id: string, email: string): Prom
   if (MASTER_ADMIN_EMAILS.includes(cleanEmail)) {
     return { success: false, error: 'Master Admin accounts cannot be revoked.' };
   }
-
-  const currentAdmin = sessionStorage.getItem('asson_admin_email') || 'Emmanuel Ikeh (President)';
-
-  if (supabase && isSupabaseConfigured) {
-    try {
-      const { error } = await supabase.from('authorized_executives').delete().eq('email', cleanEmail);
-      if (error) {
-        if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
-          return {
-            success: false,
-            error: 'Database table "authorized_executives" is not set up in Supabase yet. Run APPLY_ALL_PENDING_MIGRATIONS.sql in Supabase SQL Editor.'
-          };
-        }
-        return {
-          success: false,
-          error: 'Revoking access requires a verified Master Admin session (sign in via 6-Digit Email Code or Supabase Password).'
-        };
-      }
-      void supabase.from('audit_events').insert({
-        action: 'DELETE',
-        entity: 'authorized_executives',
-        details: `Revoked executive access for ${cleanEmail}`,
-        actor_email: currentAdmin
-      });
-    } catch (err: any) {
-      return { success: false, error: err?.message || 'Database error revoking executive.' };
-    }
+  if (!supabase || !isSupabaseConfigured) {
+    return { success: false, error: 'Active Supabase backend connection required.' };
   }
 
   try {
-    const existing = await fetchAuthorizedExecutives();
-    const updated = existing.filter(e => e.email.toLowerCase() !== cleanEmail);
-    localStorage.setItem('asson_authorized_executives', JSON.stringify(updated));
-  } catch { }
+    const { data: authUser } = await supabase.auth.getUser();
+    if (!authUser?.user) {
+      return { success: false, error: 'Verified Master Admin session required.' };
+    }
 
-  return { success: true };
+    const { error } = await supabase.from('authorized_executives').delete().eq('email', cleanEmail);
+    if (error) {
+      return {
+        success: false,
+        error: 'Revoking access requires a verified Master Admin session.'
+      };
+    }
+
+    await supabase.from('audit_events').insert({
+      action: 'DELETE',
+      entity: 'authorized_executives',
+      details: `Revoked executive access for ${cleanEmail}`
+    });
+
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Database error revoking executive.' };
+  }
+}
+
+function clearAdminClientLabels() {
+  sessionStorage.removeItem('asson_admin_authenticated');
+  sessionStorage.removeItem('asson_admin_email');
+  sessionStorage.removeItem('asson_admin_role');
+  sessionStorage.removeItem('asson_admin_is_master');
+  sessionStorage.removeItem('asson_admin_name');
+  sessionStorage.removeItem('asson_admin_office');
 }
 
 function persistAdminSession(params: {
@@ -1176,10 +1353,8 @@ function persistAdminSession(params: {
   name: string;
   office: string;
 }) {
-  sessionStorage.setItem('asson_admin_authenticated', 'true');
+  // Store strictly display metadata only (server JWT + RLS remain sole authority)
   sessionStorage.setItem('asson_admin_email', params.email);
-  sessionStorage.setItem('asson_admin_role', params.role);
-  sessionStorage.setItem('asson_admin_is_master', params.isMaster ? 'true' : 'false');
   sessionStorage.setItem('asson_admin_name', params.name);
   sessionStorage.setItem('asson_admin_office', params.office);
 
@@ -1188,14 +1363,13 @@ function persistAdminSession(params: {
       void supabase.from('audit_events').insert({
         action: 'LOGIN',
         entity: 'admin_session',
-        details: `Executive portal session opened by ${params.email} (${params.office})`,
-        actor_email: params.email
+        details: `Executive portal session opened (${params.office})`
       });
     } catch { }
   }
 }
 
-export async function sendAdminLoginOtp(email: string): Promise<{ success: boolean; error?: string }> {
+export async function sendAdminLoginOtp(email: string): Promise<{ success: boolean; message?: string; error?: string }> {
   const cleanEmail = email.trim().toLowerCase();
   if (!cleanEmail || !cleanEmail.includes('@')) {
     return { success: false, error: 'Please enter a valid executive email address.' };
@@ -1204,38 +1378,37 @@ export async function sendAdminLoginOtp(email: string): Promise<{ success: boole
     return { success: false, error: 'Email OTP requires an active Supabase connection.' };
   }
 
-  const isMaster = MASTER_ADMIN_EMAILS.includes(cleanEmail);
-  let isAllowed = isMaster;
-
-  if (!isAllowed) {
-    try {
-      const { data: rpcAllowed, error: rpcErr } = await supabase.rpc('is_authorized_executive_email', {
-        p_email: cleanEmail
-      });
-      if (!rpcErr && rpcAllowed === true) {
-        isAllowed = true;
-      }
-    } catch { }
-  }
-
-  if (!isAllowed) {
-    return {
-      success: false,
-      error: `Access Denied: "${email}" is not on the approved committee list.`
-    };
-  }
-
   try {
+    // Enforce server-side rate limiting before dispatching email OTP
+    const { data: limitData } = await supabase.rpc('check_rate_limit', {
+      p_bucket: 'exec_otp',
+      p_key: cleanEmail,
+      p_max_attempts: 5,
+      p_window_seconds: 900
+    });
+
+    if (limitData && limitData.allowed === false) {
+      return {
+        success: false,
+        error: `Too many code requests. Please wait ${limitData.retryAfter || 60} seconds before retrying.`
+      };
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: { shouldCreateUser: true }
     });
+
     if (error) {
-      return { success: false, error: error.message || 'Could not send login code.' };
+      return { success: false, error: 'Could not send verification code right now. Please try again shortly.' };
     }
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to send login code.' };
+
+    return {
+      success: true,
+      message: 'If this email is approved on the executive list, a 6-digit login code has been sent.'
+    };
+  } catch {
+    return { success: false, error: 'Failed to send login code.' };
   }
 }
 
@@ -1253,6 +1426,20 @@ export async function verifyAdminLoginOtp(
   }
 
   try {
+    const { data: limitData } = await supabase.rpc('check_rate_limit', {
+      p_bucket: 'exec_verify',
+      p_key: cleanEmail,
+      p_max_attempts: 8,
+      p_window_seconds: 900
+    });
+
+    if (limitData && limitData.allowed === false) {
+      return {
+        success: false,
+        error: `Too many verification attempts. Wait ${limitData.retryAfter || 60} seconds and try again.`
+      };
+    }
+
     const { data, error } = await supabase.auth.verifyOtp({
       email: cleanEmail,
       token: cleanToken,
@@ -1260,19 +1447,27 @@ export async function verifyAdminLoginOtp(
     });
 
     if (error || !data.user) {
-      return { success: false, error: error?.message || 'Invalid or expired verification code.' };
+      return { success: false, error: 'Invalid or expired 6-digit verification code.' };
+    }
+
+    const isMaster = MASTER_ADMIN_EMAILS.includes(cleanEmail);
+    let isAllowed = isMaster;
+    if (!isAllowed) {
+      const { data: rpcAllowed } = await supabase.rpc('is_authorized_executive_email', {
+        p_email: cleanEmail
+      });
+      isAllowed = rpcAllowed === true;
+    }
+
+    if (!isAllowed) {
+      await supabase.auth.signOut();
+      return { success: false, error: 'Access Denied: email is not authorized for the executive console.' };
     }
 
     const authorizedList = await fetchAuthorizedExecutives();
-    const isMaster = MASTER_ADMIN_EMAILS.includes(cleanEmail);
     const matchedExec = authorizedList.find(e => e.email.toLowerCase() === cleanEmail);
-
-    if (!isMaster && !matchedExec) {
-      await supabase.auth.signOut();
-      return { success: false, error: 'Email is not on the approved executive list.' };
-    }
-
     const role = isMaster ? 'super_admin' : (matchedExec?.role || 'admin');
+
     persistAdminSession({
       email: cleanEmail,
       role,
@@ -1282,8 +1477,8 @@ export async function verifyAdminLoginOtp(
     });
 
     return { success: true, role, isMaster };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Verification failed.' };
+  } catch {
+    return { success: false, error: 'Verification failed.' };
   }
 }
 
@@ -1292,7 +1487,7 @@ export async function adminSignIn(
   password?: string
 ): Promise<{ success: boolean; role?: string; isMaster?: boolean; needsSetup?: boolean; error?: string }> {
   if (!email || !password || !email.includes('@')) {
-    return { success: false, error: 'A valid email address and passkey/password are required.' };
+    return { success: false, error: 'A valid executive email address and password are required.' };
   }
 
   const cleanEmail = email.trim().toLowerCase();
@@ -1305,100 +1500,93 @@ export async function adminSignIn(
     };
   }
 
-  const isMaster = MASTER_ADMIN_EMAILS.includes(cleanEmail);
-
-  // 1. Try individual Supabase Auth password first (if executive has a registered Supabase password)
   try {
+    // Rate-limit executive password attempts server-side before hitting auth
+    const { data: limitData } = await supabase.rpc('check_rate_limit', {
+      p_bucket: 'exec_pwd',
+      p_key: cleanEmail,
+      p_max_attempts: 5,
+      p_window_seconds: 900
+    });
+
+    if (limitData && limitData.allowed === false) {
+      return {
+        success: false,
+        error: `Too many failed sign-in attempts. Wait ${limitData.retryAfter || 60} seconds or use 6-Digit Email Code.`
+      };
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
       password: inputSecret
     });
-    if (!error && data.user) {
-      const authorizedList = await fetchAuthorizedExecutives();
-      const matchedExec = authorizedList.find(e => e.email.toLowerCase() === cleanEmail);
-      if (!isMaster && !matchedExec) {
-        await supabase.auth.signOut();
-        return {
-          success: false,
-          error: `Access Denied: "${email}" is not on the approved committee list.`
-        };
-      }
-      const role = isMaster ? 'super_admin' : (matchedExec?.role || 'admin');
-      persistAdminSession({
-        email: cleanEmail,
-        role,
-        isMaster,
-        name: matchedExec?.name || (isMaster ? 'Emmanuel Ikeh' : 'Executive Member'),
-        office: matchedExec?.office || (isMaster ? 'Executive President / Lead Admin' : 'Executive Council')
-      });
-      return { success: true, role, isMaster };
-    }
-  } catch { }
 
-  // 2. Verify allowlist + salted SHA-256 committee passkey hash server-side via SECURITY DEFINER RPC
-  try {
-    const { data: rpcData, error: rpcError } = await supabase.rpc('verify_executive_login', {
-      p_email: cleanEmail,
-      p_passkey: inputSecret
-    });
-
-    if (rpcError) {
-      if (rpcError.code === 'PGRST202' || rpcError.message?.includes('schema cache')) {
-        return {
-          success: false,
-          error: 'Database setup pending: please run APPLY_ALL_PENDING_MIGRATIONS.sql in your Supabase SQL Editor first.'
-        };
-      }
-      return { success: false, error: rpcError.message || 'Verification service error.' };
-    }
-
-    if (rpcData?.success) {
-      const role = rpcData.role || (isMaster ? 'super_admin' : 'admin');
-      const masterFlag = Boolean(rpcData.isMaster ?? isMaster);
-      persistAdminSession({
-        email: cleanEmail,
-        role,
-        isMaster: masterFlag,
-        name: rpcData.name || (masterFlag ? 'Emmanuel Ikeh' : 'Executive Member'),
-        office: rpcData.office || (masterFlag ? 'Executive President / Lead Admin' : 'Executive Council')
-      });
-      return { success: true, role, isMaster: masterFlag };
-    }
-
-    if (rpcData?.needsSetup) {
+    if (error || !data.user) {
       return {
         success: false,
-        needsSetup: true,
-        error: rpcData.error || 'Committee passkey is not set yet. Use "Sign in with 6-Digit Email Code" below as Master Admin to set it.'
+        error: 'Invalid executive credentials. Newly added committee members should use "Sign in with 6-Digit Email Code" below.'
       };
     }
 
-    if (rpcData?.error) {
-      return { success: false, error: rpcData.error };
+    const isMaster = MASTER_ADMIN_EMAILS.includes(cleanEmail);
+    let isAllowed = isMaster;
+    if (!isAllowed) {
+      const { data: rpcAllowed } = await supabase.rpc('is_authorized_executive_email', {
+        p_email: cleanEmail
+      });
+      isAllowed = rpcAllowed === true;
     }
-  } catch { }
 
-  return {
-    success: false,
-    error: 'Incorrect passkey or password. Master Admins can also sign in using a 6-digit Email Code below.'
-  };
+    if (!isAllowed) {
+      await supabase.auth.signOut();
+      return {
+        success: false,
+        error: 'Invalid executive credentials. Access denied.'
+      };
+    }
+
+    const authorizedList = await fetchAuthorizedExecutives();
+    const matchedExec = authorizedList.find(e => e.email.toLowerCase() === cleanEmail);
+    const role = isMaster ? 'super_admin' : (matchedExec?.role || 'admin');
+
+    persistAdminSession({
+      email: cleanEmail,
+      role,
+      isMaster,
+      name: matchedExec?.name || (isMaster ? 'Emmanuel Ikeh' : 'Executive Member'),
+      office: matchedExec?.office || (isMaster ? 'Executive President / Lead Admin' : 'Executive Council')
+    });
+
+    return { success: true, role, isMaster };
+  } catch {
+    return {
+      success: false,
+      error: 'Authentication service unavailable. Try signing in with a 6-digit Email Code.'
+    };
+  }
 }
 
 export async function adminSignOut(): Promise<void> {
   if (supabase) {
     try {
       await supabase.auth.signOut();
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
-  sessionStorage.removeItem('asson_admin_authenticated');
-  sessionStorage.removeItem('asson_admin_email');
-  sessionStorage.removeItem('asson_admin_role');
+  clearAdminClientLabels();
 }
 
-export function isExecutiveAuthenticated(): boolean {
-  return sessionStorage.getItem('asson_admin_authenticated') === 'true';
+export async function isExecutiveAuthenticated(): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { data: authUser } = await supabase.auth.getUser();
+    if (!authUser?.user?.email) return false;
+    const { isAuthorized } = await verifyExecutiveRole(authUser.user.id);
+    return isAuthorized;
+  } catch {
+    return false;
+  }
 }
 
 // ====================================================================
@@ -1415,33 +1603,36 @@ export async function createNoticeInDb(notice: {
   deadline?: string;
   effectiveDate?: string;
 }): Promise<{ success: boolean; error?: string }> {
+  const parsed = NoticeSchema.safeParse(notice);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message || 'Invalid notice payload.' };
+  }
+
   if (supabase) {
     try {
       const { error } = await supabase.from('notices').insert({
-        title: notice.title.trim(),
-        summary: notice.summary.trim(),
-        content: notice.content.trim(),
-        category: notice.category,
-        is_urgent: notice.isUrgent,
-        issuer: notice.issuer.trim(),
-        deadline: notice.deadline || null,
-        effective_date: notice.effectiveDate || null,
+        title: parsed.data.title,
+        summary: parsed.data.summary,
+        content: parsed.data.content,
+        category: parsed.data.category,
+        is_urgent: parsed.data.isUrgent,
+        issuer: parsed.data.issuer,
+        deadline: parsed.data.deadline || null,
+        effective_date: parsed.data.effectiveDate || null,
         is_expired: false,
       });
 
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: 'Database rejected notice creation. Verify executive permissions.' };
 
-      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
       await supabase.from('audit_events').insert({
         action: 'CREATE',
         entity: 'notices',
-        details: `Created new announcement: "${notice.title}" (${notice.category})`,
-        actor_email: userEmail
+        details: `Created new announcement: "${parsed.data.title}" (${parsed.data.category})`
       });
 
       return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err?.message || 'Database error creating notice.' };
+    } catch {
+      return { success: false, error: 'Database error creating notice.' };
     }
   }
   return { success: false, error: 'Database service is offline.' };
@@ -1451,19 +1642,17 @@ export async function deleteNoticeInDb(id: string): Promise<{ success: boolean; 
   if (supabase) {
     try {
       const { error } = await supabase.from('notices').delete().eq('id', id);
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: 'Could not delete notice. Verify executive permissions.' };
 
-      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
       await supabase.from('audit_events').insert({
         action: 'DELETE',
         entity: 'notices',
-        details: `Deleted notice ${id}`,
-        actor_email: userEmail
+        details: `Deleted notice ${id}`
       });
 
       return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err?.message || 'Database error deleting notice.' };
+    } catch {
+      return { success: false, error: 'Database error deleting notice.' };
     }
   }
   return { success: false, error: 'Database service is offline.' };
@@ -1479,34 +1668,37 @@ export async function createOpportunityInDb(opp: {
   applicationUrl: string;
   location: string;
 }): Promise<{ success: boolean; error?: string }> {
+  const parsed = OpportunitySchema.safeParse(opp);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message || 'Invalid opportunity details.' };
+  }
+
   if (supabase) {
     try {
       const { error } = await supabase.from('opportunities').insert({
-        title: opp.title.trim(),
-        provider: opp.provider.trim(),
-        category: opp.category,
-        deadline: opp.deadline,
-        eligibility: opp.eligibility.trim(),
-        description: opp.description.trim(),
-        application_url: opp.applicationUrl.trim(),
-        location: opp.location.trim(),
+        title: parsed.data.title,
+        provider: parsed.data.provider,
+        category: parsed.data.category,
+        deadline: parsed.data.deadline,
+        eligibility: parsed.data.eligibility,
+        description: parsed.data.description,
+        application_url: parsed.data.applicationUrl,
+        location: parsed.data.location,
         is_verified: true,
         is_expired: false
       });
 
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: 'Could not create opportunity. Verify executive permissions.' };
 
-      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
       await supabase.from('audit_events').insert({
         action: 'CREATE',
         entity: 'opportunities',
-        details: `Added opportunity: "${opp.title}" by ${opp.provider}`,
-        actor_email: userEmail
+        details: `Added opportunity: "${parsed.data.title}" by ${parsed.data.provider}`
       });
 
       return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err?.message || 'Database error adding opportunity.' };
+    } catch {
+      return { success: false, error: 'Database error adding opportunity.' };
     }
   }
   return { success: false, error: 'Database service is offline.' };
@@ -1516,19 +1708,17 @@ export async function deleteOpportunityInDb(id: string): Promise<{ success: bool
   if (supabase) {
     try {
       const { error } = await supabase.from('opportunities').delete().eq('id', id);
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: 'Could not delete opportunity. Verify executive permissions.' };
 
-      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
       await supabase.from('audit_events').insert({
         action: 'DELETE',
         entity: 'opportunities',
-        details: `Deleted opportunity ${id}`,
-        actor_email: userEmail
+        details: `Deleted opportunity ${id}`
       });
 
       return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err?.message || 'Database error deleting opportunity.' };
+    } catch {
+      return { success: false, error: 'Database error deleting opportunity.' };
     }
   }
   return { success: false, error: 'Database service is offline.' };
@@ -1539,27 +1729,30 @@ export async function createFaqInDb(faq: {
   answer: string;
   category: string;
 }): Promise<{ success: boolean; error?: string }> {
+  const parsed = FaqSchema.safeParse(faq);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message || 'Invalid FAQ content.' };
+  }
+
   if (supabase) {
     try {
       const { error } = await supabase.from('faqs').insert({
-        question: faq.question.trim(),
-        answer: faq.answer.trim(),
-        category: faq.category.trim()
+        question: parsed.data.question,
+        answer: parsed.data.answer,
+        category: parsed.data.category
       });
 
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: 'Could not create FAQ. Verify executive permissions.' };
 
-      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
       await supabase.from('audit_events').insert({
         action: 'CREATE',
         entity: 'faqs',
-        details: `Added FAQ: "${faq.question}"`,
-        actor_email: userEmail
+        details: `Added FAQ: "${parsed.data.question}"`
       });
 
       return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err?.message || 'Database error creating FAQ.' };
+    } catch {
+      return { success: false, error: 'Database error creating FAQ.' };
     }
   }
   return { success: false, error: 'Database service is offline.' };
@@ -1569,19 +1762,17 @@ export async function deleteFaqInDb(id: string): Promise<{ success: boolean; err
   if (supabase) {
     try {
       const { error } = await supabase.from('faqs').delete().eq('id', id);
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: 'Could not delete FAQ. Verify executive permissions.' };
 
-      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
       await supabase.from('audit_events').insert({
         action: 'DELETE',
         entity: 'faqs',
-        details: `Deleted FAQ ${id}`,
-        actor_email: userEmail
+        details: `Deleted FAQ ${id}`
       });
 
       return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err?.message || 'Database error deleting FAQ.' };
+    } catch {
+      return { success: false, error: 'Database error deleting FAQ.' };
     }
   }
   return { success: false, error: 'Database service is offline.' };
@@ -1602,33 +1793,36 @@ export async function createCalendarEventInDb(event: {
   venue?: string;
   isConfirmed: boolean;
 }): Promise<{ success: boolean; error?: string }> {
+  const parsed = CalendarEventSchema.safeParse(event);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message || 'Invalid calendar event details.' };
+  }
+
   if (supabase) {
     try {
       const { error } = await supabase.from('academic_calendar').insert({
-        title: event.title.trim(),
-        description: event.description?.trim() || null,
-        category: event.category,
-        start_date: event.startDate,
-        end_date: event.endDate || null,
-        start_time: event.startTime || null,
+        title: parsed.data.title,
+        description: parsed.data.description || null,
+        category: parsed.data.category,
+        start_date: parsed.data.startDate,
+        end_date: parsed.data.endDate || null,
+        start_time: parsed.data.startTime || null,
         target_level: event.targetLevel || null,
-        venue: event.venue?.trim() || null,
-        is_confirmed: event.isConfirmed,
+        venue: parsed.data.venue || null,
+        is_confirmed: parsed.data.isConfirmed,
       });
 
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: 'Could not create calendar event. Verify executive permissions.' };
 
-      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
       await supabase.from('audit_events').insert({
         action: 'CREATE',
         entity: 'academic_calendar',
-        details: `Created calendar event: "${event.title}" (${event.startDate})`,
-        actor_email: userEmail
+        details: `Created calendar event: "${parsed.data.title}" (${parsed.data.startDate})`
       });
 
       return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err?.message || 'Database error creating calendar event.' };
+    } catch {
+      return { success: false, error: 'Database error creating calendar event.' };
     }
   }
   return { success: false, error: 'Database service is offline.' };
@@ -1638,19 +1832,17 @@ export async function deleteCalendarEventInDb(id: string): Promise<{ success: bo
   if (supabase) {
     try {
       const { error } = await supabase.from('academic_calendar').delete().eq('id', id);
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: 'Could not delete calendar event. Verify executive permissions.' };
 
-      const userEmail = sessionStorage.getItem('asson_admin_email') || 'ASSON Executive';
       await supabase.from('audit_events').insert({
         action: 'DELETE',
         entity: 'academic_calendar',
-        details: `Deleted calendar event ${id}`,
-        actor_email: userEmail
+        details: `Deleted calendar event ${id}`
       });
 
       return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err?.message || 'Database error deleting calendar event.' };
+    } catch {
+      return { success: false, error: 'Database error deleting calendar event.' };
     }
   }
   return { success: false, error: 'Database service is offline.' };
@@ -1663,28 +1855,15 @@ export async function registerEventRsvp(
   let count = 1;
   if (supabase) {
     try {
-      // 1. Insert RSVP record
-      await supabase.from('event_rsvps').insert({
-        notice_id: noticeId,
-        contributor_name: contributorName?.trim() || 'Student Attendee'
+      const { data: rpcCount, error } = await supabase.rpc('increment_notice_rsvp', {
+        p_notice_id: noticeId,
+        p_contributor_name: contributorName?.trim() || 'Student Attendee'
       });
-
-      // 2. Increment count on notices
-      const { data: notice } = await supabase
-        .from('notices')
-        .select('rsvp_count')
-        .eq('id', noticeId)
-        .single();
-
-      if (notice) {
-        count = (notice.rsvp_count || 0) + 1;
-        await supabase
-          .from('notices')
-          .update({ rsvp_count: count })
-          .eq('id', noticeId);
+      if (!error && typeof rpcCount === 'number') {
+        count = rpcCount;
       }
     } catch (err) {
-      console.warn('Remote RSVP sync notice:', err);
+      logDevWarning('Remote RSVP sync notice:', err);
     }
   }
 
@@ -1771,15 +1950,15 @@ export async function studentSignUp(
       };
     }
     return { success: false, error: 'Registration could not be completed.' };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Network error during registration.' };
+  } catch (err: unknown) {
+    return { success: false, error: getErrorMessage(err, 'Network error during registration.') };
   }
 }
 
 export async function studentSignIn(
   email: string,
   password: string
-): Promise<{ success: boolean; user?: any; profile?: UserProfile; error?: string }> {
+): Promise<{ success: boolean; user?: User; profile?: UserProfile; error?: string }> {
   if (!email || !password) {
     return { success: false, error: 'Email and password are required.' };
   }
@@ -1828,24 +2007,14 @@ export async function studentSignIn(
 
     localStorage.setItem('asson_student_profile', JSON.stringify(profile));
     return { success: true, user: data.user, profile };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Authentication error.' };
+  } catch (err: unknown) {
+    return { success: false, error: getErrorMessage(err, 'Authentication error.') };
   }
 }
 
 export async function studentSignInWithGoogle(): Promise<{ success: boolean; profile?: UserProfile; error?: string }> {
   if (!supabase) {
-    // Offline / Demo mode fallback
-    const mockProfile: UserProfile = {
-      id: 'google-student-' + Date.now(),
-      displayName: 'Statistics Scholar (Google)',
-      email: 'scholar@stu.ui.edu.ng',
-      level: '200',
-      department: 'Department of Statistics',
-      role: 'student'
-    };
-    localStorage.setItem('asson_student_profile', JSON.stringify(mockProfile));
-    return { success: true, profile: mockProfile };
+    return { success: false, error: 'Authentication service is currently offline.' };
   }
 
   try {
@@ -1881,8 +2050,8 @@ export async function studentSignInWithGoogle(): Promise<{ success: boolean; pro
     }
 
     return { success: false, error: 'Could not initialize Google authentication.' };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Google sign-in error.' };
+  } catch (err: unknown) {
+    return { success: false, error: getErrorMessage(err, 'Google sign-in error.') };
   }
 }
 
@@ -1923,35 +2092,36 @@ export async function studentSignOut(): Promise<void> {
 }
 
 export async function studentResetPassword(email: string): Promise<{ success: boolean; error?: string }> {
-  if (!email || !email.includes('@')) {
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail || !cleanEmail.includes('@')) {
     return { success: false, error: 'Please enter a valid email address.' };
   }
 
-  // Client-side rate limiting / cooldown protection to safeguard Supabase free-tier email quota (Checklist 6.2)
-  const RESET_COOLDOWN_KEY = 'asson_pwd_reset_cooldown';
-  const lastReset = sessionStorage.getItem(RESET_COOLDOWN_KEY);
-  if (lastReset) {
-    const elapsed = Date.now() - Number(lastReset);
-    if (elapsed < 60000) {
-      const waitSec = Math.ceil((60000 - elapsed) / 1000);
-      return {
-        success: false,
-        error: `Security cooldown active: Please wait ${waitSec} seconds before requesting another recovery code.`
-      };
-    }
-  }
-
   if (!supabase) {
-    return { success: true };
+    return { success: false, error: 'Password reset service is currently offline.' };
   }
 
   try {
+    // Server-side rate limiting against brute-force / email quota abuse (Checklist 6.2 & 6.3)
+    const { data: limitData } = await supabase.rpc('check_rate_limit', {
+      p_bucket: 'pwd_reset',
+      p_key: cleanEmail,
+      p_max_attempts: 3,
+      p_window_seconds: 900
+    });
+
+    if (limitData && limitData.allowed === false) {
+      return {
+        success: false,
+        error: `Security cooldown active: Please wait ${limitData.retryAfter || 60} seconds before requesting another recovery code.`
+      };
+    }
+
     const redirectUrl = `${window.location.origin}/dashboard#type=recovery`;
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
       redirectTo: redirectUrl
     });
-    if (error) return { success: false, error: error.message };
-    sessionStorage.setItem(RESET_COOLDOWN_KEY, Date.now().toString());
+    if (error) return { success: false, error: 'Could not initiate recovery email. Please try again later.' };
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to send recovery email. Please try again shortly.' };
@@ -1998,8 +2168,8 @@ export async function studentVerifyOtpAndResetPassword(
     }
 
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Password reset error.' };
+  } catch (err: unknown) {
+    return { success: false, error: getErrorMessage(err, 'Password reset error.') };
   }
 }
 
@@ -2017,8 +2187,8 @@ export async function studentUpdatePasswordOnly(newPassword: string): Promise<{ 
     });
     if (error) return { success: false, error: error.message };
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to update password.' };
+  } catch (err: unknown) {
+    return { success: false, error: getErrorMessage(err, 'Failed to update password.') };
   }
 }
 
@@ -2047,7 +2217,7 @@ export async function fetchUserBookmarks(userId?: string): Promise<string[]> {
         .eq('user_id', userId);
 
       if (!error && data) {
-        const remoteIds = data.map((b: any) => b.resource_id);
+        const remoteIds = (data as Array<{ resource_id: string }>).map((b) => b.resource_id);
         const merged = Array.from(new Set([...localBookmarks, ...remoteIds]));
         localStorage.setItem('asson_bookmarks', JSON.stringify(merged));
         return merged;
@@ -2089,7 +2259,7 @@ export async function toggleUserBookmark(resourceId: string, userId?: string): P
           .insert({ user_id: userId, resource_id: resourceId });
       }
     } catch (err) {
-      console.warn('Remote bookmark sync notice:', err);
+      logDevWarning('Remote bookmark sync notice:', err);
     }
   }
 
@@ -2106,7 +2276,9 @@ export async function fetchEnterpriseListings(includePending = false): Promise<E
     if (cached) {
       const parsed = JSON.parse(cached);
       if (Date.now() - parsed.timestamp < 1000 * 60 * 15 && parsed.data?.length > 0) {
-        return includePending ? parsed.data : parsed.data.filter((e: EnterpriseListing) => e.status === 'approved');
+        return includePending
+          ? parsed.data
+          : parsed.data.filter((e: EnterpriseListing) => String(e.status).toLowerCase() === 'approved');
       }
     }
   } catch {
@@ -2117,21 +2289,21 @@ export async function fetchEnterpriseListings(includePending = false): Promise<E
     try {
       let query = supabase.from('enterprise_listings').select('*');
       if (!includePending) {
-        query = query.eq('status', 'approved');
+        query = query.in('status', ['Approved', 'approved']);
       }
       const { data, error } = await query.order('created_at', { ascending: false });
       if (!error && data && data.length > 0) {
-        const mapped = data.map((d: any) => ({
+        const mapped: EnterpriseListing[] = (data as DbEnterpriseRow[]).map((d) => ({
           id: d.id,
-          businessName: d.business_name || d.businessName,
-          ownerName: d.owner_name || d.ownerName,
-          ownerLevel: d.owner_level || d.ownerLevel,
+          businessName: d.business_name || d.businessName || 'Enterprise',
+          ownerName: d.owner_name || d.ownerName || 'Student Owner',
+          ownerLevel: d.owner_level || d.ownerLevel || '200',
           category: d.category,
           description: d.description,
-          whatsapp: d.whatsapp,
-          instagram: d.instagram,
-          imageUrl: d.image_url || d.imageUrl,
-          status: d.status || 'pending',
+          whatsapp: d.whatsapp || d.contact_phone || '',
+          instagram: d.instagram || d.instagram_handle,
+          imageUrl: sanitizeSafeHttpUrl(d.image_url || d.imageUrl || undefined),
+          status: (String(d.status || 'Pending').toLowerCase() as 'pending' | 'approved' | 'rejected'),
           createdAt: d.created_at ? d.created_at.split('T')[0] : '2026-11-20',
         }));
         try {
@@ -2151,7 +2323,9 @@ export async function fetchEnterpriseListings(includePending = false): Promise<E
     if (cached) {
       const parsed = JSON.parse(cached);
       if (parsed.data?.length > 0) {
-        return includePending ? parsed.data : parsed.data.filter((e: EnterpriseListing) => e.status === 'approved');
+        return includePending
+          ? parsed.data
+          : parsed.data.filter((e: EnterpriseListing) => String(e.status).toLowerCase() === 'approved');
       }
     }
   } catch {
@@ -2161,16 +2335,74 @@ export async function fetchEnterpriseListings(includePending = false): Promise<E
   return includePending ? MOCK_ENTERPRISES : MOCK_ENTERPRISES.filter((e) => e.status === 'approved');
 }
 
+export async function uploadEnterpriseImage(
+  file: File
+): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
+  const allowedMimes: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+  };
+  const ext = allowedMimes[file.type];
+  if (!ext) {
+    return { success: false, error: 'Only JPEG, PNG, or WebP images are permitted.' };
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    return { success: false, error: 'Image must be 2MB or smaller.' };
+  }
+  if (!supabase) {
+    return { success: false, error: 'Image storage requires an active Supabase connection.' };
+  }
+
+  const nonce = Math.random().toString(36).slice(2, 9);
+  const path = `enterprises/${Date.now()}_${nonce}.${ext}`;
+
+  try {
+    const { error } = await supabase.storage
+      .from('enterprise-images')
+      .upload(path, file, { cacheControl: '3600', upsert: false });
+
+    if (error) {
+      return { success: false, error: 'Image upload rejected by storage policy.' };
+    }
+
+    const { data } = supabase.storage.from('enterprise-images').getPublicUrl(path);
+    const safeUrl = sanitizeSafeHttpUrl(data?.publicUrl);
+    return safeUrl ? { success: true, publicUrl: safeUrl } : { success: false, error: 'Invalid storage URL returned.' };
+  } catch {
+    return { success: false, error: 'Failed to upload image.' };
+  }
+}
+
 export async function submitEnterpriseListing(data: {
   businessName: string;
   ownerName: string;
   ownerLevel: AcademicLevel;
-  category: any;
+  category: EnterpriseCategory;
   description: string;
   whatsapp: string;
   instagram?: string;
   imageUrl?: string;
 }): Promise<{ success: boolean; data?: EnterpriseListing; error?: string }> {
+  const validation = EnterpriseListingSchema.safeParse({
+    businessName: data.businessName,
+    category: data.category,
+    description: data.description,
+    ownerName: data.ownerName,
+    ownerLevel: data.ownerLevel,
+    contactPhone: data.whatsapp,
+    instagramHandle: data.instagram,
+    imageUrl: data.imageUrl,
+  });
+
+  if (!validation.success) {
+    return {
+      success: false,
+      error: validation.error.issues[0]?.message || 'Please check your business submission fields.'
+    };
+  }
+
+  const safeImageUrl = data.imageUrl ? sanitizeSafeHttpUrl(data.imageUrl) : undefined;
   const newEntry: EnterpriseListing = {
     id: `ent-${Date.now()}`,
     businessName: data.businessName.trim(),
@@ -2180,52 +2412,62 @@ export async function submitEnterpriseListing(data: {
     description: data.description.trim(),
     whatsapp: data.whatsapp.trim(),
     instagram: data.instagram?.trim() || undefined,
-    imageUrl: data.imageUrl?.trim() || undefined,
+    imageUrl: safeImageUrl,
     status: 'pending',
     createdAt: new Date().toISOString().split('T')[0],
   };
 
   if (supabase) {
     try {
+      let sessionUserId: string | null = null;
+      try {
+        const { data: authUser } = await supabase.auth.getUser();
+        if (authUser?.user) sessionUserId = authUser.user.id;
+      } catch { }
+
       const { error } = await supabase.from('enterprise_listings').insert({
         business_name: newEntry.businessName,
+        tagline: `${newEntry.businessName} — ${newEntry.category}`,
         owner_name: newEntry.ownerName,
         owner_level: newEntry.ownerLevel,
-        category: newEntry.category,
+        category: 'Other Services',
         description: newEntry.description,
-        whatsapp: newEntry.whatsapp,
-        instagram: newEntry.instagram,
-        image_url: newEntry.imageUrl,
-        status: 'pending',
+        contact_phone: newEntry.whatsapp,
+        whatsapp_link: `https://wa.me/${newEntry.whatsapp}`,
+        instagram_handle: newEntry.instagram || null,
+        image_url: safeImageUrl || null,
+        user_id: sessionUserId,
+        status: 'Pending',
       });
       if (error) {
-        console.warn('Supabase insert note:', error.message);
+        logDevWarning('Supabase insert note:', error.message);
+        return { success: false, error: 'Submission could not be saved right now. Please try again shortly.' };
       }
-    } catch (e: any) {
-      console.warn('Supabase offline or table missing, using cache:', e.message);
+    } catch {
+      return { success: false, error: 'Database error saving business submission.' };
     }
   }
 
-  try {
-    const existing = await fetchEnterpriseListings(true);
-    const updated = [newEntry, ...existing];
-    localStorage.setItem('asson_cached_enterprises', JSON.stringify({ timestamp: Date.now(), data: updated }));
-  } catch {
-    // ignore
-  }
-
-  return { success: true };
+  return { success: true, data: newEntry };
 }
 
 export async function updateEnterpriseStatus(
   id: string,
   status: 'approved' | 'rejected'
 ): Promise<{ success: boolean; error?: string }> {
+  const dbStatus = status === 'approved' ? 'Approved' : 'Rejected';
   if (supabase) {
     try {
-      await supabase.from('enterprise_listings').update({ status }).eq('id', id);
+      const { data: authUser } = await supabase.auth.getUser();
+      if (!authUser?.user) {
+        return { success: false, error: 'Unauthorized: Executive session required.' };
+      }
+      const { error } = await supabase.from('enterprise_listings').update({ status: dbStatus }).eq('id', id);
+      if (error) {
+        return { success: false, error: 'Database rejected enterprise status change.' };
+      }
     } catch {
-      // ignore
+      return { success: false, error: 'Database error updating enterprise status.' };
     }
   }
 
@@ -2268,16 +2510,16 @@ export async function fetchElectedExecutives(): Promise<ElectedExecutive[]> {
         .order('order_index', { ascending: true });
 
       if (!error && data && data.length > 0) {
-        const mapped: ElectedExecutive[] = data.map((d: any) => ({
+        const mapped: ElectedExecutive[] = (data as DbElectedExecutiveRow[]).map((d) => ({
           id: d.id,
           name: d.name,
           office: d.office,
           session: d.session || '2026/2027',
           level: d.level || '300',
-          imageUrl: d.image_url || d.imageUrl,
-          whatsapp: d.whatsapp,
-          email: d.email,
-          bio: d.bio,
+          imageUrl: sanitizeSafeHttpUrl(d.image_url || d.imageUrl || undefined),
+          whatsapp: d.whatsapp || undefined,
+          email: d.email || undefined,
+          bio: d.bio || undefined,
           orderIndex: d.order_index ?? 99,
         }));
         try {
@@ -2335,7 +2577,7 @@ export async function createElectedExecutiveInDb(exec: {
     office: exec.office.trim(),
     session: exec.session.trim() || '2026/2027',
     level: exec.level,
-    imageUrl: exec.imageUrl?.trim() || undefined,
+    imageUrl: sanitizeSafeHttpUrl(exec.imageUrl) || undefined,
     whatsapp: exec.whatsapp?.trim() || undefined,
     email: exec.email?.trim() || undefined,
     bio: exec.bio?.trim() || undefined,
@@ -2345,11 +2587,11 @@ export async function createElectedExecutiveInDb(exec: {
   if (supabase) {
     try {
       const { data: authUser } = await supabase.auth.getUser();
-      if (!authUser?.user && sessionStorage.getItem('asson_admin_authenticated') !== 'true') {
-        return { success: false, error: 'Unauthorized: Admin privileges required.' };
+      if (!authUser?.user) {
+        return { success: false, error: 'Unauthorized: Verified Supabase session required.' };
       }
 
-      await supabase.from('elected_executives').insert({
+      const { error } = await supabase.from('elected_executives').insert({
         name: newEntry.name,
         office: newEntry.office,
         session: newEntry.session,
@@ -2360,8 +2602,12 @@ export async function createElectedExecutiveInDb(exec: {
         bio: newEntry.bio,
         order_index: newEntry.orderIndex,
       });
+
+      if (error) {
+        return { success: false, error: 'Database rejected executive creation. Confirm admin privileges.' };
+      }
     } catch {
-      // Sanitized error
+      return { success: false, error: 'Database connection error creating executive.' };
     }
   }
 
@@ -2378,11 +2624,16 @@ export async function deleteElectedExecutiveInDb(id: string): Promise<{ success:
   if (supabase) {
     try {
       const { data: authUser } = await supabase.auth.getUser();
-      if (!authUser?.user && sessionStorage.getItem('asson_admin_authenticated') !== 'true') {
-        return { success: false, error: 'Unauthorized: Admin privileges required.' };
+      if (!authUser?.user) {
+        return { success: false, error: 'Unauthorized: Verified Supabase session required.' };
       }
-      await supabase.from('elected_executives').delete().eq('id', id);
-    } catch { }
+      const { error } = await supabase.from('elected_executives').delete().eq('id', id);
+      if (error) {
+        return { success: false, error: 'Database rejected executive deletion.' };
+      }
+    } catch {
+      return { success: false, error: 'Database connection error deleting executive.' };
+    }
   }
 
   try {
@@ -2413,18 +2664,18 @@ export async function fetchStaffMembers(): Promise<StaffMember[]> {
     try {
       const { data, error } = await supabase.from('staff_members').select('*');
       if (!error && data && data.length > 0) {
-        const mapped: StaffMember[] = data.map((d: any) => ({
+        const mapped: StaffMember[] = (data as DbStaffRow[]).map((d) => ({
           id: d.id,
           name: d.name,
           title: d.title,
           designation: d.designation,
           courses: d.courses || [],
           office: d.office,
-          email: d.email,
-          consultationHours: d.consultation_hours || d.consultationHours,
-          advisorLevel: d.advisor_level || d.advisorLevel,
-          isHOD: d.is_hod || d.isHOD,
-          imageUrl: d.image_url || d.imageUrl || undefined,
+          email: d.email || undefined,
+          consultationHours: d.consultation_hours || d.consultationHours || undefined,
+          advisorLevel: d.advisor_level || d.advisorLevel || undefined,
+          isHOD: Boolean(d.is_hod || d.isHOD),
+          imageUrl: sanitizeSafeHttpUrl(d.image_url || d.imageUrl || undefined) || undefined,
         }));
         try {
           localStorage.setItem('asson_cached_staff', JSON.stringify({ timestamp: Date.now(), data: mapped }));
@@ -2446,14 +2697,15 @@ export async function createStaffMemberInDb(staff: Omit<StaffMember, 'id'>): Pro
 
   const newStaff: StaffMember = {
     ...staff,
+    imageUrl: sanitizeSafeHttpUrl(staff.imageUrl),
     id: `staff-${Date.now()}`
   };
 
   if (supabase) {
     try {
       const { data: authUser } = await supabase.auth.getUser();
-      if (!authUser?.user && sessionStorage.getItem('asson_admin_authenticated') !== 'true') {
-        return { success: false, error: 'Unauthorized: Admin privileges required.' };
+      if (!authUser?.user) {
+        return { success: false, error: 'Unauthorized: Verified Supabase session required.' };
       }
 
       const { data, error } = await supabase.from('staff_members').insert([{
@@ -2470,10 +2722,16 @@ export async function createStaffMemberInDb(staff: Omit<StaffMember, 'id'>): Pro
         image_url: newStaff.imageUrl || null
       }]).select().single();
 
-      if (!error && data) {
+      if (error) {
+        return { success: false, error: 'Database rejected staff creation. Confirm admin privileges.' };
+      }
+
+      if (data) {
         newStaff.id = data.id;
       }
-    } catch {}
+    } catch {
+      return { success: false, error: 'Database connection error creating staff member.' };
+    }
   }
 
   try {
@@ -2489,11 +2747,16 @@ export async function deleteStaffMemberInDb(id: string): Promise<{ success: bool
   if (supabase) {
     try {
       const { data: authUser } = await supabase.auth.getUser();
-      if (!authUser?.user && sessionStorage.getItem('asson_admin_authenticated') !== 'true') {
-        return { success: false, error: 'Unauthorized: Admin privileges required.' };
+      if (!authUser?.user) {
+        return { success: false, error: 'Unauthorized: Verified Supabase session required.' };
       }
-      await supabase.from('staff_members').delete().eq('id', id);
-    } catch {}
+      const { error } = await supabase.from('staff_members').delete().eq('id', id);
+      if (error) {
+        return { success: false, error: 'Database rejected staff deletion.' };
+      }
+    } catch {
+      return { success: false, error: 'Database connection error deleting staff member.' };
+    }
   }
 
   try {

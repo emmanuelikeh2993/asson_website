@@ -1,6 +1,17 @@
 import { AcademicResource } from '../types';
 import { formatFileSize } from './utils';
 import { incrementResourceDownloads } from './supabase';
+import { sanitizeSafeHttpUrl } from './validation';
+import { trackEvent } from './telemetry';
+
+export interface DownloadHistoryEntry {
+  id: string;
+  title: string;
+  courseCode: string;
+  downloadedAt: string;
+  fileSizeBytes: number;
+  type: AcademicResource['type'];
+}
 
 /**
  * Triggers zero-barrier file download for students without requiring any login or signup.
@@ -28,10 +39,18 @@ export function triggerResourceDownload(
     incrementResourceDownloads(resource.id).catch(() => {});
   }
 
+  // Track privacy-respecting download telemetry
+  trackEvent('resource_downloaded', {
+    courseCode: resource.courseCode,
+    level: resource.level,
+    type: resource.type,
+  });
+
   // Record to local browser download history for Student Dashboard Locker
   try {
-    const history = JSON.parse(localStorage.getItem('asson_downloads') || '[]');
-    const newEntry = {
+    const rawHistory = JSON.parse(localStorage.getItem('asson_downloads') || '[]');
+    const history: DownloadHistoryEntry[] = Array.isArray(rawHistory) ? rawHistory : [];
+    const newEntry: DownloadHistoryEntry = {
       id: resource.id,
       title: resource.title,
       courseCode: resource.courseCode,
@@ -39,9 +58,9 @@ export function triggerResourceDownload(
       fileSizeBytes: resource.fileSizeBytes,
       type: resource.type,
     };
-    const updated = [newEntry, ...history.filter((h: any) => h.id !== resource.id)].slice(0, 50);
+    const updated = [newEntry, ...history.filter((h) => h.id !== resource.id)].slice(0, 50);
     localStorage.setItem('asson_downloads', JSON.stringify(updated));
-  } catch (err) {
+  } catch {
     // ignore local storage errors
   }
 
@@ -49,13 +68,14 @@ export function triggerResourceDownload(
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cvhjohbknghlmspoaenr.supabase.co';
   let verifiedFileUrl: string | null = null;
 
-  // 1. External verified link (not a Supabase placeholder)
-  if (resource.downloadUrl && resource.downloadUrl !== '#' && !resource.downloadUrl.includes('cvhjohbknghlmspoaenr')) {
-    verifiedFileUrl = resource.downloadUrl;
+  // 1. External verified link (strict http/https only, not a Supabase placeholder)
+  const safeExternalUrl = sanitizeSafeHttpUrl(resource.downloadUrl);
+  if (safeExternalUrl && !safeExternalUrl.includes('cvhjohbknghlmspoaenr')) {
+    verifiedFileUrl = safeExternalUrl;
   }
   // 2. Real physical file in storage (uploaded papers or submissions)
   else if (resource.filePath && (resource.filePath.startsWith('submissions/') || resource.filePath.startsWith('papers/') || resource.filePath === 'test.pdf')) {
-    const sanitizedPath = resource.filePath.replace(/^resources\//, '');
+    const sanitizedPath = resource.filePath.replace(/^resources\//, '').replace(/[^a-zA-Z0-9._/-]/g, '');
     verifiedFileUrl = `${supabaseUrl}/storage/v1/object/public/resources/${sanitizedPath}`;
   }
 

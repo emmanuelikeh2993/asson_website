@@ -60,13 +60,14 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-text-main mb-1.5">
+            <label htmlFor="report-issue-type" className="block text-xs font-semibold text-text-main mb-1.5">
               Issue Category *
             </label>
             <select
+              id="report-issue-type"
               value={issueType}
               onChange={(e) => setIssueType(e.target.value)}
-              className="w-full rounded-lg border border-border-light bg-surface-card px-3 py-2 text-sm text-text-main focus:outline-none focus:border-brand-green focus:ring-1 focus:ring-brand-green"
+              className="w-full rounded-lg border border-border-light bg-surface-card px-3 py-2 text-base text-text-main focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
             >
               {issueOptions.map((opt) => (
                 <option key={opt} value={opt}>
@@ -77,15 +78,16 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-text-main mb-1.5">
+            <label htmlFor="report-issue-desc" className="block text-xs font-semibold text-text-main mb-1.5">
               Description (Optional)
             </label>
             <textarea
+              id="report-issue-desc"
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. Page 3 is missing question 4b..."
-              className="w-full rounded-lg border border-border-light bg-surface-card p-3 text-xs text-text-main placeholder:text-text-subtle focus:outline-none focus:border-brand-green focus:ring-1 focus:ring-brand-green resize-none"
+              className="w-full rounded-lg border border-border-light bg-surface-card p-3 text-base text-text-main placeholder:text-text-subtle focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green resize-none"
             />
           </div>
 

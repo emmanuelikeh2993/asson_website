@@ -4,9 +4,20 @@ import { Home, BookOpen, Calendar, Bell, SlidersHorizontal } from 'lucide-react'
 
 interface MobileNavProps {
   onOpenSubmit?: () => void;
-  onOpenSettings?: () => void;
   onOpenAuth?: () => void;
 }
+
+const MORE_SUBPATHS = new Set([
+  '/more',
+  '/settings',
+  '/cgpa-calculator',
+  '/help',
+  '/faqs',
+  '/enterprise',
+  '/terms',
+  '/privacy',
+  '/opportunities',
+]);
 
 export const MobileNav: React.FC<MobileNavProps> = () => {
   const location = useLocation();
@@ -28,12 +39,16 @@ export const MobileNav: React.FC<MobileNavProps> = () => {
         const Icon = tab.icon;
         const isActive =
           location.pathname === tab.path ||
-          (tab.path === '/more' && location.pathname === '/settings');
+          (tab.path === '/resources' &&
+            (location.pathname.startsWith('/resources') ||
+              location.pathname.startsWith('/past-questions'))) ||
+          (tab.path === '/more' && MORE_SUBPATHS.has(location.pathname));
 
         return (
           <Link
             key={tab.path}
             to={tab.path}
+            aria-current={isActive ? 'page' : undefined}
             onClick={() => {
               window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
             }}
@@ -54,7 +69,7 @@ export const MobileNav: React.FC<MobileNavProps> = () => {
               />
             </div>
             <span
-              className={`text-[10px] sm:text-[11px] mt-0.5 tracking-tight transition-colors ${
+              className={`text-xs mt-0.5 tracking-tight transition-colors ${
                 isActive
                   ? 'font-bold text-brand-green'
                   : 'font-medium text-text-muted group-hover:text-text-main'

@@ -244,11 +244,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <button
               type="button"
               onClick={handleBack}
-              className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              className="min-w-[44px] min-h-[44px] rounded-full bg-surface-bg text-text-muted hover:text-text-main flex items-center justify-center transition-colors cursor-pointer border border-border-light"
               aria-label="Back"
               title="Go back"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4" aria-hidden="true" />
             </button>
           ) : (
             <div />
@@ -257,10 +257,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center cursor-pointer ml-auto"
+            className="min-w-[44px] min-h-[44px] rounded-full text-text-muted hover:text-text-main hover:bg-surface-bg transition-colors flex items-center justify-center cursor-pointer ml-auto"
             aria-label="Close"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 
@@ -272,54 +272,58 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center justify-center gap-4 mb-2.5">
                 <img
-                  src="/logo/asson_logo.png"
+                  src="/logo/asson_logo.webp"
                   alt="ASSON Official Logo"
+                  width={44}
+                  height={44}
                   className="w-11 h-11 max-w-[44px] max-h-[44px] object-contain shrink-0"
                 />
                 <img
-                  src="/logo/ui_crest.jpg"
+                  src="/logo/ui_crest.webp"
                   alt="University of Ibadan Crest"
+                  width={40}
+                  height={40}
                   className="w-10 h-10 max-w-[40px] max-h-[40px] object-contain rounded-md shrink-0"
                 />
               </div>
 
-              <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
+              <h1 className="text-2xl font-extrabold text-text-main tracking-tight">
                 Study Locker
               </h1>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              <p className="text-xs sm:text-sm text-text-muted mt-1">
                 Your authenticated account on ASSON UI
               </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 flex items-center gap-3.5 shadow-2xs">
-              <div className="w-12 h-12 rounded-full bg-[#087A3E]/10 text-[#087A3E] flex items-center justify-center font-extrabold text-base border-2 border-[#087A3E]/30 shrink-0">
+            <div className="p-4 rounded-2xl bg-surface-bg border border-border-light flex items-center gap-3.5 shadow-2xs">
+              <div className="w-12 h-12 rounded-full bg-brand-light text-brand-green flex items-center justify-center font-extrabold text-base border-2 border-brand-green/30 shrink-0">
                 {profile.displayName ? profile.displayName.charAt(0).toUpperCase() : 'S'}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                  <h3 className="text-sm font-bold text-text-main truncate">
                     {profile.displayName}
                   </h3>
-                  <span className="w-2 h-2 rounded-full bg-[#087A3E] shrink-0" />
+                  <span className="w-2 h-2 rounded-full bg-brand-green shrink-0" aria-hidden="true" />
                 </div>
-                <p className="text-xs text-zinc-500 truncate">{profile.email}</p>
+                <p className="text-xs text-text-muted truncate">{profile.email}</p>
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300">
+                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-surface-card border border-border-light text-text-main">
                     {profile.level} Level
                   </span>
-                  <span className="text-[10px] text-zinc-400 truncate">
+                  <span className="text-xs text-text-subtle truncate">
                     {profile.department}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs space-y-1.5">
-              <div className="flex items-center gap-2 text-[#087A3E] font-bold">
-                <ShieldCheck className="w-4 h-4 text-[#087A3E]" />
+            <div className="p-3.5 rounded-2xl border border-border-light bg-surface-bg text-xs space-y-1.5">
+              <div className="flex items-center gap-2 text-brand-green font-bold">
+                <ShieldCheck className="w-4 h-4 text-brand-green" aria-hidden="true" />
                 <span>Cloud Study Locker Active</span>
               </div>
-              <p className="text-[11px] text-zinc-500 leading-relaxed">
+              <p className="text-xs text-text-muted leading-relaxed">
                 Your bookmarks, download history, and peer submissions sync automatically across your devices.
               </p>
             </div>
@@ -328,18 +332,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <a
                 href="/dashboard"
                 onClick={onClose}
-                className="flex-1 py-2.5 px-3 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 px-3 min-h-[44px] rounded-xl bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-1.5"
               >
                 <span>Open Dashboard</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
               </a>
 
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="py-2.5 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                className="py-2.5 px-4 min-h-[44px] rounded-xl border border-border-light hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 text-brand-red text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Sign Out</span>
               </button>
             </div>
@@ -348,111 +352,114 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div className="space-y-4">
             {/* Inline Alert / Notification Messages */}
             {errorMessage && (
-              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs text-red-600 dark:text-red-300 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs text-red-700 dark:text-red-300 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
                 <span className="leading-snug">{errorMessage}</span>
               </div>
             )}
 
             {successMessage && (
-              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-xs text-[#087A3E] dark:text-emerald-300 flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+              <div role="status" className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-xs text-brand-deep dark:text-emerald-300 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
                 <span className="leading-snug">{successMessage}</span>
               </div>
             )}
 
-            {/* ==================================================================== */}
-            {/* SCREEN 1: LOG IN (CLEAN, NO ROLES, NO GOOGLE, EXACT SIZING)          */}
-            {/* ==================================================================== */}
             {activeTab === 'signin' && (
               <div className="space-y-4">
-                {/* Official ASSON Logo + UI Crest Header */}
                 <div className="flex flex-col items-center text-center">
                   <div className="flex items-center justify-center gap-4 mb-2.5">
                     <img
-                      src="/logo/asson_logo.png"
+                      src="/logo/asson_logo.webp"
                       alt="ASSON Official Logo"
+                      width={44}
+                      height={44}
                       className="w-11 h-11 max-w-[44px] max-h-[44px] object-contain shrink-0"
                     />
                     <img
-                      src="/logo/ui_crest.jpg"
+                      src="/logo/ui_crest.webp"
                       alt="University of Ibadan Crest"
+                      width={40}
+                      height={40}
                       className="w-10 h-10 max-w-[40px] max-h-[40px] object-contain rounded-md shrink-0"
                     />
                   </div>
 
-                  <h1 className="text-2xl sm:text-[26px] font-extrabold text-zinc-900 dark:text-white tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight">
                     Log in
                   </h1>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  <p className="text-xs sm:text-sm text-text-muted mt-1">
                     Log in to access your student study portal
                   </p>
                 </div>
 
                 <form onSubmit={handleSignIn} className="space-y-3.5 pt-1">
-                  {/* Email / Username Input */}
                   <div>
-                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                    <label htmlFor="auth-login-email" className="text-xs font-semibold text-text-muted block mb-1.5">
                       Email / Username
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                        <Mail className="w-4 h-4" />
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-subtle">
+                        <Mail className="w-4 h-4" aria-hidden="true" />
                       </div>
                       <input
+                        id="auth-login-email"
                         type="email"
                         required
+                        autoComplete="email"
                         placeholder="yourname@student.ui.edu.ng"
                         value={loginEmail}
                         onChange={(e) => {
                           setLoginEmail(e.target.value);
                           setErrorMessage(null);
                         }}
-                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all"
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main placeholder:text-text-subtle text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green transition-all"
                       />
                     </div>
                   </div>
 
-                  {/* Password Input with Show/Hide */}
                   <div>
-                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                    <label htmlFor="auth-login-password" className="text-xs font-semibold text-text-muted block mb-1.5">
                       Password
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                        <Lock className="w-4 h-4" />
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-subtle">
+                        <Lock className="w-4 h-4" aria-hidden="true" />
                       </div>
                       <input
+                        id="auth-login-password"
                         type={showLoginPassword ? 'text' : 'password'}
                         required
+                        autoComplete="current-password"
                         placeholder="Enter your password"
                         value={loginPassword}
                         onChange={(e) => {
                           setLoginPassword(e.target.value);
                           setErrorMessage(null);
                         }}
-                        className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs font-mono focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all"
+                        className="w-full pl-10 pr-12 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main placeholder:text-text-subtle text-base font-mono focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green transition-all"
                       />
                       <button
                         type="button"
                         onClick={() => setShowLoginPassword(!showLoginPassword)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer"
+                        aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                        className="absolute inset-y-0 right-0 px-3 flex items-center text-text-subtle hover:text-text-main transition-colors cursor-pointer"
                         title={showLoginPassword ? 'Hide password' : 'Show password'}
                       >
-                        {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showLoginPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                       </button>
                     </div>
 
-                    {/* Remember me & Forgot Password Row */}
                     <div className="flex items-center justify-between text-xs mt-2">
-                      <label className="flex items-center gap-2 text-zinc-500 cursor-pointer select-none">
+                      <label htmlFor="auth-remember-me" className="flex items-center gap-2 text-text-muted cursor-pointer select-none min-h-[36px]">
                         <input
+                          id="auth-remember-me"
                           type="checkbox"
                           checked={rememberMe}
                           onChange={(e) => setRememberMe(e.target.checked)}
-                          className="w-3.5 h-3.5 rounded border-zinc-300 text-[#087A3E] focus:ring-[#087A3E] cursor-pointer accent-[#087A3E]"
+                          className="w-4 h-4 rounded border-border-light text-brand-green focus:ring-brand-green cursor-pointer accent-emerald-700"
                         />
-                        <span className="text-[11px]">Remember me</span>
+                        <span className="text-xs">Remember me</span>
                       </label>
 
                       <button
@@ -463,26 +470,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                           setSuccessMessage(null);
                           setResetEmail('');
                         }}
-                        className="text-[11px] text-zinc-500 hover:text-[#087A3E] transition-colors cursor-pointer"
+                        className="text-xs text-text-muted hover:text-brand-green transition-colors cursor-pointer min-h-[36px] px-1"
                       >
                         Forgot password?
                       </button>
                     </div>
                   </div>
 
-                  {/* Primary Action Button: ASSON Green with Arrow */}
+                  {/* Primary Action Button */}
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 mt-2"
+                    className="w-full py-3 px-4 min-h-[44px] rounded-xl bg-brand-green hover:bg-brand-deep text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 mt-2"
                   >
                     <span>{isLoading ? 'Verifying Credentials...' : 'Access Dashboard'}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
                   </button>
                 </form>
 
                 {/* Sign Up Link */}
-                <p className="text-center text-xs text-zinc-500 pt-2 border-t border-zinc-100 dark:border-zinc-800/80 mt-3">
+                <p className="text-center text-xs text-text-muted pt-2 border-t border-border-light mt-3">
                   Don't have an account?{' '}
                   <button
                     type="button"
@@ -491,7 +498,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       setErrorMessage(null);
                       setSuccessMessage(null);
                     }}
-                    className="font-bold text-[#087A3E] hover:underline cursor-pointer"
+                    className="font-bold text-brand-green hover:underline cursor-pointer"
                   >
                     Sign up here
                   </button>
@@ -507,21 +514,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="flex flex-col items-center text-center">
                   <div className="flex items-center justify-center gap-4 mb-2.5">
                     <img
-                      src="/logo/asson_logo.png"
+                      src="/logo/asson_logo.webp"
                       alt="ASSON Official Logo"
+                      width={44}
+                      height={44}
                       className="w-11 h-11 max-w-[44px] max-h-[44px] object-contain shrink-0"
                     />
                     <img
-                      src="/logo/ui_crest.jpg"
+                      src="/logo/ui_crest.webp"
                       alt="University of Ibadan Crest"
+                      width={40}
+                      height={40}
                       className="w-10 h-10 max-w-[40px] max-h-[40px] object-contain rounded-md shrink-0"
                     />
                   </div>
 
-                  <h1 className="text-2xl sm:text-[26px] font-extrabold text-zinc-900 dark:text-white tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight">
                     Welcome
                   </h1>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  <p className="text-xs sm:text-sm text-text-muted mt-1">
                     Create your student account to get started
                   </p>
                 </div>
@@ -529,30 +540,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <form onSubmit={handleSignUp} className="space-y-3 pt-1">
                   {/* Full Name */}
                   <div>
-                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1">
+                    <label htmlFor="auth-signup-name" className="text-xs font-semibold text-text-muted block mb-1">
                       Full Name
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                        <User className="w-4 h-4" />
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-subtle">
+                        <User className="w-4 h-4" aria-hidden="true" />
                       </div>
                       <input
+                        id="auth-signup-name"
                         type="text"
                         required
+                        autoComplete="name"
                         placeholder="e.g. Babatunde Ayomide"
                         value={signupName}
                         onChange={(e) => setSignupName(e.target.value)}
-                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all"
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main placeholder:text-text-subtle text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green transition-all"
                       />
                     </div>
                   </div>
 
                   {/* Academic Level */}
                   <div>
-                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1">
+                    <span className="text-xs font-semibold text-text-muted block mb-1">
                       Academic Level
-                    </label>
-                    <div className="grid grid-cols-5 gap-1.5">
+                    </span>
+                    <div className="grid grid-cols-5 gap-1.5" role="group" aria-label="Academic Level">
                       {(['100', '200', '300', '400', 'Postgraduate'] as const).map((lvl) => {
                         const isSelected = signupLevel === lvl;
                         const label = lvl === 'Postgraduate' ? 'PG' : `${lvl}L`;
@@ -561,10 +574,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                             key={lvl}
                             type="button"
                             onClick={() => setSignupLevel(lvl)}
-                            className={`py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                            className={`py-2 min-h-[40px] rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                               isSelected
-                                ? 'bg-[#087A3E] text-white shadow-2xs'
-                                : 'bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
+                                ? 'bg-brand-green text-white shadow-2xs'
+                                : 'bg-surface-bg border border-border-light text-text-muted hover:text-text-main'
                             }`}
                           >
                             {label}
@@ -576,20 +589,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
                   {/* Email */}
                   <div>
-                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1">
+                    <label htmlFor="auth-signup-email" className="text-xs font-semibold text-text-muted block mb-1">
                       Email Address
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                        <Mail className="w-4 h-4" />
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-subtle">
+                        <Mail className="w-4 h-4" aria-hidden="true" />
                       </div>
                       <input
+                        id="auth-signup-email"
                         type="email"
                         required
+                        autoComplete="email"
                         placeholder="yourname@student.ui.edu.ng"
                         value={signupEmail}
                         onChange={(e) => setSignupEmail(e.target.value)}
-                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all"
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main placeholder:text-text-subtle text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green transition-all"
                       />
                     </div>
                   </div>
@@ -597,55 +612,61 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   {/* Password & Confirm Password */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
-                      <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1">
+                      <label htmlFor="auth-signup-password" className="text-xs font-semibold text-text-muted block mb-1">
                         Password
                       </label>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
-                          <Lock className="w-3.5 h-3.5" />
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-subtle">
+                          <Lock className="w-3.5 h-3.5" aria-hidden="true" />
                         </div>
                         <input
+                          id="auth-signup-password"
                           type={showSignupPassword ? 'text' : 'password'}
                           required
+                          autoComplete="new-password"
                           minLength={6}
                           placeholder="Min 6 chars"
                           value={signupPassword}
                           onChange={(e) => setSignupPassword(e.target.value)}
-                          className="w-full pl-9 pr-8 py-2 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs font-mono focus:outline-none focus:border-[#087A3E]"
+                          className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main placeholder:text-text-subtle text-base font-mono focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
                         />
                         <button
                           type="button"
+                          aria-label={showSignupPassword ? 'Hide signup password' : 'Show signup password'}
                           onClick={() => setShowSignupPassword(!showSignupPassword)}
-                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-zinc-400 hover:text-zinc-600"
+                          className="absolute inset-y-0 right-0 px-2.5 flex items-center text-text-subtle hover:text-text-main cursor-pointer"
                         >
-                          {showSignupPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          {showSignupPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                         </button>
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1">
+                      <label htmlFor="auth-signup-confirm" className="text-xs font-semibold text-text-muted block mb-1">
                         Confirm Password
                       </label>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
-                          <Lock className="w-3.5 h-3.5" />
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-subtle">
+                          <Lock className="w-3.5 h-3.5" aria-hidden="true" />
                         </div>
                         <input
+                          id="auth-signup-confirm"
                           type={showSignupConfirmPassword ? 'text' : 'password'}
                           required
+                          autoComplete="new-password"
                           minLength={6}
                           placeholder="Re-type password"
                           value={signupConfirmPassword}
                           onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                          className="w-full pl-9 pr-8 py-2 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs font-mono focus:outline-none focus:border-[#087A3E]"
+                          className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main placeholder:text-text-subtle text-base font-mono focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
                         />
                         <button
                           type="button"
+                          aria-label={showSignupConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                           onClick={() => setShowSignupConfirmPassword(!showSignupConfirmPassword)}
-                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-zinc-400 hover:text-zinc-600"
+                          className="absolute inset-y-0 right-0 px-2.5 flex items-center text-text-subtle hover:text-text-main cursor-pointer"
                         >
-                          {showSignupConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          {showSignupConfirmPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                         </button>
                       </div>
                     </div>
@@ -655,13 +676,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 mt-3"
+                    className="w-full py-3 px-4 min-h-[44px] rounded-xl bg-brand-green hover:bg-brand-deep text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 mt-3"
                   >
                     <span>{isLoading ? 'Creating Account...' : 'Create Account'}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
                   </button>
 
-                  <p className="text-center text-xs text-zinc-500 pt-2 border-t border-zinc-100 dark:border-zinc-800/80 mt-3">
+                  <p className="text-center text-xs text-text-muted pt-2 border-t border-border-light mt-3">
                     Already have an account?{' '}
                     <button
                       type="button"
@@ -670,7 +691,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         setErrorMessage(null);
                         setSuccessMessage(null);
                       }}
-                      className="font-bold text-[#087A3E] hover:underline cursor-pointer"
+                      className="font-bold text-brand-green hover:underline cursor-pointer"
                     >
                       Log in here
                     </button>
@@ -687,33 +708,37 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="flex flex-col items-center text-center">
                   <div className="flex items-center justify-center gap-4 mb-2.5">
                     <img
-                      src="/logo/asson_logo.png"
+                      src="/logo/asson_logo.webp"
                       alt="ASSON Official Logo"
+                      width={44}
+                      height={44}
                       className="w-11 h-11 max-w-[44px] max-h-[44px] object-contain shrink-0"
                     />
                     <img
-                      src="/logo/ui_crest.jpg"
+                      src="/logo/ui_crest.webp"
                       alt="University of Ibadan Crest"
+                      width={40}
+                      height={40}
                       className="w-10 h-10 max-w-[40px] max-h-[40px] object-contain rounded-md shrink-0"
                     />
                   </div>
 
-                  <h1 className="text-2xl sm:text-[26px] font-extrabold text-zinc-900 dark:text-white tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight">
                     Reset password
                   </h1>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  <p className="text-xs sm:text-sm text-text-muted mt-1">
                     Enter your email to receive recovery instructions
                   </p>
                 </div>
 
                 {emailSent ? (
                   <div className="text-center space-y-3 pt-2">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-[#087A3E] flex items-center justify-center mx-auto border border-emerald-200/80 dark:border-emerald-800/80 shadow-2xs">
-                      <CheckCircle2 className="w-6 h-6" />
+                    <div className="w-12 h-12 rounded-2xl bg-brand-light text-brand-green flex items-center justify-center mx-auto border border-brand-green/20 shadow-2xs">
+                      <CheckCircle2 className="w-6 h-6" aria-hidden="true" />
                     </div>
-                    <p className="text-xs text-zinc-500 max-w-xs mx-auto leading-relaxed">
+                    <p className="text-xs sm:text-sm text-text-muted max-w-xs mx-auto leading-relaxed">
                       We've sent a recovery link to{' '}
-                      <span className="font-bold text-zinc-900 dark:text-white">{resetEmail}</span>.
+                      <span className="font-bold text-text-main">{resetEmail}</span>.
                     </p>
 
                     <div className="pt-2 space-y-2">
@@ -723,7 +748,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                           setActiveTab('signin');
                           setEmailSent(false);
                         }}
-                        className="w-full py-2.5 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs transition-colors cursor-pointer"
+                        className="w-full py-2.5 px-4 min-h-[44px] rounded-xl bg-brand-green hover:bg-brand-deep text-white font-bold text-xs transition-colors cursor-pointer"
                       >
                         Back to Log In
                       </button>
@@ -731,7 +756,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setActiveTab('otp')}
-                        className="text-xs font-semibold text-zinc-500 hover:text-[#087A3E] underline cursor-pointer block mx-auto pt-1"
+                        className="text-xs font-semibold text-text-muted hover:text-brand-green underline cursor-pointer block mx-auto pt-1 min-h-[36px]"
                       >
                         Have a 6-digit recovery code? Enter code
                       </button>
@@ -740,20 +765,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 ) : (
                   <form onSubmit={handleSendRecoveryCode} className="space-y-3.5 pt-1">
                     <div>
-                      <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                      <label htmlFor="auth-reset-email" className="text-xs font-semibold text-text-muted block mb-1.5">
                         Registered Student Email
                       </label>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Mail className="w-4 h-4" />
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-subtle">
+                          <Mail className="w-4 h-4" aria-hidden="true" />
                         </div>
                         <input
+                          id="auth-reset-email"
                           type="email"
                           required
+                          autoComplete="email"
                           placeholder="yourname@student.ui.edu.ng"
                           value={resetEmail}
                           onChange={(e) => setResetEmail(e.target.value)}
-                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all"
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main placeholder:text-text-subtle text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green transition-all"
                         />
                       </div>
                     </div>
@@ -761,13 +788,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full py-3 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 mt-2"
+                      className="w-full py-3 px-4 min-h-[44px] rounded-xl bg-brand-green hover:bg-brand-deep text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 mt-2"
                     >
                       <span>{isLoading ? 'Sending instructions...' : 'Send Recovery Link'}</span>
-                      <ArrowRight className="w-4 h-4" />
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
                     </button>
 
-                    <p className="text-center text-xs text-zinc-500 pt-1">
+                    <p className="text-center text-xs text-text-muted pt-1">
                       Remember your password?{' '}
                       <button
                         type="button"
@@ -776,7 +803,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                           setErrorMessage(null);
                           setSuccessMessage(null);
                         }}
-                        className="font-bold text-[#087A3E] hover:underline cursor-pointer"
+                        className="font-bold text-brand-green hover:underline cursor-pointer"
                       >
                         Log in here
                       </button>
@@ -794,93 +821,105 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="flex flex-col items-center text-center">
                   <div className="flex items-center justify-center gap-4 mb-2.5">
                     <img
-                      src="/logo/asson_logo.png"
+                      src="/logo/asson_logo.webp"
                       alt="ASSON Official Logo"
+                      width={44}
+                      height={44}
                       className="w-11 h-11 max-w-[44px] max-h-[44px] object-contain shrink-0"
                     />
                     <img
-                      src="/logo/ui_crest.jpg"
+                      src="/logo/ui_crest.webp"
                       alt="University of Ibadan Crest"
+                      width={40}
+                      height={40}
                       className="w-10 h-10 max-w-[40px] max-h-[40px] object-contain rounded-md shrink-0"
                     />
                   </div>
 
-                  <h1 className="text-2xl sm:text-[26px] font-extrabold text-zinc-900 dark:text-white tracking-tight">
-                    Verify & Reset
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight">
+                    Verify &amp; Reset
                   </h1>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                    Enter the 6-digit code sent to <strong className="text-zinc-900 dark:text-white">{resetEmail}</strong>
+                  <p className="text-xs sm:text-sm text-text-muted mt-1">
+                    Enter the 6-digit code sent to <strong className="text-text-main">{resetEmail}</strong>
                   </p>
                 </div>
 
                 <form onSubmit={handleVerifyOtpAndReset} className="space-y-3 pt-1">
                   <div>
-                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1">
+                    <label htmlFor="auth-otp-code" className="text-xs font-semibold text-text-muted block mb-1">
                       6-Digit Code
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                        <KeyRound className="w-4 h-4 text-[#087A3E]" />
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-subtle">
+                        <KeyRound className="w-4 h-4 text-brand-green" aria-hidden="true" />
                       </div>
                       <input
+                        id="auth-otp-code"
                         type="text"
                         inputMode="numeric"
+                        autoComplete="one-time-code"
                         pattern="[0-9]*"
                         maxLength={6}
                         required
                         placeholder="123456"
                         value={otpCode}
                         onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-sm font-mono tracking-widest font-bold text-center focus:outline-none focus:border-[#087A3E]"
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main placeholder:text-text-subtle text-base font-mono tracking-widest font-bold text-center focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
-                      <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1">
+                      <label htmlFor="auth-new-password" className="text-xs font-semibold text-text-muted block mb-1">
                         New Password
                       </label>
                       <div className="relative">
                         <input
+                          id="auth-new-password"
                           type={showNewPassword ? 'text' : 'password'}
                           required
+                          autoComplete="new-password"
                           minLength={6}
                           placeholder="Min 6 chars"
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-xs font-mono focus:outline-none focus:border-[#087A3E]"
+                          className="w-full pl-3 pr-10 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main text-base font-mono focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
                         />
                         <button
                           type="button"
+                          aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
                           onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-zinc-400 hover:text-zinc-600"
+                          className="absolute inset-y-0 right-0 px-2.5 flex items-center text-text-subtle hover:text-text-main cursor-pointer"
                         >
-                          {showNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          {showNewPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                         </button>
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1">
+                      <label htmlFor="auth-confirm-new-password" className="text-xs font-semibold text-text-muted block mb-1">
                         Confirm Password
                       </label>
                       <div className="relative">
                         <input
+                          id="auth-confirm-new-password"
                           type={showConfirmNewPassword ? 'text' : 'password'}
                           required
+                          autoComplete="new-password"
                           minLength={6}
                           placeholder="Re-type password"
                           value={confirmNewPassword}
                           onChange={(e) => setConfirmNewPassword(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-xs font-mono focus:outline-none focus:border-[#087A3E]"
+                          className="w-full pl-3 pr-10 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main text-base font-mono focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
                         />
                         <button
                           type="button"
+                          aria-label={showConfirmNewPassword ? 'Hide confirm new password' : 'Show confirm new password'}
                           onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
-                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-zinc-400 hover:text-zinc-600"
+                          className="absolute inset-y-0 right-0 px-2.5 flex items-center text-text-subtle hover:text-text-main cursor-pointer"
                         >
-                          {showConfirmNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          {showConfirmNewPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                         </button>
                       </div>
                     </div>
@@ -889,10 +928,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 mt-3"
+                    className="w-full py-3 px-4 min-h-[44px] rounded-xl bg-brand-green hover:bg-brand-deep text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50 mt-3"
                   >
                     <span>{isLoading ? 'Updating...' : 'Update Password'}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
                   </button>
 
                   <div className="flex items-center justify-between text-xs pt-1.5">
@@ -900,9 +939,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       type="button"
                       onClick={handleSendRecoveryCode}
                       disabled={isLoading}
-                      className="text-zinc-500 hover:text-[#087A3E] font-medium flex items-center gap-1 cursor-pointer"
+                      className="text-text-muted hover:text-brand-green font-medium flex items-center gap-1 cursor-pointer min-h-[36px]"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" />
+                      <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
                       <span>Resend code</span>
                     </button>
 
@@ -913,7 +952,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         setErrorMessage(null);
                         setSuccessMessage(null);
                       }}
-                      className="font-bold text-[#087A3E] hover:underline cursor-pointer"
+                      className="font-bold text-brand-green hover:underline cursor-pointer min-h-[36px]"
                     >
                       Back to Log In
                     </button>

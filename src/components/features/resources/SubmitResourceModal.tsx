@@ -20,7 +20,8 @@ import {
   Search,
   Check,
   FileCheck2,
-  FolderOpen
+  FolderOpen,
+  type LucideIcon
 } from 'lucide-react';
 import { formatFileSize, cn } from '../../../lib/utils';
 import { Link } from 'react-router-dom';
@@ -82,7 +83,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
   }, [courseCode]);
 
   // Material types with icons and descriptions
-  const materialTypeOptions: { type: ResourceType; label: string; desc: string; icon: any }[] = [
+  const materialTypeOptions: { type: ResourceType; label: string; desc: string; icon: LucideIcon }[] = [
     {
       type: 'Past Question',
       label: 'Past Question',
@@ -122,7 +123,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
     }
   };
 
-  const validateAndSetFile = (selectedFile: File) => {
+  const validateAndSetFile = async (selectedFile: File) => {
     setError(null);
     const maxBytes = 15 * 1024 * 1024; // 15MB limit
     if (selectedFile.size > maxBytes) {
@@ -135,11 +136,36 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
       'application/msword'
     ];
     const hasValidExtension = Boolean(selectedFile.name.match(/\.(pdf|docx)$/i));
-    const hasValidMime = validTypes.includes(selectedFile.type) || (selectedFile.type === '' && hasValidExtension);
+    const hasValidMime = validTypes.includes(selectedFile.type);
     if (!hasValidExtension || !hasValidMime) {
-      setError('Invalid format. Per ASSON security guidelines, only verified PDF and DOCX files are permitted. Archives (.zip) are strictly prohibited.');
+      setError('Invalid format. Per ASSON security guidelines, only verified PDF and DOCX files are permitted.');
       return;
     }
+
+    // Verify file magic bytes (%PDF- for PDF, PK\x03\x04 ZIP header for DOCX)
+    try {
+      const headerBuf = new Uint8Array(await selectedFile.slice(0, 5).arrayBuffer());
+      const isPdf = selectedFile.name.toLowerCase().endsWith('.pdf');
+      const matchesPdf =
+        headerBuf[0] === 0x25 &&
+        headerBuf[1] === 0x50 &&
+        headerBuf[2] === 0x44 &&
+        headerBuf[3] === 0x46 &&
+        headerBuf[4] === 0x2d;
+      const matchesZipDocx =
+        headerBuf[0] === 0x50 &&
+        headerBuf[1] === 0x4b &&
+        headerBuf[2] === 0x03 &&
+        headerBuf[3] === 0x04;
+      if ((isPdf && !matchesPdf) || (!isPdf && !matchesZipDocx)) {
+        setError('Invalid file signature: file contents do not match a valid PDF or DOCX document.');
+        return;
+      }
+    } catch {
+      setError('Could not inspect selected file header.');
+      return;
+    }
+
     setFile(selectedFile);
     if (!title || title.trim() === `${courseCode} Academic Material`) {
       const cleanName = selectedFile.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
@@ -199,9 +225,10 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
       setIsUploading(false);
       setSubmittedReceipt(res.referenceCode || res.submissionId);
       onSuccess(title);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsUploading(false);
-      setError(err?.message || 'Upload failed. Please check your connection and try again.');
+      const msg = err instanceof Error ? err.message : undefined;
+      setError(msg || 'Upload failed. Please check your connection and try again.');
     }
   };
 
@@ -405,22 +432,23 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
           {currentStep === 1 && (
             <div className="space-y-5 animate-in fade-in duration-150">
               <div>
-                <label className="text-xs font-bold text-text-main block mb-1">
+                <label htmlFor="submit-course-search" className="text-xs font-bold text-text-main block mb-1">
                   Step 1: Select Academic Course <span className="text-brand-red">*</span>
                 </label>
-                <p className="text-[11px] text-text-muted mb-3">
+                <p className="text-xs text-text-muted mb-3">
                   Select the University of Ibadan course code for this academic document.
                 </p>
 
                 {/* Course Search & Filter */}
                 <div className="relative mb-3">
-                  <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-3" />
+                  <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-3" aria-hidden="true" />
                   <input
+                    id="submit-course-search"
                     type="text"
                     placeholder="Search by course code or title (e.g. STA 211, MAT 121)..."
                     value={courseSearch}
                     onChange={(e) => setCourseSearch(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-xs focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/20"
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/25"
                   />
                 </div>
 
@@ -431,10 +459,10 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                       key={lvl}
                       type="button"
                       onClick={() => setSelectedLevelFilter(lvl)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all shrink-0 cursor-pointer ${
+                      className={`px-3 py-1.5 min-h-[38px] rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
                         selectedLevelFilter === lvl
                           ? 'bg-brand-green text-white shadow-2xs'
-                          : 'bg-neutral-100 text-text-muted hover:bg-neutral-200'
+                          : 'bg-surface-bg border border-border-light text-text-muted hover:text-text-main'
                       }`}
                     >
                       {lvl === 'All' ? 'All' : lvl === 'Postgraduate' ? 'PG' : `${lvl}L`}
@@ -444,7 +472,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
 
                 {/* Suggestions / Quick Tap Chips */}
                 <div className="mb-4">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-text-subtle block mb-1.5">
+                  <span className="text-xs uppercase font-bold tracking-wider text-text-subtle block mb-1.5">
                     Popular Suggestions:
                   </span>
                   <div className="flex items-center flex-wrap gap-1.5">
@@ -458,10 +486,10 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                             setCourseCode(code);
                             setError(null);
                           }}
-                          className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                          className={`px-3 py-1.5 min-h-[38px] rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-emerald-600 text-white shadow-xs scale-105'
-                              : 'bg-surface-bg hover:bg-neutral-100 text-text-main border border-border-light'
+                              ? 'bg-brand-green text-white shadow-xs'
+                              : 'bg-surface-bg hover:bg-surface-card text-text-main border border-border-light'
                           }`}
                         >
                           {code}
@@ -473,16 +501,17 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
 
                 {/* Course Dropdown Selector */}
                 <div>
-                  <label className="text-[11px] font-bold text-text-subtle block mb-1">
+                  <label htmlFor="submit-course-select" className="text-xs font-bold text-text-subtle block mb-1">
                     Select from Course Catalog ({filteredCourses.length} available):
                   </label>
                   <select
+                    id="submit-course-select"
                     value={courseCode}
                     onChange={(e) => {
                       setCourseCode(e.target.value);
                       setError(null);
                     }}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-xs font-semibold focus:outline-none focus:border-brand-green"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base font-semibold focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/25"
                   >
                     {filteredCourses.map((c) => (
                       <option key={c.code} value={c.code}>
@@ -542,15 +571,17 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                     const isSelected = resourceType === opt.type;
                     const Icon = opt.icon;
                     return (
-                      <div
+                      <button
                         key={opt.type}
+                        type="button"
+                        aria-pressed={isSelected}
                         onClick={() => {
                           setResourceType(opt.type);
                           setTitle(`${courseCode} ${opt.type} (${session})`);
                         }}
-                        className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 text-left ${
+                        className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 text-left w-full ${
                           isSelected
-                            ? 'border-brand-green bg-emerald-50/80 shadow-xs ring-2 ring-brand-green/20'
+                            ? 'border-brand-green bg-brand-light shadow-xs ring-2 ring-brand-green/20'
                             : 'border-border-light bg-surface-card hover:border-border-hover'
                         }`}
                       >
@@ -558,10 +589,10 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                           className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                             isSelected
                               ? 'bg-brand-green text-white'
-                              : 'bg-neutral-100 text-neutral-500'
+                              : 'bg-surface-bg text-text-muted'
                           }`}
                         >
-                          <Icon className="w-4 h-4" />
+                          <Icon className="w-4 h-4" aria-hidden="true" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
@@ -572,17 +603,17 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                               className={`w-4 h-4 rounded-full border flex items-center justify-center ${
                                 isSelected
                                   ? 'border-brand-green bg-brand-green text-white'
-                                  : 'border-neutral-300 bg-white'
+                                  : 'border-border-hover bg-surface-card'
                               }`}
                             >
-                              {isSelected && <Check className="w-2.5 h-2.5" />}
+                              {isSelected && <Check className="w-2.5 h-2.5" aria-hidden="true" />}
                             </div>
                           </div>
-                          <p className="text-[10px] text-text-muted mt-0.5 line-clamp-2">
+                          <p className="text-xs text-text-muted mt-0.5 line-clamp-2">
                             {opt.desc}
                           </p>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -603,10 +634,10 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                             setSession(sess);
                             setTitle(`${courseCode} ${resourceType} (${sess})`);
                           }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          className={`px-3 py-1.5 min-h-[38px] rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                             isSelected
                               ? 'bg-brand-deep text-white shadow-2xs font-bold'
-                              : 'bg-surface-bg hover:bg-neutral-100 text-text-main border border-border-light'
+                              : 'bg-surface-bg hover:bg-surface-card text-text-main border border-border-light'
                           }`}
                         >
                           {sess}
@@ -618,17 +649,18 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
 
                 {/* Document Title Input */}
                 <div>
-                  <label className="text-xs font-bold text-text-main block mb-1">
+                  <label htmlFor="submit-document-title" className="text-xs font-bold text-text-main block mb-1">
                     Document Title
                   </label>
                   <input
+                    id="submit-document-title"
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g. STA 211 Past Examination Paper (2023/2024)"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-xs focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/20"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/25"
                   />
-                  <p className="text-[10px] text-text-subtle mt-1">
+                  <p className="text-xs text-text-subtle mt-1">
                     Auto-generated from your selection; customize if you wish.
                   </p>
                 </div>
@@ -735,7 +767,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                         </label>
                         <span className="text-xs text-text-muted"> or drag and drop</span>
                       </div>
-                      <p className="text-[10px] text-text-subtle">
+                      <p className="text-xs text-text-subtle">
                         PDF or Word (.docx) documents up to 15MB. Archives (.zip) are strictly prohibited.
                       </p>
                     </div>
@@ -745,17 +777,18 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
 
               {/* Peer Contributor Field (Zero Personal Data / No Matriculation Required) */}
               <div className="pt-1">
-                <label className="text-xs font-bold text-text-main block mb-1">
+                <label htmlFor="submit-contributor-name" className="text-xs font-bold text-text-main block mb-1">
                   Contributor Name or Course Rep Alias (Optional Credit)
                 </label>
                 <input
+                  id="submit-contributor-name"
                   type="text"
                   placeholder="e.g. Tunde Balogun or 200L Course Rep (or leave blank for Anonymous)"
                   value={contributorName}
                   onChange={(e) => setContributorName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-xs focus:outline-none focus:border-brand-green"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/25"
                 />
-                <p className="text-[10px] text-text-subtle mt-1">
+                <p className="text-xs text-text-subtle mt-1">
                   Per NDPA and ASSON privacy standards, matriculation numbers are never collected.
                 </p>
               </div>

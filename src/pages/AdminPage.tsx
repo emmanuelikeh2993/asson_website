@@ -40,14 +40,15 @@ import {
   fetchAuthorizedExecutives,
   addAuthorizedExecutive,
   revokeAuthorizedExecutive,
-  checkExecutivePasskeyConfigured,
-  updateExecutivePasskey,
+  getSubmissionPreviewUrl,
+  studentUpdatePasswordOnly,
   sendAdminLoginOtp,
   verifyAdminLoginOtp,
   MASTER_ADMIN_EMAILS,
   isSupabaseConfigured,
   supabase 
 } from '../lib/supabase';
+import { sanitizeSafeHttpUrl } from '../lib/validation';
 import { 
   AuditLog, 
   StudentSubmission, 
@@ -67,6 +68,7 @@ import {
 } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
 import { AnalyticsChart } from '../components/features/admin/AnalyticsChart';
 import { CourseDemandLeaderboard } from '../components/features/admin/CourseDemandLeaderboard';
 import { useToast } from '../components/ui/Toast';
@@ -244,9 +246,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
 
   // Committee Delegation State
   const [authorizedExecs, setAuthorizedExecs] = useState<AuthorizedExecutive[]>([]);
-  const [isPasskeyConfigured, setIsPasskeyConfigured] = useState<boolean>(false);
   const [isPasskeyEditing, setIsPasskeyEditing] = useState(false);
-  const [currentPasskeyVal, setCurrentPasskeyVal] = useState('');
   const [newPasskeyVal, setNewPasskeyVal] = useState('');
   const [isSavingPasskey, setIsSavingPasskey] = useState(false);
 
@@ -343,7 +343,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     fetchElectedExecutives().then((data) => setExecutives(data.length > 0 ? data : MOCK_EXECUTIVES));
     fetchStaffMembers().then((data) => setStaff(data));
     fetchAuthorizedExecutives().then((data) => setAuthorizedExecs(data));
-    checkExecutivePasskeyConfigured().then((configured) => setIsPasskeyConfigured(configured));
   }, [isAuthenticated]);
 
   const handleAddExecutive = async (e: React.FormEvent) => {
@@ -364,7 +363,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
       setAuthorizedExecs(prev => [res.data!, ...prev.filter(x => x.email.toLowerCase() !== newExecEmail.toLowerCase())]);
       setNewExecEmail('');
       setNewExecName('');
-      toast.success('Executive Authorized!', `${res.data.name} (${newExecEmail}) can now log in using the shared committee passkey.`);
+      toast.success('Executive Authorized!', `${res.data.name} (${newExecEmail}) can now sign in at /executive using a 6-Digit Email Code.`);
     } else {
       toast.error('Failed to authorize', res.error || 'Check details and try again.');
     }
@@ -384,20 +383,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
 
   const handleSavePasskey = async () => {
     if (newPasskeyVal.trim().length < 8) {
-      toast.error('Passkey too short', 'Passkey must be at least 8 characters.');
+      toast.error('Password too short', 'Personal executive password must be at least 8 characters.');
       return;
     }
     setIsSavingPasskey(true);
-    const res = await updateExecutivePasskey(newPasskeyVal, currentPasskeyVal || undefined);
+    const res = await studentUpdatePasswordOnly(newPasskeyVal.trim());
     setIsSavingPasskey(false);
     if (res.success) {
-      setIsPasskeyConfigured(true);
       setIsPasskeyEditing(false);
-      setCurrentPasskeyVal('');
       setNewPasskeyVal('');
-      toast.success('Passkey Encrypted & Saved', 'New committee passkey hash stored safely in Supabase. Share it privately with authorized members.');
+      toast.success('Personal Password Saved', 'You can now sign in with this personal password or via 6-Digit Email OTP.');
     } else {
-      toast.error('Could Not Update Passkey', res.error || 'Verify your Master Admin session and try again.');
+      toast.error('Could Not Update Password', res.error || 'Verify your active authenticated session and try again.');
     }
   };
 
@@ -453,7 +450,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
     setIsSendingOtp(false);
     if (res.success) {
       setOtpSent(true);
-      toast.success('Verification Code Sent', `Check ${email.trim()} for your 6-digit login code.`);
+      toast.success('Verification Code Requested', res.message || `Check ${email.trim()} for your 6-digit login code.`);
     } else {
       setAuthError(res.error || 'Could not send login code.');
     }
@@ -825,44 +822,47 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
 
   if (isVerifyingSession) {
     return (
-      <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 bg-[#F8FAFC] dark:bg-[#0A0D10]">
+      <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 bg-surface-bg">
         <div className="text-center space-y-3">
-          <div className="w-8 h-8 rounded-full border-2 border-[#087A3E] border-t-transparent animate-spin mx-auto" />
-          <p className="text-xs font-semibold text-zinc-500">Verifying executive session...</p>
+          <div className="w-8 h-8 rounded-full border-2 border-brand-green border-t-transparent animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-text-muted">Verifying executive session...</p>
         </div>
       </div>
     );
   }
 
   // ====================================================================
-  // SCREEN 1: ADMIN SIGN-IN (OFFICIAL ASSON LOGO + CLEAN WHITE BACKGROUND)
-  // Per User Directive: Pure White Canvas, Official ASSON Logo & UI Crest
+  // SCREEN 1: ADMIN SIGN-IN
   // ====================================================================
   if (!isAuthenticated) {
     return (
-      <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 relative bg-[#F8FAFC] dark:bg-[#0A0D10]">
-        {/* Centered Minimalist White Card */}
-        <div className="w-full max-w-[420px] rounded-3xl bg-white dark:bg-[#13171D] border border-zinc-200/90 dark:border-zinc-800 shadow-xl p-7 sm:p-9 space-y-6">
+      <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 relative bg-surface-bg">
+        {/* Centered Minimalist Card */}
+        <div className="w-full max-w-md rounded-3xl bg-surface-card border border-border-light shadow-xl p-7 sm:p-9 space-y-6">
           {/* Official ASSON Logo paired with University of Ibadan Crest */}
           <div className="flex flex-col items-center text-center">
             <div className="flex items-center justify-center gap-3 mb-3">
               <img
-                src="/logo/asson_logo.png"
+                src="/logo/asson_logo.webp"
                 alt="ASSON Official Logo"
+                width={56}
+                height={56}
                 className="w-14 h-14 object-contain"
               />
-              <div className="h-8 w-px bg-zinc-200 dark:bg-zinc-700" />
+              <div className="h-8 w-px bg-border-light" aria-hidden="true" />
               <img
-                src="/logo/ui_crest.jpg"
+                src="/logo/ui_crest.webp"
                 alt="University of Ibadan Crest"
+                width={44}
+                height={44}
                 className="w-11 h-11 object-contain rounded-lg"
               />
             </div>
 
-            <h1 className="text-2xl sm:text-[26px] font-extrabold text-zinc-900 dark:text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight">
               Welcome back
             </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            <p className="text-xs sm:text-sm text-text-muted mt-1">
               Log in to access ASSON Executive Portal
             </p>
           </div>
@@ -871,96 +871,102 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
             <form onSubmit={handleLogin} className="space-y-4">
               {/* Role Dropdown */}
               <div>
-                <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                <label htmlFor="exec-role" className="text-xs font-semibold text-text-muted block mb-1.5">
                   Role
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                    <User className="w-4 h-4" />
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-subtle">
+                    <User className="w-4 h-4" aria-hidden="true" />
                   </div>
                   <select
+                    id="exec-role"
                     value={selectedRole}
-                    onChange={(e) => setSelectedRole(e.target.value as any)}
-                    className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white text-xs font-medium focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all appearance-none cursor-pointer"
+                    onChange={(e) => setSelectedRole(e.target.value as 'admin' | 'editor' | 'director')}
+                    className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main text-base font-medium focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green transition-all appearance-none cursor-pointer"
                   >
                     <option value="admin">Executive Administrator</option>
                     <option value="editor">Academic Editorial Lead</option>
                     <option value="director">Department Exco Director</option>
                   </select>
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-zinc-400">
-                    <ChevronDown className="w-4 h-4" />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-text-subtle">
+                    <ChevronDown className="w-4 h-4" aria-hidden="true" />
                   </div>
                 </div>
               </div>
 
               {/* Email / Username Input */}
               <div>
-                <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                <label htmlFor="exec-email" className="text-xs font-semibold text-text-muted block mb-1.5">
                   Authorized Executive Email
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                    <Mail className="w-4 h-4" />
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-subtle">
+                    <Mail className="w-4 h-4" aria-hidden="true" />
                   </div>
                   <input
+                    id="exec-email"
                     type="email"
                     required
+                    autoComplete="email"
                     placeholder="e.g. ikehemmanuel70@gmail.com"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
                       setAuthError(null);
                     }}
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all"
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main placeholder:text-text-subtle text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green transition-all"
                   />
                 </div>
               </div>
 
               {/* Password / Passkey Input with Show/Hide */}
               <div>
-                <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
-                  Committee Passkey / Password
+                <label htmlFor="exec-password" className="text-xs font-semibold text-text-muted block mb-1.5">
+                  Personal Executive Password
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                    <Lock className="w-4 h-4" />
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-subtle">
+                    <Lock className="w-4 h-4" aria-hidden="true" />
                   </div>
                   <input
+                    id="exec-password"
                     type={showPassword ? 'text' : 'password'}
                     required
-                    placeholder="Enter executive passkey or password"
+                    autoComplete="current-password"
+                    placeholder="Enter your personal executive password"
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
                       setAuthError(null);
                     }}
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs font-mono focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all"
+                    className="w-full pl-10 pr-12 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main placeholder:text-text-subtle text-base font-mono focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer"
+                    aria-label={showPassword ? 'Hide executive password' : 'Show executive password'}
+                    className="absolute inset-y-0 right-0 px-3 min-w-[44px] flex items-center justify-center text-text-subtle hover:text-text-main transition-colors cursor-pointer"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                   </button>
                 </div>
 
                 {/* Switch to 6-Digit Email OTP */}
-                <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
                   <button
                     type="button"
                     onClick={() => {
                       setOtpMode(true);
                       setAuthError(null);
                     }}
-                    className="text-[11px] font-semibold text-[#087A3E] hover:underline transition-colors cursor-pointer"
+                    className="min-h-[44px] sm:min-h-[36px] inline-flex items-center text-xs font-semibold text-brand-green hover:underline transition-colors cursor-pointer"
                   >
                     Sign in with 6-Digit Email Code instead
                   </button>
                   <button
                     type="button"
                     onClick={() => toast.info('Passkey Recovery', 'Master Admins can sign in via 6-Digit Email Code to reset the committee passkey.')}
-                    className="text-[11px] text-zinc-500 hover:text-[#087A3E] transition-colors cursor-pointer"
+                    className="min-h-[44px] sm:min-h-[36px] inline-flex items-center text-xs text-text-muted hover:text-brand-green transition-colors cursor-pointer"
                   >
                     Forgot passkey?
                   </button>
@@ -969,42 +975,44 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
 
               {/* Error Message */}
               {authError && (
-                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
                   <span className="leading-snug">{authError}</span>
                 </div>
               )}
 
-              {/* Primary Action Button: ASSON Green with Arrow */}
+              {/* Primary Action Button */}
               <button
                 type="submit"
                 disabled={isLoggingIn}
-                className="w-full py-3 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50"
+                className="w-full py-3 px-4 min-h-[44px] rounded-xl bg-brand-green hover:bg-brand-deep text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer disabled:opacity-50"
               >
                 <span>{isLoggingIn ? 'Verifying Credentials...' : 'Access Dashboard'}</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </button>
             </form>
           ) : (
             <form onSubmit={handleVerifyOtp} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                <label htmlFor="exec-otp-email" className="text-xs font-semibold text-text-muted block mb-1.5">
                   Authorized Executive Email
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                    <Mail className="w-4 h-4" />
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-subtle">
+                    <Mail className="w-4 h-4" aria-hidden="true" />
                   </div>
                   <input
+                    id="exec-otp-email"
                     type="email"
                     required
+                    autoComplete="email"
                     placeholder="e.g. ikehemmanuel70@gmail.com"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
                       setAuthError(null);
                     }}
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-xs focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E] transition-all"
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main placeholder:text-text-subtle text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green transition-all"
                   />
                 </div>
               </div>
@@ -1014,20 +1022,22 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   type="button"
                   disabled={isSendingOtp}
                   onClick={handleSendOtp}
-                  className="w-full py-3 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                  className="w-full py-3 px-4 min-h-[44px] rounded-xl bg-brand-green hover:bg-brand-deep text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
                 >
                   <span>{isSendingOtp ? 'Sending 6-Digit Code...' : 'Send 6-Digit Verification Code'}</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </button>
               ) : (
                 <>
                   <div>
-                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                    <label htmlFor="exec-otp-code" className="text-xs font-semibold text-text-muted block mb-1.5">
                       6-Digit Verification Code
                     </label>
                     <input
+                      id="exec-otp-code"
                       type="text"
                       inputMode="numeric"
+                      autoComplete="one-time-code"
                       required
                       placeholder="Enter 6-digit code from your email"
                       value={otpCode}
@@ -1035,23 +1045,23 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                         setOtpCode(e.target.value);
                         setAuthError(null);
                       }}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#0D1117] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-sm font-mono tracking-widest text-center focus:outline-none focus:border-[#087A3E] focus:ring-1 focus:ring-[#087A3E]"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-surface-bg border border-border-light text-text-main placeholder:text-text-subtle text-base font-mono tracking-widest text-center focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={isLoggingIn}
-                    className="w-full py-3 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                    className="w-full py-3 px-4 min-h-[44px] rounded-xl bg-brand-green hover:bg-brand-deep text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
                   >
                     <span>{isLoggingIn ? 'Verifying Code...' : 'Verify & Open Console'}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
                   </button>
                 </>
               )}
 
               {authError && (
-                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
                   <span className="leading-snug">{authError}</span>
                 </div>
               )}
@@ -1064,7 +1074,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                     setOtpSent(false);
                     setAuthError(null);
                   }}
-                  className="text-[11px] font-semibold text-zinc-500 hover:text-[#087A3E] cursor-pointer"
+                  className="min-h-[44px] sm:min-h-[36px] inline-flex items-center text-xs font-semibold text-text-muted hover:text-brand-green cursor-pointer"
                 >
                   Back to Passkey / Password Sign In
                 </button>
@@ -1073,8 +1083,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
           )}
 
           {/* Bottom Watermark */}
-          <div className="text-center pt-2 text-[10px] text-zinc-400">
-            Association of Statistics Students of Nigeria • University of Ibadan Chapter
+          <div className="text-center pt-2 text-xs text-text-subtle">
+            Association of Statistics Students of Nigeria â€¢ University of Ibadan Chapter
           </div>
         </div>
       </div>
@@ -1092,7 +1102,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
       {/* LEFT SIDEBAR                                                  */}
       {/* ------------------------------------------------------------- */}
       <aside
-        className={`fixed md:sticky top-0 z-40 h-screen w-64 bg-white dark:bg-[#0E1318] border-r border-zinc-200/80 dark:border-zinc-800/80 flex flex-col justify-between transition-transform duration-200 ease-in-out shrink-0 ${
+        className={`fixed md:sticky top-0 z-40 h-screen w-64 bg-white dark:bg-surface-bg border-r border-zinc-200/80 dark:border-zinc-800/80 flex flex-col justify-between transition-transform duration-200 ease-in-out shrink-0 ${
           isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
@@ -1101,22 +1111,26 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
           <div className="h-16 px-6 flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/60">
             <div className="flex items-center gap-2.5">
               <img
-                src="/logo/asson_logo.png"
+                src="/logo/asson_logo.webp"
                 alt="ASSON Logo"
+                width={32}
+                height={32}
                 className="w-8 h-8 object-contain shrink-0"
               />
               <div>
                 <span className="font-extrabold text-sm tracking-tight block text-zinc-900 dark:text-white">
                   ASSON UI
                 </span>
-                <span className="text-[10px] font-semibold tracking-wider uppercase text-zinc-400 block -mt-0.5">
+                <span className="text-xs font-semibold tracking-wider uppercase text-zinc-500 dark:text-zinc-400 block -mt-0.5">
                   Executive Desk
                 </span>
               </div>
             </div>
             <button
+              type="button"
               onClick={() => setIsMobileSidebarOpen(false)}
-              className="md:hidden p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+              aria-label="Close navigation drawer"
+              className="md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
             >
               <X className="w-4 h-4" />
             </button>
@@ -1142,7 +1156,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <LayoutDashboard className={`w-4 h-4 ${activeTab === 'dashboard' ? 'text-[#087A3E]' : ''}`} />
+                    <LayoutDashboard className={`w-4 h-4 ${activeTab === 'dashboard' ? 'text-brand-green' : ''}`} />
                     <span>General Dashboard</span>
                   </div>
                 </button>
@@ -1159,7 +1173,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <TrendingUp className={`w-4 h-4 ${activeTab === 'analytics' ? 'text-[#087A3E]' : ''}`} />
+                    <TrendingUp className={`w-4 h-4 ${activeTab === 'analytics' ? 'text-brand-green' : ''}`} />
                     <span>Analytics & Telemetry</span>
                   </div>
                 </button>
@@ -1184,11 +1198,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <FileCheck className={`w-4 h-4 ${activeTab === 'moderation' ? 'text-[#087A3E]' : ''}`} />
+                    <FileCheck className={`w-4 h-4 ${activeTab === 'moderation' ? 'text-brand-green' : ''}`} />
                     <span>Submissions</span>
                   </div>
                   {pendingSubmissions.length > 0 && (
-                    <span className="px-1.5 py-0.5 rounded-full bg-[#087A3E] text-white text-[10px] font-bold">
+                    <span className="px-1.5 py-0.5 rounded-full bg-brand-green text-white text-[10px] font-bold">
                       {pendingSubmissions.length}
                     </span>
                   )}
@@ -1207,7 +1221,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Building2 className={`w-4 h-4 ${activeTab === 'staff' ? 'text-[#087A3E]' : ''}`} />
+                    <Building2 className={`w-4 h-4 ${activeTab === 'staff' ? 'text-brand-green' : ''}`} />
                     <span>Staff & Lecturers</span>
                   </div>
                   <span className="text-[10px] text-zinc-400 font-mono">
@@ -1228,7 +1242,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Award className={`w-4 h-4 ${activeTab === 'electorals' ? 'text-[#087A3E]' : ''}`} />
+                    <Award className={`w-4 h-4 ${activeTab === 'electorals' ? 'text-brand-green' : ''}`} />
                     <span>Elected Executives</span>
                   </div>
                   <span className="text-[10px] text-zinc-400 font-mono">
@@ -1248,7 +1262,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Store className={`w-4 h-4 ${activeTab === 'enterprise' ? 'text-[#087A3E]' : ''}`} />
+                    <Store className={`w-4 h-4 ${activeTab === 'enterprise' ? 'text-brand-green' : ''}`} />
                     <span>Enterprise Hub</span>
                   </div>
                   <span className="text-[10px] text-zinc-400 font-mono">
@@ -1268,7 +1282,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Calendar className={`w-4 h-4 ${activeTab === 'calendar' ? 'text-[#087A3E]' : ''}`} />
+                    <Calendar className={`w-4 h-4 ${activeTab === 'calendar' ? 'text-brand-green' : ''}`} />
                     <span>Academic Calendar</span>
                   </div>
                   <span className="text-[10px] text-zinc-400 font-mono">
@@ -1296,7 +1310,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Bell className={`w-4 h-4 ${activeTab === 'notices' ? 'text-[#087A3E]' : ''}`} />
+                    <Bell className={`w-4 h-4 ${activeTab === 'notices' ? 'text-brand-green' : ''}`} />
                     <span>Notices & News</span>
                   </div>
                   <span className="text-[10px] text-zinc-400 font-mono">
@@ -1316,7 +1330,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Briefcase className={`w-4 h-4 ${activeTab === 'opportunities' ? 'text-[#087A3E]' : ''}`} />
+                    <Briefcase className={`w-4 h-4 ${activeTab === 'opportunities' ? 'text-brand-green' : ''}`} />
                     <span>Opportunities</span>
                   </div>
                   <span className="text-[10px] text-zinc-400 font-mono">
@@ -1336,7 +1350,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <HelpCircle className={`w-4 h-4 ${activeTab === 'faqs' ? 'text-[#087A3E]' : ''}`} />
+                    <HelpCircle className={`w-4 h-4 ${activeTab === 'faqs' ? 'text-brand-green' : ''}`} />
                     <span>Help & FAQs</span>
                   </div>
                 </button>
@@ -1362,7 +1376,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <History className={`w-4 h-4 ${activeTab === 'audit' ? 'text-[#087A3E]' : ''}`} />
+                      <History className={`w-4 h-4 ${activeTab === 'audit' ? 'text-brand-green' : ''}`} />
                       <span>Audit Trail</span>
                     </div>
                     <span className="text-[10px] text-zinc-400 font-mono">
@@ -1384,7 +1398,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <ShieldCheck className={`w-4 h-4 ${activeTab === 'access' ? 'text-[#087A3E]' : ''}`} />
+                        <ShieldCheck className={`w-4 h-4 ${activeTab === 'access' ? 'text-brand-green' : ''}`} />
                         <span>Committee &amp; Access</span>
                       </div>
                       <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold">
@@ -1402,7 +1416,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
         <div className="p-4 border-t border-zinc-100 dark:border-zinc-800/60">
           <div className="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/40">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-[#087A3E] text-white flex items-center justify-center font-bold text-xs shrink-0">
+              <div className="w-8 h-8 rounded-full bg-brand-green text-white flex items-center justify-center font-bold text-xs shrink-0">
                 EX
               </div>
               <div className="min-w-0">
@@ -1438,7 +1452,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
       {/* ------------------------------------------------------------- */}
       <main className="flex-1 min-w-0 flex flex-col">
         {/* Top Header Bar */}
-        <header className="h-16 px-4 sm:px-8 border-b border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-[#0E1318]/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-20">
+        <header className="h-16 px-4 sm:px-8 border-b border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-surface-bg/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
@@ -1458,7 +1472,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   ? 'BROADCASTS'
                   : 'GOVERNANCE'}
               </span>
-              <span>›</span>
+              <span>â€º</span>
               <span className="text-zinc-900 dark:text-zinc-100 font-bold capitalize">
                 {activeTab === 'dashboard'
                   ? 'General Dashboard'
@@ -1477,10 +1491,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
               <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
               <input
                 type="text"
-                placeholder="Search records... ⌘K"
+                placeholder="Search records... âŒ˜K"
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
+                className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-brand-green"
               />
             </div>
 
@@ -1494,7 +1508,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 else if (activeTab === 'faqs') setIsCreateFaqOpen(true);
                 else if (onOpenSubmit) onOpenSubmit();
               }}
-              className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">
@@ -1555,27 +1569,27 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div 
                   onClick={() => setActiveTab('moderation')}
-                  className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 cursor-pointer hover:border-[#087A3E]/50 transition-all shadow-xs"
+                  className="p-4 sm:p-5 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 cursor-pointer hover:border-brand-green/50 transition-all shadow-xs"
                 >
                   <div className="flex items-center justify-between text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
                     <span>PENDING VETTING</span>
-                    <span className="text-zinc-300 dark:text-zinc-600">···</span>
+                    <span className="text-zinc-300 dark:text-zinc-600">Â·Â·Â·</span>
                   </div>
                   <div className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white mt-2">
                     {String(pendingSubmissions.length).padStart(2, '0')}
                   </div>
-                  <div className="text-[11px] text-[#087A3E] font-semibold mt-1">
+                  <div className="text-[11px] text-brand-green font-semibold mt-1">
                     Awaiting review
                   </div>
                 </div>
 
                 <div 
                   onClick={() => setActiveTab('moderation')}
-                  className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 cursor-pointer hover:border-[#087A3E]/50 transition-all shadow-xs"
+                  className="p-4 sm:p-5 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 cursor-pointer hover:border-brand-green/50 transition-all shadow-xs"
                 >
                   <div className="flex items-center justify-between text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
                     <span>MATERIALS</span>
-                    <span className="text-zinc-300 dark:text-zinc-600">···</span>
+                    <span className="text-zinc-300 dark:text-zinc-600">Â·Â·Â·</span>
                   </div>
                   <div className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white mt-2">
                     {resourcesCount}
@@ -1587,27 +1601,27 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
 
                 <div 
                   onClick={() => setActiveTab('electorals')}
-                  className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 cursor-pointer hover:border-[#087A3E]/50 transition-all shadow-xs"
+                  className="p-4 sm:p-5 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 cursor-pointer hover:border-brand-green/50 transition-all shadow-xs"
                 >
                   <div className="flex items-center justify-between text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
                     <span>ELECTED EXCOS</span>
-                    <span className="text-zinc-300 dark:text-zinc-600">···</span>
+                    <span className="text-zinc-300 dark:text-zinc-600">Â·Â·Â·</span>
                   </div>
                   <div className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white mt-2">
                     {String(executives.length).padStart(2, '0')}
                   </div>
-                  <div className="text-[11px] text-[#087A3E] font-medium mt-1">
+                  <div className="text-[11px] text-brand-green font-medium mt-1">
                     Executive Council
                   </div>
                 </div>
 
                 <div 
                   onClick={() => setActiveTab('notices')}
-                  className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 cursor-pointer hover:border-[#087A3E]/50 transition-all shadow-xs"
+                  className="p-4 sm:p-5 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 cursor-pointer hover:border-brand-green/50 transition-all shadow-xs"
                 >
                   <div className="flex items-center justify-between text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
                     <span>ACTIVE NOTICES</span>
-                    <span className="text-zinc-300 dark:text-zinc-600">···</span>
+                    <span className="text-zinc-300 dark:text-zinc-600">Â·Â·Â·</span>
                   </div>
                   <div className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white mt-2">
                     {String(notices.filter(n => !n.isExpired).length).padStart(2, '0')}
@@ -1621,19 +1635,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
               {/* 30 Days Telemetry Row */}
               <div className="space-y-3">
                 <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
-                  LAST 30 DAYS • SEMESTER TELEMETRY
+                  LAST 30 DAYS â€¢ SEMESTER TELEMETRY
                 </span>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-                  <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 space-y-1 shadow-xs">
+                  <div className="p-5 sm:p-6 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 space-y-1 shadow-xs">
                     <div className="flex items-center justify-between text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
                       <span>TOTAL DOWNLOADS</span>
-                      <span className="text-zinc-300 dark:text-zinc-600">···</span>
+                      <span className="text-zinc-300 dark:text-zinc-600">Â·Â·Â·</span>
                     </div>
                     <div className="flex items-baseline gap-2 pt-1">
                       <span className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white">
                         1,420
                       </span>
-                      <span className="px-2 py-0.5 rounded-md bg-[#087A3E]/10 text-[#087A3E] text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-md bg-brand-green/10 text-brand-green text-[10px] font-bold">
                         +18%
                       </span>
                     </div>
@@ -1642,10 +1656,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                     </p>
                   </div>
 
-                  <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 space-y-1 shadow-xs">
+                  <div className="p-5 sm:p-6 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 space-y-1 shadow-xs">
                     <div className="flex items-center justify-between text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
                       <span>EDITORIAL VELOCITY</span>
-                      <span className="text-zinc-300 dark:text-zinc-600">···</span>
+                      <span className="text-zinc-300 dark:text-zinc-600">Â·Â·Â·</span>
                     </div>
                     <div className="flex items-baseline gap-2 pt-1">
                       <span className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white">
@@ -1660,16 +1674,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                     </p>
                   </div>
 
-                  <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 space-y-1 shadow-xs">
+                  <div className="p-5 sm:p-6 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 space-y-1 shadow-xs">
                     <div className="flex items-center justify-between text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
                       <span>SUPABASE EGRESS</span>
-                      <span className="text-zinc-300 dark:text-zinc-600">···</span>
+                      <span className="text-zinc-300 dark:text-zinc-600">Â·Â·Â·</span>
                     </div>
                     <div className="flex items-baseline gap-2 pt-1">
                       <span className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white">
                         0.00 GB
                       </span>
-                      <span className="px-2 py-0.5 rounded-md bg-[#087A3E]/10 text-[#087A3E] text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-md bg-brand-green/10 text-brand-green text-[10px] font-bold">
                         100% Free
                       </span>
                     </div>
@@ -1681,7 +1695,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
               </div>
 
               {/* Activity Bar Chart */}
-              <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 space-y-4 shadow-xs">
+              <div className="p-5 sm:p-6 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 space-y-4 shadow-xs">
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
@@ -1724,7 +1738,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                         style={{ height: `${(item.val / 180) * 100}%` }}
                         className={`w-full max-w-[16px] rounded-t-sm transition-all duration-300 ${
                           item.isPeak
-                            ? 'bg-[#087A3E]'
+                            ? 'bg-brand-green'
                             : 'bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700'
                         }`}
                         title={`${item.day}: ${item.val} interactions`}
@@ -1750,14 +1764,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   </div>
                   <button
                     onClick={() => setActiveTab('moderation')}
-                    className="text-xs font-bold text-[#087A3E] hover:underline flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-bold text-brand-green hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <span>View all submissions</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
-                <div className="overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#13171D] shadow-xs">
+                <div className="overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-surface-card shadow-xs">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
@@ -1773,7 +1787,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                         {pendingSubmissions.length === 0 ? (
                           <tr>
                             <td colSpan={5} className="py-8 text-center text-zinc-400">
-                              <CheckCircle className="w-7 h-7 text-[#087A3E] mx-auto mb-1.5 opacity-60" />
+                              <CheckCircle className="w-7 h-7 text-brand-green mx-auto mb-1.5 opacity-60" />
                               <p className="font-semibold text-zinc-900 dark:text-zinc-200 text-xs">Queue Clear</p>
                               <p className="text-[11px] text-zinc-400">No submissions currently awaiting vetting.</p>
                             </td>
@@ -1781,7 +1795,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                         ) : (
                           pendingSubmissions.slice(0, 4).map((sub) => (
                             <tr key={sub.id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
-                              <td className="py-3 px-4 font-bold text-[#087A3E]">{sub.courseCode}</td>
+                              <td className="py-3 px-4 font-bold text-brand-green">{sub.courseCode}</td>
                               <td className="py-3 px-4 font-semibold text-zinc-900 dark:text-zinc-100 max-w-xs truncate">
                                 {sub.resourceTitle}
                               </td>
@@ -1794,7 +1808,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                               <td className="py-3 px-4 text-right space-x-1.5">
                                 <button
                                   onClick={() => handleApprove(sub.id, sub.resourceTitle)}
-                                  className="h-7 text-xs px-2.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white font-bold transition-all shadow-xs inline-flex items-center gap-1 cursor-pointer"
+                                  className="h-7 text-xs px-2.5 rounded-lg bg-brand-green hover:bg-brand-deep text-white font-bold transition-all shadow-xs inline-flex items-center gap-1 cursor-pointer"
                                 >
                                   <Check className="w-3.5 h-3.5" /> Approve
                                 </button>
@@ -1827,14 +1841,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 {onOpenSubmit && (
                   <button
                     onClick={onOpenSubmit}
-                    className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-lg bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
                   >
                     <PlusCircle className="w-3.5 h-3.5" /> Add Material
                   </button>
                 )}
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#13171D] shadow-xs">
+              <div className="overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-surface-card shadow-xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
@@ -1857,13 +1871,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                         </tr>
                       ) : (
                         submissions.map((sub) => {
-                          const fileUrl = sub.filePath
-                            ? `https://cvhjohbknghlmspoaenr.supabase.co/storage/v1/object/public/resources/${sub.filePath.replace(/^resources\//, '')}`
-                            : null;
-
                           return (
                             <tr key={sub.id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
-                              <td className="py-3.5 px-4 font-bold text-[#087A3E]">
+                              <td className="py-3.5 px-4 font-bold text-brand-green">
                                 {sub.courseCode}
                               </td>
                               <td className="py-3.5 px-4 font-semibold text-zinc-900 dark:text-zinc-100 max-w-xs truncate">
@@ -1880,7 +1890,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                                 <span
                                   className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
                                     sub.status === 'Approved'
-                                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-[#087A3E]'
+                                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-brand-green'
                                       : sub.status === 'Under Review'
                                       ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600'
                                       : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600'
@@ -1891,21 +1901,27 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                               </td>
                               <td className="py-3.5 px-4 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
-                                  {fileUrl && (
-                                    <a
-                                      href={fileUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 transition-colors shrink-0"
+                                  {sub.filePath && (
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        const url = await getSubmissionPreviewUrl(sub.filePath);
+                                        if (url) {
+                                          window.open(url, '_blank', 'noopener,noreferrer');
+                                        } else {
+                                          toast.error('Preview Unavailable', 'Could not generate a signed preview link for this file.');
+                                        }
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 transition-colors shrink-0 cursor-pointer"
                                     >
                                       <Eye className="w-3.5 h-3.5" /> Preview
-                                    </a>
+                                    </button>
                                   )}
                                   {sub.status === 'Under Review' && (
                                     <>
                                       <button
                                         onClick={() => handleApprove(sub.id, sub.resourceTitle)}
-                                        className="h-7 text-xs px-2.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white font-bold transition-all shadow-xs inline-flex items-center gap-1 cursor-pointer"
+                                        className="h-7 text-xs px-2.5 rounded-lg bg-brand-green hover:bg-brand-deep text-white font-bold transition-all shadow-xs inline-flex items-center gap-1 cursor-pointer"
                                       >
                                         <Check className="w-3.5 h-3.5" /> Approve
                                       </button>
@@ -1949,7 +1965,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 </div>
                 <button
                   onClick={() => setIsCreateExecOpen(true)}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" /> Add Executive
                 </button>
@@ -1960,7 +1976,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 {executives.map((exec) => (
                   <div
                     key={exec.id}
-                    className="p-4 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 flex flex-col justify-between space-y-3 shadow-xs relative group"
+                    className="p-4 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 flex flex-col justify-between space-y-3 shadow-xs relative group"
                   >
                     <div className="space-y-2">
                       <div className="flex items-start justify-between gap-3">
@@ -1972,7 +1988,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                               className="w-12 h-12 rounded-2xl object-cover border border-zinc-200 dark:border-zinc-700 shrink-0"
                             />
                           ) : (
-                            <div className="w-12 h-12 rounded-2xl bg-[#087A3E]/10 text-[#087A3E] font-bold text-sm flex items-center justify-center shrink-0">
+                            <div className="w-12 h-12 rounded-2xl bg-brand-green/10 text-brand-green font-bold text-sm flex items-center justify-center shrink-0">
                               {exec.name.charAt(0)}
                             </div>
                           )}
@@ -1981,7 +1997,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                               {exec.name}
                             </h3>
                             <span className="text-[11px] text-zinc-500 font-mono block">
-                              {exec.level} Level • {exec.session}
+                              {exec.level} Level â€¢ {exec.session}
                             </span>
                           </div>
                         </div>
@@ -1996,7 +2012,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                       </div>
 
                       <div className="inline-block">
-                        <span className="px-2 py-0.5 rounded-md bg-[#087A3E]/10 text-[#087A3E] text-[10px] font-bold uppercase tracking-wider">
+                        <span className="px-2 py-0.5 rounded-md bg-brand-green/10 text-brand-green text-[10px] font-bold uppercase tracking-wider">
                           {exec.office}
                         </span>
                       </div>
@@ -2034,7 +2050,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 </div>
                 <button
                   onClick={() => setIsCreateStaffOpen(true)}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" /> Add Lecturer / HOD
                 </button>
@@ -2045,7 +2061,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 {staff.map((member) => (
                   <div
                     key={member.id}
-                    className="p-4 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 flex flex-col justify-between space-y-3 shadow-xs relative group"
+                    className="p-4 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 flex flex-col justify-between space-y-3 shadow-xs relative group"
                   >
                     <div className="space-y-2">
                       <div className="flex items-start justify-between gap-3">
@@ -2057,7 +2073,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                               className="w-12 h-12 rounded-2xl object-cover border border-zinc-200 dark:border-zinc-700 shrink-0"
                             />
                           ) : (
-                            <div className="w-12 h-12 rounded-2xl bg-[#087A3E]/10 text-[#087A3E] font-bold text-sm flex items-center justify-center shrink-0">
+                            <div className="w-12 h-12 rounded-2xl bg-brand-green/10 text-brand-green font-bold text-sm flex items-center justify-center shrink-0">
                               {member.name.charAt(0)}
                             </div>
                           )}
@@ -2088,7 +2104,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                       </div>
 
                       {member.advisorLevel && (
-                        <span className="inline-block px-2 py-0.5 rounded-md bg-[#087A3E]/10 text-[#087A3E] text-[10px] font-bold">
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-brand-green/10 text-brand-green text-[10px] font-bold">
                           {member.advisorLevel}L Staff Adviser
                         </span>
                       )}
@@ -2134,7 +2150,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 </div>
                 <button
                   onClick={() => setIsCreateCalOpen(true)}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" /> Schedule Date
                 </button>
@@ -2144,11 +2160,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 {calendarEvents.map((evt) => (
                   <div
                     key={evt.id}
-                    className="p-4 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 space-y-2 relative group shadow-xs"
+                    className="p-4 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 space-y-2 relative group shadow-xs"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <span className="text-[10px] font-bold text-[#087A3E] uppercase tracking-wider block">
+                        <span className="text-[10px] font-bold text-brand-green uppercase tracking-wider block">
                           {evt.category}
                         </span>
                         <h4 className="text-sm font-bold text-zinc-900 dark:text-white mt-0.5">
@@ -2166,8 +2182,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
 
                     <div className="flex items-center gap-4 text-xs text-zinc-500 font-mono">
                       <span>{evt.startDate}</span>
-                      {evt.venue && <span>• {evt.venue}</span>}
-                      {evt.targetLevel && <span>• {evt.targetLevel}L</span>}
+                      {evt.venue && <span>â€¢ {evt.venue}</span>}
+                      {evt.targetLevel && <span>â€¢ {evt.targetLevel}L</span>}
                     </div>
 
                     {evt.description && (
@@ -2197,7 +2213,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 </div>
                 <button
                   onClick={() => setIsCreateNoticeOpen(true)}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" /> Broadcast Notice
                 </button>
@@ -2207,11 +2223,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 {notices.map((n) => (
                   <div
                     key={n.id}
-                    className="p-4 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 flex items-start justify-between gap-4 shadow-xs"
+                    className="p-4 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 flex items-start justify-between gap-4 shadow-xs"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-[#087A3E] uppercase tracking-wider">
+                        <span className="text-[10px] font-bold text-brand-green uppercase tracking-wider">
                           {n.category}
                         </span>
                         {n.isUrgent && (
@@ -2260,7 +2276,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 </div>
                 <button
                   onClick={() => setIsCreateOppOpen(true)}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" /> Add Opportunity
                 </button>
@@ -2270,12 +2286,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 {opportunities.map((opp) => (
                   <div
                     key={opp.id}
-                    className="p-4 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 space-y-2 relative group shadow-xs"
+                    className="p-4 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 space-y-2 relative group shadow-xs"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <span className="text-[10px] font-bold text-[#087A3E] uppercase tracking-wider block">
-                          {opp.category} • {opp.provider}
+                        <span className="text-[10px] font-bold text-brand-green uppercase tracking-wider block">
+                          {opp.category} â€¢ {opp.provider}
                         </span>
                         <h4 className="text-sm font-bold text-zinc-900 dark:text-white mt-0.5">
                           {opp.title}
@@ -2299,10 +2315,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                         Deadline: {opp.deadline}
                       </span>
                       <a
-                        href={opp.applicationUrl}
+                        href={sanitizeSafeHttpUrl(opp.applicationUrl) || '#'}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#087A3E] font-bold hover:underline inline-flex items-center gap-1"
+                        className="text-brand-green font-bold hover:underline inline-flex items-center gap-1"
                       >
                         <span>Apply</span>
                         <ExternalLink className="w-3 h-3" />
@@ -2330,7 +2346,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#13171D] shadow-xs">
+              <div className="overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-surface-card shadow-xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
@@ -2362,7 +2378,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                                     className="w-10 h-10 rounded-xl object-cover shrink-0 border border-zinc-200 dark:border-zinc-700"
                                   />
                                 ) : (
-                                  <div className="w-10 h-10 rounded-xl bg-[#087A3E]/10 text-[#087A3E] font-black text-xs flex items-center justify-center shrink-0">
+                                  <div className="w-10 h-10 rounded-xl bg-brand-green/10 text-brand-green font-black text-xs flex items-center justify-center shrink-0">
                                     {item.businessName.charAt(0).toUpperCase()}
                                   </div>
                                 )}
@@ -2377,7 +2393,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                               <span className="text-[10px] text-zinc-400 block font-mono">{item.ownerLevel}L</span>
                             </td>
                             <td className="py-3 px-4">
-                              <span className="px-2 py-0.5 rounded-md bg-[#087A3E]/10 text-[#087A3E] font-bold text-[10px]">
+                              <span className="px-2 py-0.5 rounded-md bg-brand-green/10 text-brand-green font-bold text-[10px]">
                                 {item.category}
                               </span>
                             </td>
@@ -2388,7 +2404,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                               <span
                                 className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
                                   item.status === 'approved'
-                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-[#087A3E]'
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-brand-green'
                                     : item.status === 'pending'
                                     ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600'
                                     : 'bg-red-50 text-red-600'
@@ -2407,7 +2423,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                                     );
                                     toast.success('Approved', `Approved ${item.businessName} for showcase.`);
                                   }}
-                                  className="px-2.5 py-1 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-[11px] transition-colors cursor-pointer"
+                                  className="px-2.5 py-1 rounded-lg bg-brand-green hover:bg-brand-deep text-white font-bold text-[11px] transition-colors cursor-pointer"
                                 >
                                   Approve
                                 </button>
@@ -2453,7 +2469,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 </div>
                 <button
                   onClick={() => setIsCreateFaqOpen(true)}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" /> Add FAQ
                 </button>
@@ -2463,10 +2479,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 {faqs.map((f) => (
                   <div
                     key={f.id}
-                    className="p-4 rounded-2xl bg-white dark:bg-[#13171D] border border-zinc-200/80 dark:border-zinc-800/80 flex items-start justify-between gap-4 shadow-xs"
+                    className="p-4 rounded-2xl bg-surface-card border border-zinc-200/80 dark:border-zinc-800/80 flex items-start justify-between gap-4 shadow-xs"
                   >
                     <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-[#087A3E] uppercase tracking-wider block">
+                      <span className="text-[10px] font-bold text-brand-green uppercase tracking-wider block">
                         {f.category}
                       </span>
                       <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
@@ -2521,7 +2537,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                 </p>
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#13171D] shadow-xs">
+              <div className="overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-surface-card shadow-xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
@@ -2536,7 +2552,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                     <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 font-mono text-[11px]">
                       {auditLogs.map((log) => (
                         <tr key={log.id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
-                          <td className="py-3 px-4 font-bold text-[#087A3E]">
+                          <td className="py-3 px-4 font-bold text-brand-green">
                             {log.action}
                           </td>
                           <td className="py-3 px-4 text-zinc-600 dark:text-zinc-400">
@@ -2575,7 +2591,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                     Committee Delegation & Access Control
                   </h2>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    Manage approved committee emails and the shared executive passkey. Only emails on this list can log in to the administration console.
+                    Manage approved committee emails and personal executive credentials. Only verified emails on this list can access the administration console.
                   </p>
                 </div>
 
@@ -2589,8 +2605,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
 
               {/* Grid: Shared Passkey Card & Explainer */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* 1. Shared Executive Passkey Card */}
-                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#13171D] p-5 shadow-xs space-y-4">
+                {/* 1. Personal Executive Credential Card */}
+                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-surface-card p-5 shadow-xs space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center border border-amber-200 dark:border-amber-900">
@@ -2598,9 +2614,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                       </div>
                       <div>
                         <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
-                          Shared Executive Passkey
+                          Personal Account Security
                         </h3>
-                        <span className="text-[11px] text-zinc-500">Universal password for all 15 committee members</span>
+                        <span className="text-[11px] text-zinc-500">Server-verified individual JWT authentication</span>
                       </div>
                     </div>
                   </div>
@@ -2608,64 +2624,45 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                   {!isPasskeyEditing ? (
                     <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/70 dark:border-zinc-800 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg ${
-                          isPasskeyConfigured
-                            ? 'bg-emerald-50 dark:bg-emerald-950/50 text-[#087A3E] border border-emerald-200 dark:border-emerald-800'
-                            : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
-                        }`}>
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-brand-green border border-emerald-200 dark:border-emerald-800">
                           <Lock className="w-3.5 h-3.5" />
-                          {isPasskeyConfigured
-                            ? 'Active (Server-Side Salted Hash)'
-                            : 'Not Configured Yet — Set Below'}
+                          Verified Supabase Auth Session Active
                         </span>
                       </div>
 
-                      {isMasterAdmin && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCurrentPasskeyVal('');
-                            setNewPasskeyVal('');
-                            setIsPasskeyEditing(true);
-                          }}
-                          className="px-2.5 py-1 rounded-lg text-xs font-bold text-[#087A3E] hover:bg-emerald-50 dark:hover:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 cursor-pointer shrink-0"
-                        >
-                          {isPasskeyConfigured ? 'Rotate Passkey' : 'Set Passkey'}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewPasskeyVal('');
+                          setIsPasskeyEditing(true);
+                        }}
+                        className="px-2.5 py-1 rounded-lg text-xs font-bold text-brand-green hover:bg-emerald-50 dark:hover:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 cursor-pointer shrink-0"
+                      >
+                        Set / Change My Password
+                      </button>
                     </div>
                   ) : (
                     <div className="space-y-2.5">
-                      {isPasskeyConfigured && (
-                        <input
-                          type="password"
-                          value={currentPasskeyVal}
-                          onChange={(e) => setCurrentPasskeyVal(e.target.value)}
-                          placeholder="Current passkey (optional if signed in via Email OTP)"
-                          className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#087A3E]"
-                        />
-                      )}
                       <input
                         type="password"
                         value={newPasskeyVal}
                         onChange={(e) => setNewPasskeyVal(e.target.value)}
-                        placeholder="Enter new committee passkey (min 8 chars)"
-                        className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono font-bold text-zinc-900 dark:text-white focus:outline-none focus:border-[#087A3E]"
+                        placeholder="Enter personal password (min 8 chars)"
+                        className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono font-bold text-zinc-900 dark:text-white focus:outline-none focus:border-brand-green"
                       />
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           disabled={isSavingPasskey}
                           onClick={handleSavePasskey}
-                          className="px-3 py-1.5 rounded-lg bg-[#087A3E] text-white text-xs font-bold hover:bg-[#066131] cursor-pointer disabled:opacity-50"
+                          className="px-3 py-1.5 rounded-lg bg-brand-green text-white text-xs font-bold hover:bg-brand-deep cursor-pointer disabled:opacity-50"
                         >
-                          {isSavingPasskey ? 'Encrypting...' : 'Save New Passkey'}
+                          {isSavingPasskey ? 'Saving...' : 'Save Personal Password'}
                         </button>
                         <button
                           type="button"
                           onClick={() => {
                             setIsPasskeyEditing(false);
-                            setCurrentPasskeyVal('');
                             setNewPasskeyVal('');
                           }}
                           className="px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-600 hover:bg-zinc-100 cursor-pointer"
@@ -2676,13 +2673,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                     </div>
                   )}
 
-                  <p className="text-[11px] text-zinc-500 leading-relaxed">
-                    💡 <strong>Tenure Handoff:</strong> When your executive session ends after 9–10 months, change this passkey and clear the email list to seamlessly hand over access to the next administration.
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                    <strong>Zero-Trust Governance:</strong> Shared passwords are disabled. Each approved member signs in via <strong>6-Digit Email OTP</strong> (and may set a personal password here), ensuring individual JWT enforcement and tamper-proof audit logs.
                   </p>
                 </div>
 
                 {/* 2. How it works guide */}
-                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#13171D] p-5 shadow-xs space-y-3">
+                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-surface-card p-5 shadow-xs space-y-3">
                   <div className="flex items-center gap-2.5">
                     <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-brand-green flex items-center justify-center border border-emerald-200 dark:border-emerald-800">
                       <UserCheck className="w-4 h-4" />
@@ -2691,23 +2688,23 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                       <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
                         How Committee Login Works
                       </h3>
-                      <span className="text-[11px] text-zinc-500">Security + Personal Accountability</span>
+                      <span className="text-[11px] text-zinc-500">Individual Auth + Server RLS</span>
                     </div>
                   </div>
 
                   <ul className="text-xs text-zinc-600 dark:text-zinc-300 space-y-2 list-disc list-inside leading-relaxed">
-                    <li>Your authorized committee members navigate directly to <code className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[11px] font-mono">/executive</code>.</li>
-                    <li>They enter their <strong>distinct email</strong> (approved below) + the <strong>shared committee passkey</strong>.</li>
-                    <li>Because each member uses their own email, every past question they approve, announcement they post, or feedback they reply to is <strong>permanently stamped with their personal name</strong> in the Audit Trail!</li>
+                    <li>Approved committee members open <code className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-[11px] font-mono">/executive</code> and click <strong>Sign in with 6-Digit Email Code</strong>.</li>
+                    <li>Supabase issues a real signed JWT bound to their email, unlocking Postgres RLS actions and letting them optionally set a personal password above.</li>
+                    <li>Every approval, announcement, or deletion is automatically stamped with their verified JWT email by the database trigger.</li>
                   </ul>
                 </div>
               </div>
 
               {/* 3. Add Committee Member Form (Master Admin Only) */}
               {isMasterAdmin && (
-                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#13171D] p-5 sm:p-6 shadow-xs space-y-4">
+                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-surface-card p-5 sm:p-6 shadow-xs space-y-4">
                   <div className="flex items-center gap-2">
-                    <PlusCircle className="w-4 h-4 text-[#087A3E]" />
+                    <PlusCircle className="w-4 h-4 text-brand-green" />
                     <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
                       Authorize New Committee Member
                     </h3>
@@ -2724,7 +2721,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                         placeholder="e.g. director@gmail.com"
                         value={newExecEmail}
                         onChange={(e) => setNewExecEmail(e.target.value)}
-                        className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-surface-bg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#087A3E]"
+                        className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-surface-bg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-brand-green"
                       />
                     </div>
 
@@ -2738,7 +2735,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                         placeholder="e.g. Adebayo Ogunlesi"
                         value={newExecName}
                         onChange={(e) => setNewExecName(e.target.value)}
-                        className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-surface-bg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#087A3E]"
+                        className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-surface-bg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-brand-green"
                       />
                     </div>
 
@@ -2752,7 +2749,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                         placeholder="e.g. Academic Director"
                         value={newExecOffice}
                         onChange={(e) => setNewExecOffice(e.target.value)}
-                        className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-surface-bg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#087A3E]"
+                        className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-surface-bg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-brand-green"
                       />
                     </div>
 
@@ -2760,7 +2757,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                       <button
                         type="submit"
                         disabled={isAddingExec}
-                        className="w-full py-2 px-4 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        className="w-full py-2 px-4 rounded-xl bg-brand-green hover:bg-brand-deep text-white font-bold text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                       >
                         <UserCheck className="w-3.5 h-3.5" />
                         <span>{isAddingExec ? 'Authorizing...' : 'Authorize Member'}</span>
@@ -2771,7 +2768,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
               )}
 
               {/* 4. Approved Executive Allowlist Table */}
-              <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#13171D] overflow-hidden shadow-xs">
+              <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-surface-card overflow-hidden shadow-xs">
                 <div className="p-4 bg-zinc-50/60 dark:bg-zinc-900/60 border-b border-zinc-200/70 dark:border-zinc-800 flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
@@ -2863,657 +2860,594 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
       {/* ------------------------------------------------------------- */}
 
       {/* ADD ELECTED EXECUTIVE MODAL */}
-      {isCreateExecOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setIsCreateExecOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-xs" />
-          <div className="relative z-10 w-full max-w-lg rounded-3xl bg-white dark:bg-[#13171D] p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-[#087A3E]" />
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Add Elected Executive</h3>
-              </div>
-              <button onClick={() => setIsCreateExecOpen(false)} className="p-1 text-zinc-400 hover:text-zinc-600">
-                <X className="w-4 h-4" />
-              </button>
+      <Modal
+        isOpen={isCreateExecOpen}
+        onClose={() => setIsCreateExecOpen(false)}
+        title="Add Elected Executive"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleCreateExecutive} className="space-y-3.5 text-xs">
+          <div>
+            <label htmlFor="admin-exec-name" className="font-bold text-text-main block mb-1">Full Name *</label>
+            <input
+              id="admin-exec-name"
+              type="text"
+              required
+              placeholder="e.g. Babatunde Ayomide"
+              value={execForm.name}
+              onChange={(e) => setExecForm({ ...execForm, name: e.target.value })}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="admin-exec-office" className="font-bold text-text-main block mb-1">Office / Portfolio *</label>
+              <select
+                id="admin-exec-office"
+                value={execForm.office}
+                onChange={(e) => setExecForm({ ...execForm, office: e.target.value })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              >
+                <option value="President">President</option>
+                <option value="Vice President">Vice President</option>
+                <option value="General Secretary">General Secretary</option>
+                <option value="Academic Director">Academic Director</option>
+                <option value="Financial Secretary">Financial Secretary</option>
+                <option value="Public Relations Officer (P.R.O)">Public Relations Officer (P.R.O)</option>
+                <option value="Welfare Director">Welfare Director</option>
+                <option value="Social Director">Social Director</option>
+                <option value="Sports Director">Sports Director</option>
+                <option value="Assistant General Secretary">Assistant General Secretary</option>
+              </select>
             </div>
 
-            <form onSubmit={handleCreateExecutive} className="space-y-3.5 text-xs">
-              <div>
-                <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Full Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Babatunde Ayomide"
-                  value={execForm.name}
-                  onChange={(e) => setExecForm({ ...execForm, name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Office / Portfolio *</label>
-                  <select
-                    value={execForm.office}
-                    onChange={(e) => setExecForm({ ...execForm, office: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  >
-                    <option value="President">President</option>
-                    <option value="Vice President">Vice President</option>
-                    <option value="General Secretary">General Secretary</option>
-                    <option value="Academic Director">Academic Director</option>
-                    <option value="Financial Secretary">Financial Secretary</option>
-                    <option value="Public Relations Officer (P.R.O)">Public Relations Officer (P.R.O)</option>
-                    <option value="Welfare Director">Welfare Director</option>
-                    <option value="Social Director">Social Director</option>
-                    <option value="Sports Director">Sports Director</option>
-                    <option value="Assistant General Secretary">Assistant General Secretary</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Academic Level *</label>
-                  <select
-                    value={execForm.level}
-                    onChange={(e) => setExecForm({ ...execForm, level: e.target.value as AcademicLevel })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  >
-                    <option value="100">100 Level</option>
-                    <option value="200">200 Level</option>
-                    <option value="300">300 Level</option>
-                    <option value="400">400 Level</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Administration Session</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 2026/2027"
-                    value={execForm.session}
-                    onChange={(e) => setExecForm({ ...execForm, session: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">WhatsApp Line</label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. 08012345678"
-                    value={execForm.whatsapp}
-                    onChange={(e) => setExecForm({ ...execForm, whatsapp: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Official Email</label>
-                  <input
-                    type="email"
-                    placeholder="e.g. president.asson@ui.edu.ng"
-                    value={execForm.email}
-                    onChange={(e) => setExecForm({ ...execForm, email: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Profile Photo URL (Optional)</label>
-                  <input
-                    type="url"
-                    placeholder="https://..."
-                    value={execForm.imageUrl}
-                    onChange={(e) => setExecForm({ ...execForm, imageUrl: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Brief Manifesto / Quote</label>
-                <textarea
-                  rows={2}
-                  placeholder="e.g. Dedicated to statistical excellence and student welfare..."
-                  value={execForm.bio}
-                  onChange={(e) => setExecForm({ ...execForm, bio: e.target.value })}
-                  className="w-full p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateExecOpen(false)}
-                  className="px-3 py-1.5 text-xs text-zinc-500 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold"
-                >
-                  Save Executive
-                </button>
-              </div>
-            </form>
+            <div>
+              <label htmlFor="admin-exec-level" className="font-bold text-text-main block mb-1">Academic Level *</label>
+              <select
+                id="admin-exec-level"
+                value={execForm.level}
+                onChange={(e) => setExecForm({ ...execForm, level: e.target.value as AcademicLevel })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              >
+                <option value="100">100 Level</option>
+                <option value="200">200 Level</option>
+                <option value="300">300 Level</option>
+                <option value="400">400 Level</option>
+              </select>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="admin-exec-session" className="font-bold text-text-main block mb-1">Administration Session</label>
+              <input
+                id="admin-exec-session"
+                type="text"
+                placeholder="e.g. 2026/2027"
+                value={execForm.session}
+                onChange={(e) => setExecForm({ ...execForm, session: e.target.value })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="admin-exec-whatsapp" className="font-bold text-text-main block mb-1">WhatsApp Line</label>
+              <input
+                id="admin-exec-whatsapp"
+                type="tel"
+                placeholder="e.g. 08012345678"
+                value={execForm.whatsapp}
+                onChange={(e) => setExecForm({ ...execForm, whatsapp: e.target.value })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="admin-exec-email" className="font-bold text-text-main block mb-1">Official Email</label>
+              <input
+                id="admin-exec-email"
+                type="email"
+                placeholder="e.g. president.asson@ui.edu.ng"
+                value={execForm.email}
+                onChange={(e) => setExecForm({ ...execForm, email: e.target.value })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="admin-exec-photo" className="font-bold text-text-main block mb-1">Profile Photo URL (Optional)</label>
+              <input
+                id="admin-exec-photo"
+                type="url"
+                placeholder="https://..."
+                value={execForm.imageUrl}
+                onChange={(e) => setExecForm({ ...execForm, imageUrl: e.target.value })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="admin-exec-bio" className="font-bold text-text-main block mb-1">Brief Manifesto / Quote</label>
+            <textarea
+              id="admin-exec-bio"
+              rows={2}
+              placeholder="e.g. Dedicated to statistical excellence and student welfare..."
+              value={execForm.bio}
+              onChange={(e) => setExecForm({ ...execForm, bio: e.target.value })}
+              className="w-full p-3 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border-light">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsCreateExecOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="sm">
+              Save Executive
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* ADD STAFF / LECTURER MODAL */}
-      {isCreateStaffOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setIsCreateStaffOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-xs" />
-          <div className="relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-white dark:bg-[#13171D] p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-[#087A3E]" />
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Add Academic Lecturer / HOD</h3>
-              </div>
-              <button onClick={() => setIsCreateStaffOpen(false)} className="p-1 text-zinc-400 hover:text-zinc-600">
-                <X className="w-4 h-4" />
-              </button>
+      <Modal
+        isOpen={isCreateStaffOpen}
+        onClose={() => setIsCreateStaffOpen(false)}
+        title="Add Academic Lecturer / HOD"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleCreateStaff} className="space-y-3.5 text-xs">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label htmlFor="admin-staff-title" className="font-bold text-text-main block mb-1">Title *</label>
+              <select
+                id="admin-staff-title"
+                value={staffForm.title}
+                onChange={(e) => setStaffForm({ ...staffForm, title: e.target.value })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              >
+                <option value="Prof.">Prof.</option>
+                <option value="Dr.">Dr.</option>
+                <option value="Mr.">Mr.</option>
+                <option value="Mrs.">Mrs.</option>
+                <option value="Ms.">Ms.</option>
+              </select>
             </div>
-
-            <form onSubmit={handleCreateStaff} className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Title *</label>
-                  <select
-                    value={staffForm.title}
-                    onChange={(e) => setStaffForm({ ...staffForm, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  >
-                    <option value="Prof.">Prof.</option>
-                    <option value="Dr.">Dr.</option>
-                    <option value="Mr.">Mr.</option>
-                    <option value="Mrs.">Mrs.</option>
-                    <option value="Ms.">Ms.</option>
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. K. I. Ojo or O. I. Shittu"
-                    value={staffForm.name}
-                    onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Designation *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Professor, Senior Lecturer, Lecturer I"
-                    value={staffForm.designation}
-                    onChange={(e) => setStaffForm({ ...staffForm, designation: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Staff Adviser Level</label>
-                  <select
-                    value={staffForm.advisorLevel}
-                    onChange={(e) => setStaffForm({ ...staffForm, advisorLevel: e.target.value as AcademicLevel | '' })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  >
-                    <option value="">None / Not an adviser</option>
-                    <option value="100">100 Level Adviser</option>
-                    <option value="200">200 Level Adviser</option>
-                    <option value="300">300 Level Adviser</option>
-                    <option value="400">400 Level Adviser</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800">
-                <input
-                  type="checkbox"
-                  id="staff-is-hod"
-                  checked={staffForm.isHOD}
-                  onChange={(e) => setStaffForm({ ...staffForm, isHOD: e.target.checked })}
-                  className="rounded text-[#087A3E] focus:ring-[#087A3E]"
-                />
-                <label htmlFor="staff-is-hod" className="font-bold text-amber-900 dark:text-amber-200 cursor-pointer">
-                  Designate as Head of Department (HOD)
-                </label>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Office Room *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Room 214, Faculty of Science"
-                    value={staffForm.office}
-                    onChange={(e) => setStaffForm({ ...staffForm, office: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Consultation Hours</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Wed & Fri 10am - 12pm"
-                    value={staffForm.consultationHours}
-                    onChange={(e) => setStaffForm({ ...staffForm, consultationHours: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Official Email</label>
-                <input
-                  type="email"
-                  placeholder="e.g. k.ojo@ui.edu.ng"
-                  value={staffForm.email}
-                  onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Courses Taught (Comma-separated)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. STA 111, STA 211, STA 720"
-                  value={staffForm.courses}
-                  onChange={(e) => setStaffForm({ ...staffForm, courses: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Lecturer Photo URL (Direct Link)</label>
-                <input
-                  type="url"
-                  placeholder="https://... (Direct photo link)"
-                  value={staffForm.imageUrl}
-                  onChange={(e) => setStaffForm({ ...staffForm, imageUrl: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateStaffOpen(false)}
-                  className="px-3 py-1.5 text-xs text-zinc-500 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-[#087A3E] hover:bg-[#066131] text-white font-bold transition-all shadow-xs"
-                >
-                  Save Lecturer Profile
-                </button>
-              </div>
-            </form>
+            <div className="col-span-2">
+              <label htmlFor="admin-staff-name" className="font-bold text-text-main block mb-1">Full Name *</label>
+              <input
+                id="admin-staff-name"
+                type="text"
+                required
+                placeholder="e.g. K. I. Ojo or O. I. Shittu"
+                value={staffForm.name}
+                onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="admin-staff-designation" className="font-bold text-text-main block mb-1">Designation *</label>
+              <input
+                id="admin-staff-designation"
+                type="text"
+                required
+                placeholder="e.g. Professor, Senior Lecturer, Lecturer I"
+                value={staffForm.designation}
+                onChange={(e) => setStaffForm({ ...staffForm, designation: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              />
+            </div>
+            <div>
+              <label htmlFor="admin-staff-advisor" className="font-bold text-text-main block mb-1">Staff Adviser Level</label>
+              <select
+                id="admin-staff-advisor"
+                value={staffForm.advisorLevel}
+                onChange={(e) => setStaffForm({ ...staffForm, advisorLevel: e.target.value as AcademicLevel | '' })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              >
+                <option value="">None / Not an adviser</option>
+                <option value="100">100 Level Adviser</option>
+                <option value="200">200 Level Adviser</option>
+                <option value="300">300 Level Adviser</option>
+                <option value="400">400 Level Adviser</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800">
+            <input
+              type="checkbox"
+              id="staff-is-hod"
+              checked={staffForm.isHOD}
+              onChange={(e) => setStaffForm({ ...staffForm, isHOD: e.target.checked })}
+              className="w-4 h-4 rounded text-brand-green focus:ring-brand-green"
+            />
+            <label htmlFor="staff-is-hod" className="font-bold text-amber-900 dark:text-amber-200 cursor-pointer">
+              Designate as Head of Department (HOD)
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="admin-staff-office" className="font-bold text-text-main block mb-1">Office Room *</label>
+              <input
+                id="admin-staff-office"
+                type="text"
+                required
+                placeholder="e.g. Room 214, Faculty of Science"
+                value={staffForm.office}
+                onChange={(e) => setStaffForm({ ...staffForm, office: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              />
+            </div>
+            <div>
+              <label htmlFor="admin-staff-hours" className="font-bold text-text-main block mb-1">Consultation Hours</label>
+              <input
+                id="admin-staff-hours"
+                type="text"
+                placeholder="e.g. Wed & Fri 10am - 12pm"
+                value={staffForm.consultationHours}
+                onChange={(e) => setStaffForm({ ...staffForm, consultationHours: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="admin-staff-email" className="font-bold text-text-main block mb-1">Official Email</label>
+            <input
+              id="admin-staff-email"
+              type="email"
+              placeholder="e.g. k.ojo@ui.edu.ng"
+              value={staffForm.email}
+              onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="admin-staff-courses" className="font-bold text-text-main block mb-1">Courses Taught (Comma-separated)</label>
+            <input
+              id="admin-staff-courses"
+              type="text"
+              placeholder="e.g. STA 111, STA 211, STA 720"
+              value={staffForm.courses}
+              onChange={(e) => setStaffForm({ ...staffForm, courses: e.target.value })}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="admin-staff-photo" className="font-bold text-text-main block mb-1">Lecturer Photo URL (Direct Link)</label>
+            <input
+              id="admin-staff-photo"
+              type="url"
+              placeholder="https://... (Direct photo link)"
+              value={staffForm.imageUrl}
+              onChange={(e) => setStaffForm({ ...staffForm, imageUrl: e.target.value })}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+            />
+          </div>
+
+          <div className="pt-3 border-t border-border-light flex items-center justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsCreateStaffOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="sm">
+              Save Lecturer Profile
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Feedback / Request Revision Modal */}
-      {feedbackTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setFeedbackTarget(null)} className="fixed inset-0 bg-black/40 backdrop-blur-xs" />
-          <div className="relative z-10 w-full max-w-md rounded-2xl bg-white dark:bg-[#13171D] p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
-              Request Document Revision
-            </h3>
-            <p className="text-xs text-zinc-500">
-              Provide feedback for &ldquo;{feedbackTarget.resourceTitle}&rdquo;.
-            </p>
+      <Modal
+        isOpen={Boolean(feedbackTarget)}
+        onClose={() => setFeedbackTarget(null)}
+        title="Request Document Revision"
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          <p className="text-xs sm:text-sm text-text-muted">
+            Provide feedback for &ldquo;{feedbackTarget?.resourceTitle}&rdquo;.
+          </p>
+          <div>
+            <label htmlFor="admin-revision-note" className="text-xs font-bold text-text-main block mb-1">
+              Revision Note
+            </label>
             <textarea
+              id="admin-revision-note"
               rows={3}
               value={feedbackNote}
               onChange={(e) => setFeedbackNote(e.target.value)}
               placeholder="e.g. Please re-scan pages 4 and 5 in clearer resolution."
-              className="w-full p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
+              className="w-full p-3 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
             />
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setFeedbackTarget(null)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-500 hover:bg-zinc-100"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmChanges}
-                className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold"
-              >
-                Dispatch Feedback
-              </button>
-            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-light">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setFeedbackTarget(null)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="primary" size="sm" onClick={handleConfirmChanges}>
+              Dispatch Feedback
+            </Button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Schedule Calendar Date Modal */}
-      {isCreateCalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setIsCreateCalOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-xs" />
-          <div className="relative z-10 w-full max-w-lg rounded-2xl bg-white dark:bg-[#13171D] p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Schedule Academic Date</h3>
-              <button onClick={() => setIsCreateCalOpen(false)} className="p-1 text-zinc-400 hover:text-zinc-600">
-                <X className="w-4 h-4" />
-              </button>
+      <Modal
+        isOpen={isCreateCalOpen}
+        onClose={() => setIsCreateCalOpen(false)}
+        title="Schedule Academic Date"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleCreateCalendarEvent} className="space-y-3.5 text-xs">
+          <div>
+            <label htmlFor="admin-cal-title" className="font-bold text-text-main block mb-1">Event Title *</label>
+            <input
+              id="admin-cal-title"
+              type="text"
+              required
+              placeholder="e.g. STA 311 Continuous Assessment Test"
+              value={calForm.title}
+              onChange={(e) => setCalForm({ ...calForm, title: e.target.value })}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="admin-cal-category" className="font-bold text-text-main block mb-1">Category</label>
+              <select
+                id="admin-cal-category"
+                value={calForm.category}
+                onChange={(e) => setCalForm({ ...calForm, category: e.target.value as CalendarCategory })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              >
+                <option value="Continuous Assessment">Continuous Assessment (CA)</option>
+                <option value="Examination">Final Examination</option>
+                <option value="Academic Milestone">Academic Milestone</option>
+                <option value="Departmental Event">Departmental Event</option>
+                <option value="Registration Deadline">Registration Deadline</option>
+                <option value="Resumption / Senate">Resumption / Senate</option>
+              </select>
             </div>
 
-            <form onSubmit={handleCreateCalendarEvent} className="space-y-3.5 text-xs">
-              <div>
-                <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Event Title *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. STA 311 Continuous Assessment Test"
-                  value={calForm.title}
-                  onChange={(e) => setCalForm({ ...calForm, title: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Category</label>
-                  <select
-                    value={calForm.category}
-                    onChange={(e) => setCalForm({ ...calForm, category: e.target.value as CalendarCategory })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  >
-                    <option value="Continuous Assessment">Continuous Assessment (CA)</option>
-                    <option value="Examination">Final Examination</option>
-                    <option value="Academic Milestone">Academic Milestone</option>
-                    <option value="Departmental Event">Departmental Event</option>
-                    <option value="Registration Deadline">Registration Deadline</option>
-                    <option value="Resumption / Senate">Resumption / Senate</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Target Level</label>
-                  <select
-                    value={calForm.targetLevel}
-                    onChange={(e) => setCalForm({ ...calForm, targetLevel: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  >
-                    <option value="all">All Levels</option>
-                    <option value="100">100 Level</option>
-                    <option value="200">200 Level</option>
-                    <option value="300">300 Level</option>
-                    <option value="400">400 Level</option>
-                    <option value="Postgraduate">Postgraduate</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={calForm.startDate}
-                    onChange={(e) => setCalForm({ ...calForm, startDate: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Venue (Optional)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. LLT"
-                    value={calForm.venue}
-                    onChange={(e) => setCalForm({ ...calForm, venue: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateCalOpen(false)}
-                  className="px-3 py-1.5 text-xs text-zinc-500 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold"
-                >
-                  Schedule Date
-                </button>
-              </div>
-            </form>
+            <div>
+              <label htmlFor="admin-cal-level" className="font-bold text-text-main block mb-1">Target Level</label>
+              <select
+                id="admin-cal-level"
+                value={calForm.targetLevel}
+                onChange={(e) => setCalForm({ ...calForm, targetLevel: e.target.value as 'all' | '100' | '200' | '300' | '400' })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              >
+                <option value="all">All Levels</option>
+                <option value="100">100 Level</option>
+                <option value="200">200 Level</option>
+                <option value="300">300 Level</option>
+                <option value="400">400 Level</option>
+                <option value="Postgraduate">Postgraduate</option>
+              </select>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="admin-cal-date" className="font-bold text-text-main block mb-1">Date *</label>
+              <input
+                id="admin-cal-date"
+                type="date"
+                required
+                value={calForm.startDate}
+                onChange={(e) => setCalForm({ ...calForm, startDate: e.target.value })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              />
+            </div>
+            <div>
+              <label htmlFor="admin-cal-venue" className="font-bold text-text-main block mb-1">Venue (Optional)</label>
+              <input
+                id="admin-cal-venue"
+                type="text"
+                placeholder="e.g. LLT"
+                value={calForm.venue}
+                onChange={(e) => setCalForm({ ...calForm, venue: e.target.value })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border-light">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsCreateCalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="sm">
+              Schedule Date
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Broadcast Notice Modal */}
-      {isCreateNoticeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setIsCreateNoticeOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-xs" />
-          <div className="relative z-10 w-full max-w-lg rounded-2xl bg-white dark:bg-[#13171D] p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Broadcast Department Notice</h3>
-              <button onClick={() => setIsCreateNoticeOpen(false)} className="p-1 text-zinc-400 hover:text-zinc-600">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateNotice} className="space-y-3.5 text-xs">
-              <div>
-                <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Notice Title *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Rescheduled STA 214 Practical Session"
-                  value={noticeForm.title}
-                  onChange={(e) => setNoticeForm({ ...noticeForm, title: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Notice Content *</label>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="Enter notice announcement details..."
-                  value={noticeForm.content}
-                  onChange={(e) => setNoticeForm({ ...noticeForm, content: e.target.value })}
-                  className="w-full p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="notice-urgent"
-                  checked={noticeForm.isUrgent}
-                  onChange={(e) => setNoticeForm({ ...noticeForm, isUrgent: e.target.checked })}
-                  className="rounded text-[#087A3E] focus:ring-[#087A3E]"
-                />
-                <label htmlFor="notice-urgent" className="text-xs text-zinc-700 dark:text-zinc-300 font-medium">
-                  Mark as High Priority / Urgent
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateNoticeOpen(false)}
-                  className="px-3 py-1.5 text-xs text-zinc-500 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold"
-                >
-                  Broadcast Notice
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={isCreateNoticeOpen}
+        onClose={() => setIsCreateNoticeOpen(false)}
+        title="Broadcast Department Notice"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleCreateNotice} className="space-y-3.5 text-xs">
+          <div>
+            <label htmlFor="admin-notice-title" className="font-bold text-text-main block mb-1">Notice Title *</label>
+            <input
+              id="admin-notice-title"
+              type="text"
+              required
+              placeholder="e.g. Rescheduled STA 214 Practical Session"
+              value={noticeForm.title}
+              onChange={(e) => setNoticeForm({ ...noticeForm, title: e.target.value })}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+            />
           </div>
-        </div>
-      )}
+
+          <div>
+            <label htmlFor="admin-notice-content" className="font-bold text-text-main block mb-1">Notice Content *</label>
+            <textarea
+              id="admin-notice-content"
+              rows={3}
+              required
+              placeholder="Enter notice announcement details..."
+              value={noticeForm.content}
+              onChange={(e) => setNoticeForm({ ...noticeForm, content: e.target.value })}
+              className="w-full p-3 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="notice-urgent"
+              checked={noticeForm.isUrgent}
+              onChange={(e) => setNoticeForm({ ...noticeForm, isUrgent: e.target.checked })}
+              className="w-4 h-4 rounded text-brand-green focus:ring-brand-green"
+            />
+            <label htmlFor="notice-urgent" className="text-xs text-text-main font-medium cursor-pointer">
+              Mark as High Priority / Urgent
+            </label>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border-light">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsCreateNoticeOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="sm">
+              Broadcast Notice
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Add Opportunity Modal */}
-      {isCreateOppOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setIsCreateOppOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-xs" />
-          <div className="relative z-10 w-full max-w-lg rounded-2xl bg-white dark:bg-[#13171D] p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Publish Opportunity</h3>
-              <button onClick={() => setIsCreateOppOpen(false)} className="p-1 text-zinc-400 hover:text-zinc-600">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateOpportunity} className="space-y-3.5 text-xs">
-              <div>
-                <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Title *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Data Analytics Summer Internship 2026"
-                  value={oppForm.title}
-                  onChange={(e) => setOppForm({ ...oppForm, title: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Provider *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. KPMG Nigeria"
-                    value={oppForm.provider}
-                    onChange={(e) => setOppForm({ ...oppForm, provider: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Application URL *</label>
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://..."
-                    value={oppForm.applicationUrl}
-                    onChange={(e) => setOppForm({ ...oppForm, applicationUrl: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Description</label>
-                <textarea
-                  rows={2}
-                  placeholder="Details and eligibility..."
-                  value={oppForm.description}
-                  onChange={(e) => setOppForm({ ...oppForm, description: e.target.value })}
-                  className="w-full p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateOppOpen(false)}
-                  className="px-3 py-1.5 text-xs text-zinc-500 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold"
-                >
-                  Publish Opportunity
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={isCreateOppOpen}
+        onClose={() => setIsCreateOppOpen(false)}
+        title="Publish Opportunity"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleCreateOpportunity} className="space-y-3.5 text-xs">
+          <div>
+            <label htmlFor="admin-opp-title" className="font-bold text-text-main block mb-1">Title *</label>
+            <input
+              id="admin-opp-title"
+              type="text"
+              required
+              placeholder="e.g. Data Analytics Summer Internship 2026"
+              value={oppForm.title}
+              onChange={(e) => setOppForm({ ...oppForm, title: e.target.value })}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="admin-opp-provider" className="font-bold text-text-main block mb-1">Provider *</label>
+              <input
+                id="admin-opp-provider"
+                type="text"
+                required
+                placeholder="e.g. KPMG Nigeria"
+                value={oppForm.provider}
+                onChange={(e) => setOppForm({ ...oppForm, provider: e.target.value })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              />
+            </div>
+            <div>
+              <label htmlFor="admin-opp-url" className="font-bold text-text-main block mb-1">Application URL *</label>
+              <input
+                id="admin-opp-url"
+                type="url"
+                required
+                placeholder="https://..."
+                value={oppForm.applicationUrl}
+                onChange={(e) => setOppForm({ ...oppForm, applicationUrl: e.target.value })}
+                className="w-full px-3 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="admin-opp-desc" className="font-bold text-text-main block mb-1">Description</label>
+            <textarea
+              id="admin-opp-desc"
+              rows={2}
+              placeholder="Details and eligibility..."
+              value={oppForm.description}
+              onChange={(e) => setOppForm({ ...oppForm, description: e.target.value })}
+              className="w-full p-3 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border-light">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsCreateOppOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="sm">
+              Publish Opportunity
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Add FAQ Modal */}
-      {isCreateFaqOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setIsCreateFaqOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-xs" />
-          <div className="relative z-10 w-full max-w-lg rounded-2xl bg-white dark:bg-[#13171D] p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Add Guidance FAQ</h3>
-              <button onClick={() => setIsCreateFaqOpen(false)} className="p-1 text-zinc-400 hover:text-zinc-600">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateFaq} className="space-y-3.5 text-xs">
-              <div>
-                <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Question *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. How do I request past question solutions?"
-                  value={faqForm.question}
-                  onChange={(e) => setFaqForm({ ...faqForm, question: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Answer *</label>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="Provide clear guidance..."
-                  value={faqForm.answer}
-                  onChange={(e) => setFaqForm({ ...faqForm, answer: e.target.value })}
-                  className="w-full p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-xs focus:outline-none focus:border-[#087A3E]"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateFaqOpen(false)}
-                  className="px-3 py-1.5 text-xs text-zinc-500 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-3.5 py-1.5 rounded-lg bg-[#087A3E] hover:bg-[#066131] text-white text-xs font-bold"
-                >
-                  Save FAQ
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={isCreateFaqOpen}
+        onClose={() => setIsCreateFaqOpen(false)}
+        title="Add Guidance FAQ"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleCreateFaq} className="space-y-3.5 text-xs">
+          <div>
+            <label htmlFor="admin-faq-question" className="font-bold text-text-main block mb-1">Question *</label>
+            <input
+              id="admin-faq-question"
+              type="text"
+              required
+              placeholder="e.g. How do I request past question solutions?"
+              value={faqForm.question}
+              onChange={(e) => setFaqForm({ ...faqForm, question: e.target.value })}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+            />
           </div>
-        </div>
-      )}
+
+          <div>
+            <label htmlFor="admin-faq-answer" className="font-bold text-text-main block mb-1">Answer *</label>
+            <textarea
+              id="admin-faq-answer"
+              rows={3}
+              required
+              placeholder="Provide clear guidance..."
+              value={faqForm.answer}
+              onChange={(e) => setFaqForm({ ...faqForm, answer: e.target.value })}
+              className="w-full p-3 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border-light">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsCreateFaqOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="sm">
+              Save FAQ
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

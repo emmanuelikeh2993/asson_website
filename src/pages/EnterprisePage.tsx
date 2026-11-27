@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { EnterpriseListing, EnterpriseCategory, AcademicLevel } from '../types';
-import { fetchEnterpriseListings, submitEnterpriseListing } from '../lib/supabase';
+import { fetchEnterpriseListings, submitEnterpriseListing, uploadEnterpriseImage } from '../lib/supabase';
+import { sanitizeSafeHttpUrl } from '../lib/validation';
 import { useToast } from '../components/ui/Toast';
 import {
   Briefcase,
@@ -15,7 +17,8 @@ import {
   ShieldCheck,
   User,
   Clock,
-  Phone
+  Phone,
+  ArrowLeft
 } from 'lucide-react';
 
 export const EnterprisePage: React.FC = () => {
@@ -41,6 +44,7 @@ export const EnterprisePage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [instagram, setInstagram] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -78,15 +82,27 @@ export const EnterprisePage: React.FC = () => {
 
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setImagePreview(result);
-        setImageUrl(result);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedImageTypes.includes(file.type)) {
+      toast.error('Invalid Image Type', 'Only JPEG, PNG, or WebP images are supported (SVG/HTML blocked).');
+      e.target.value = '';
+      return;
     }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image Too Large', 'Business showcase photos must be 2MB or smaller.');
+      e.target.value = '';
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      setImagePreview(result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,7 +112,23 @@ export const EnterprisePage: React.FC = () => {
       return;
     }
 
+    let finalImageUrl = imageUrl.trim() ? sanitizeSafeHttpUrl(imageUrl.trim()) : undefined;
+    if (imageUrl.trim() && !finalImageUrl) {
+      toast.error('Invalid Image URL', 'Photo URL must begin with https:// or http://.');
+      return;
+    }
+
     setIsSubmitting(true);
+    if (imageFile) {
+      const uploadRes = await uploadEnterpriseImage(imageFile);
+      if (!uploadRes.success || !uploadRes.publicUrl) {
+        setIsSubmitting(false);
+        toast.error('Photo Upload Failed', uploadRes.error || 'Could not upload showcase photo.');
+        return;
+      }
+      finalImageUrl = uploadRes.publicUrl;
+    }
+
     const cleanPhone = whatsapp.replace(/\D/g, '');
     const res = await submitEnterpriseListing({
       businessName: businessName.trim(),
@@ -106,7 +138,7 @@ export const EnterprisePage: React.FC = () => {
       description: description.trim(),
       whatsapp: cleanPhone,
       instagram: instagram.trim() || undefined,
-      imageUrl: imageUrl.trim() || imagePreview || undefined,
+      imageUrl: finalImageUrl,
     });
     setIsSubmitting(false);
 
@@ -125,6 +157,7 @@ export const EnterprisePage: React.FC = () => {
       setDescription('');
       setWhatsapp('');
       setInstagram('');
+      setImageFile(null);
       setImageUrl('');
       setImagePreview(null);
     } else {
@@ -135,27 +168,37 @@ export const EnterprisePage: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 pb-24 w-full">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-light">
-        <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-brand-green text-[11px] font-bold border border-emerald-200/80 dark:border-emerald-800/80 mb-1.5">
-            <Briefcase className="w-3.5 h-3.5" /> ASSON UI Enterprise Hub
-          </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-text-main tracking-tight">
-            Student Enterprise & Services Showcase
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5 max-w-2xl leading-relaxed">
-            Support businesses, freelance data consultants, peer tutors, and creative ventures by fellow statistics scholars.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setIsSubmitOpen(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 self-start sm:self-auto active:scale-95"
+      <div className="space-y-3">
+        <Link
+          to="/more"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-muted hover:text-brand-green transition-colors"
         >
-          <PlusCircle className="w-4 h-4" />
-          <span>Showcase Your Business</span>
-        </button>
+          <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>Back to More</span>
+        </Link>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-light">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-brand-deep dark:text-emerald-300 text-xs font-bold border border-emerald-200/80 dark:border-emerald-800/80 mb-1.5">
+              <Briefcase className="w-3.5 h-3.5" aria-hidden="true" /> ASSON UI Enterprise Hub
+            </div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-text-main tracking-tight">
+              Student Enterprise &amp; Services Showcase
+            </h1>
+            <p className="text-sm text-text-muted mt-1 max-w-2xl leading-relaxed">
+              Support businesses, freelance data consultants, peer tutors, and creative ventures by fellow statistics scholars.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsSubmitOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-green hover:bg-brand-deep text-white text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 self-start sm:self-auto active:scale-95"
+          >
+            <PlusCircle className="w-4 h-4" aria-hidden="true" />
+            <span>Showcase Your Business</span>
+          </button>
+        </div>
       </div>
 
       {/* Search & Category Filter Bar */}
@@ -286,16 +329,16 @@ export const EnterprisePage: React.FC = () => {
                       href={whatsappUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#128C7E] dark:text-[#25D366] text-xs font-bold transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[44px] sm:min-h-[38px] rounded-xl bg-brand-light hover:bg-emerald-100 dark:hover:bg-emerald-950 text-brand-deep dark:text-emerald-300 text-xs font-bold transition-colors cursor-pointer"
                     >
-                      <MessageCircle className="w-3.5 h-3.5" />
+                      <MessageCircle className="w-3.5 h-3.5" aria-hidden="true" />
                       <span>WhatsApp</span>
                     </a>
 
                     <button
                       type="button"
                       onClick={() => setSelectedListing(item)}
-                      className="text-xs font-bold text-brand-green hover:text-brand-deep cursor-pointer"
+                      className="min-h-[44px] sm:min-h-[38px] px-2 text-xs font-bold text-brand-green hover:text-brand-deep cursor-pointer"
                     >
                       View Profile →
                     </button>
@@ -373,9 +416,9 @@ export const EnterprisePage: React.FC = () => {
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full h-10 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
+                className="w-full min-h-[44px] py-2.5 rounded-xl bg-brand-green hover:bg-brand-deep text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
               >
-                <MessageCircle className="w-4 h-4" />
+                <MessageCircle className="w-4 h-4" aria-hidden="true" />
                 <span>Chat on WhatsApp ({selectedListing.whatsapp})</span>
               </a>
 
@@ -542,7 +585,7 @@ export const EnterprisePage: React.FC = () => {
                   <div className="relative">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp"
                       id="enterprise-photo-file"
                       onChange={handleImageFileChange}
                       className="hidden"
@@ -569,6 +612,7 @@ export const EnterprisePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
+                        setImageFile(null);
                         setImagePreview(null);
                         setImageUrl('');
                       }}

@@ -9,7 +9,7 @@
   --surface-subtle: #EDF2E8;
   --text-main: #17232D;
   --text-muted: #5C6B75;
-  --text-subtle: #8C9BA5;
+  --text-subtle: #55636E;
   --border-light: #D8E2DE;
   --border-hover: #B5C7C0;
   --brand-green: #087A3E;
@@ -23,12 +23,12 @@
   --surface-elevated: #1D2730; /* Higher elevation surface */
   --surface-subtle: #19222A;   /* Subdued containers & chips */
   --text-main: #F2F5F8;        /* Crisp readable heading text */
-  --text-muted: #94A3B8;       /* Legible muted body text */
-  --text-subtle: #64748B;      /* Footers & micro-captions */
+  --text-muted: #A8B8C8;       /* Legible muted body text (>= 7:1) */
+  --text-subtle: #94A3B8;      /* Accessible captions (>= 6.6:1) */
   --border-light: #24303B;     /* Crisp subtle borders */
   --border-hover: #384856;     /* Interactive border hover */
-  --brand-green: #10B981;      /* High-contrast vivid Emerald Green */
-  --brand-deep: #059669;       /* Medium emerald */
+  --brand-green: #10B981;      /* High-contrast vivid Emerald text/border accent */
+  --brand-deep: #047857;       /* Accessible solid emerald fill for white text (>= 5.4:1) */
   --brand-light: #064E3B;      /* Deep green tint */
 }
 
@@ -49,15 +49,27 @@
     background-color: var(--surface-bg);
     color: var(--text-main);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    touch-action: manipulation;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* WhatsApp/Native mobile constant feel: prevent browser auto-zooming into inputs on focus */
-  @media screen and (max-width: 768px) {
-    input, select, textarea {
-      font-size: 16px !important;
-    }
+  /* Ensure solid emerald primary buttons maintain >= 4.5:1 contrast with white text in dark mode */
+  .dark .bg-brand-green.text-white,
+  .dark button.bg-brand-green,
+  .dark a.bg-brand-green {
+    background-color: var(--brand-deep);
+  }
+
+  /* Ensure red error/required text maintains >= 4.5:1 contrast on dark cards */
+  .dark .text-brand-red {
+    color: #F87171;
+  }
+
+  /* Prevent browser auto-zooming into inputs on focus */
+  input, select, textarea {
+    font-size: 16px !important;
   }
 }
 
@@ -100,4 +112,16 @@
     linear-gradient(to right, rgba(255, 255, 255, 0.065) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.065) 1px, transparent 1px);
   background-size: 44px 44px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html, body {
+    scroll-behavior: auto !important;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

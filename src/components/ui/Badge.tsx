@@ -32,7 +32,7 @@ export const Badge: React.FC<BadgeProps> = ({
     'needs-review': "bg-amber-50 text-amber-800 border border-amber-200",
     pending: "bg-blue-50 text-blue-800 border border-blue-200",
     'changes-requested': "bg-rose-50 text-rose-800 border border-rose-200",
-    urgent: "bg-red-50 text-brand-red border border-red-200 font-semibold animate-pulse",
+    urgent: "bg-red-50 text-brand-red border border-red-200 font-semibold",
     neutral: "bg-gray-100 text-text-muted border border-gray-200",
     course: "bg-brand-light text-brand-deep font-semibold tracking-wide border border-emerald-200",
   };

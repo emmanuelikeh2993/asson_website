@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import { useToast } from '../components/ui/Toast';
+import { sanitizeSafeHttpUrl } from '../lib/validation';
 
 function getDomainFromUrl(url?: string): string {
   if (!url) return 'Official Portal';
@@ -30,14 +31,26 @@ function getDomainFromUrl(url?: string): string {
 export const OpportunitiesPage: React.FC = () => {
   const [opportunities, setOpportunities] = useState<Opportunity[]>(MOCK_OPPORTUNITIES);
   const [activeCategory, setActiveCategory] = useState<OpportunityCategory | 'All'>('All');
+  const [loadError, setLoadError] = useState(false);
   const toast = useToast();
 
+  const loadOpportunities = () => {
+    setLoadError(false);
+    fetchOpportunities()
+      .then((data) => {
+        if (data && data.length > 0) {
+          setOpportunities(data);
+        } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          setLoadError(true);
+        }
+      })
+      .catch(() => {
+        setLoadError(true);
+      });
+  };
+
   useEffect(() => {
-    fetchOpportunities().then((data) => {
-      if (data && data.length > 0) {
-        setOpportunities(data);
-      }
-    });
+    loadOpportunities();
   }, []);
 
   const filteredOpportunities = opportunities.filter(
@@ -80,8 +93,9 @@ export const OpportunitiesPage: React.FC = () => {
           {(['All', 'Scholarship', 'Internship'] as const).map((cat) => (
             <button
               key={cat}
+              type="button"
               onClick={() => setActiveCategory(cat)}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all duration-150 active:scale-95 cursor-pointer ${
+              className={`px-3 py-1.5 min-h-[44px] sm:min-h-[36px] rounded-lg font-bold transition-all duration-150 active:scale-95 cursor-pointer ${
                 activeCategory === cat
                   ? 'bg-brand-green text-white shadow-xs'
                   : 'text-text-muted hover:text-text-main'
@@ -93,17 +107,34 @@ export const OpportunitiesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Opportunities Card Grid / Clean Empty State */}
-      {filteredOpportunities.length === 0 ? (
+      {/* Opportunities Card Grid / Error & Clean Empty State */}
+      {loadError && filteredOpportunities.length === 0 ? (
+        <div className="py-16 px-4 text-center rounded-3xl border border-dashed border-amber-300 dark:border-amber-700 bg-surface-card max-w-xl mx-auto space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 flex items-center justify-center mx-auto border border-amber-200 dark:border-amber-800 shadow-2xs">
+            <GraduationCap className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-bold text-text-main">
+              Unable to load opportunities
+            </h3>
+            <p className="text-xs sm:text-sm text-text-muted max-w-md mx-auto leading-relaxed">
+              Check your internet connection and retry fetching the latest verified scholarships, grants, and internships.
+            </p>
+          </div>
+          <Button type="button" size="sm" variant="primary" onClick={loadOpportunities}>
+            Retry
+          </Button>
+        </div>
+      ) : filteredOpportunities.length === 0 ? (
         <div className="py-16 px-4 text-center rounded-3xl border border-dashed border-border-light bg-surface-card max-w-xl mx-auto space-y-4">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-brand-green flex items-center justify-center mx-auto border border-emerald-200 shadow-2xs">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-brand-deep dark:text-emerald-300 flex items-center justify-center mx-auto border border-emerald-200 dark:border-emerald-800 shadow-2xs">
             <GraduationCap className="w-7 h-7" />
           </div>
           <div className="space-y-1">
             <h3 className="text-base font-bold text-text-main">
               No Opportunities Listed Currently
             </h3>
-            <p className="text-xs text-text-muted max-w-md mx-auto leading-relaxed">
+            <p className="text-xs sm:text-sm text-text-muted max-w-md mx-auto leading-relaxed">
               There are no active {activeCategory !== 'All' ? activeCategory.toLowerCase() : 'grant, scholarship, or internship'} listings posted at this moment. Verified corporate sponsorships, federal scholarships, and statistical research fellowships will appear here when officially announced and vetted.
             </p>
           </div>
@@ -177,7 +208,7 @@ export const OpportunitiesPage: React.FC = () => {
                   </button>
 
                   <a
-                    href={opp.applicationUrl || 'https://www.icanstudent.com/opportunities/'}
+                    href={sanitizeSafeHttpUrl(opp.applicationUrl) || 'https://www.icanstudent.com/opportunities/'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-block"

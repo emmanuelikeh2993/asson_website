@@ -1,10 +1,10 @@
-const CACHE_NAME = 'asson-ui-cache-v5';
+const CACHE_NAME = 'asson-ui-cache-v6';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/logo/asson_logo.png',
-  '/logo/ui_crest.jpg',
+  '/logo/asson_logo.webp',
+  '/logo/ui_crest.webp',
   '/icon-192.png',
   '/icon-512.png',
   '/icon-maskable-512.png',

@@ -191,20 +191,20 @@ export const StaffDirectoryModal: React.FC<StaffDirectoryModalProps> = ({ isOpen
                       <h3 className="text-sm font-bold text-zinc-900 dark:text-white leading-tight truncate">
                         {member.name}
                       </h3>
-                      <p className="text-[11px] font-medium text-brand-green dark:text-emerald-400 mt-0.5 truncate">
+                      <p className="text-xs font-medium text-brand-green mt-0.5 truncate">
                         {member.designation}
                       </p>
                       
-                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-zinc-600 dark:text-zinc-300">
+                      <div className="flex items-center gap-2 mt-1.5 text-xs text-text-muted">
                         <span className="inline-flex items-center gap-1 truncate font-medium">
-                          <MapPin className="w-3 h-3 text-[#087A3E] shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 text-brand-green shrink-0" aria-hidden="true" />
                           {member.office}
                         </span>
                         {member.consultationHours && (
                           <>
-                            <span className="text-zinc-300 dark:text-zinc-700">•</span>
+                            <span className="text-border-light" aria-hidden="true">•</span>
                             <span className="inline-flex items-center gap-1 truncate">
-                              <Clock className="w-3 h-3 text-zinc-400 shrink-0" />
+                              <Clock className="w-3.5 h-3.5 text-text-subtle shrink-0" aria-hidden="true" />
                               {member.consultationHours}
                             </span>
                           </>
