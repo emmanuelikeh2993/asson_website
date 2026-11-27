@@ -30,6 +30,8 @@ const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default:
 const TermsPage = lazy(() => import('./pages/TermsPage').then((m) => ({ default: m.TermsPage })));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then((m) => ({ default: m.PrivacyPage })));
 const MorePage = lazy(() => import('./pages/MorePage').then((m) => ({ default: m.MorePage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const EnterprisePage = lazy(() => import('./pages/EnterprisePage').then((m) => ({ default: m.EnterprisePage })));
 const CgpaCalculatorPage = lazy(() => import('./pages/CgpaCalculatorPage').then((m) => ({ default: m.CgpaCalculatorPage })));
 
@@ -126,9 +128,21 @@ const ROUTE_META: Record<string, RouteMetaConfig> = {
       'Student privacy practices, local device storage, Supabase account handling, and peer submission data minimization.',
   },
   '/more': {
-    title: 'More & Preferences — ASSON UI',
+    title: 'Menu & Account — ASSON UI',
     description:
-      'Theme preferences, academic level focus, data saver, CGPA calculator, staff directory, and executive contacts.',
+      'Study Locker shortcut, academic directory, CGPA calculator, and platform settings.',
+    noindex: true,
+  },
+  '/settings': {
+    title: 'Settings — ASSON UI',
+    description:
+      'Themes, academic level focus, data saver, cache management, and student account settings.',
+    noindex: true,
+  },
+  '/profile': {
+    title: 'My Profile — ASSON UI',
+    description:
+      'Student profile details, study level focus, and Study Locker account synchronization status.',
     noindex: true,
   },
   '/executive': {
@@ -182,7 +196,7 @@ export function AppContent() {
       setIsSubmitOpen(true);
     }
     if (params.get('settings') === 'true') {
-      navigate('/more', { replace: true });
+      navigate('/settings', { replace: true });
     }
     // Check if user arrived from a password recovery link in email
     const hash = location.hash || (typeof window !== 'undefined' ? window.location.hash : '');
@@ -347,7 +361,22 @@ export function AppContent() {
                 />
               } 
             />
-            <Route path="/settings" element={<Navigate to="/more" replace />} />
+            <Route
+              path="/settings"
+              element={
+                <SettingsPage
+                  onOpenAuth={() => setIsAuthOpen(true)}
+                />
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProfilePage
+                  onOpenAuth={() => setIsAuthOpen(true)}
+                />
+              }
+            />
 
             {/* Seamless Aliases and Deep-linking Routes */}
             <Route path="/submit" element={<Navigate to="/resources?submit=true" replace />} />

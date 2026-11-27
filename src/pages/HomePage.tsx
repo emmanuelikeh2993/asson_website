@@ -20,7 +20,8 @@ import {
   ShieldCheck,
   GraduationCap,
   ChevronRight,
-  Quote
+  Quote,
+  Calculator
 } from 'lucide-react';
 import { AcademicResource, Notice } from '../types';
 import { fetchResources, fetchNotices } from '../lib/supabase';
@@ -237,6 +238,92 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
           </Link>
         </div>
       )}
+
+      {/* Quick-Access 4-Column Academic Services Strip */}
+      <section aria-label="Quick Academic Access" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
+        <div className="rounded-2xl bg-surface-card border border-border-light/70 p-2 sm:p-3 grid grid-cols-4 gap-1 sm:gap-2 shadow-2xs">
+          <Link
+            to="/resources"
+            className="flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 min-h-[68px] rounded-xl hover:bg-surface-bg/70 transition-colors text-center"
+          >
+            <span className="w-9 h-9 rounded-xl bg-brand-light text-brand-green flex items-center justify-center">
+              <BookOpen className="w-4 h-4" aria-hidden="true" />
+            </span>
+            <span className="text-xs font-semibold text-text-main leading-tight">Library</span>
+          </Link>
+
+          <Link
+            to="/past-questions"
+            className="flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 min-h-[68px] rounded-xl hover:bg-surface-bg/70 transition-colors text-center"
+          >
+            <span className="w-9 h-9 rounded-xl bg-brand-light text-brand-green flex items-center justify-center">
+              <FileText className="w-4 h-4" aria-hidden="true" />
+            </span>
+            <span className="text-xs font-semibold text-text-main leading-tight">Past PQs</span>
+          </Link>
+
+          <Link
+            to="/cgpa-calculator"
+            className="flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 min-h-[68px] rounded-xl hover:bg-surface-bg/70 transition-colors text-center"
+          >
+            <span className="w-9 h-9 rounded-xl bg-brand-light text-brand-green flex items-center justify-center">
+              <Calculator className="w-4 h-4" aria-hidden="true" />
+            </span>
+            <span className="text-xs font-semibold text-text-main leading-tight">CGPA Calc</span>
+          </Link>
+
+          <Link
+            to="/calendar"
+            className="flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 min-h-[68px] rounded-xl hover:bg-surface-bg/70 transition-colors text-center"
+          >
+            <span className="w-9 h-9 rounded-xl bg-brand-light text-brand-green flex items-center justify-center">
+              <Calendar className="w-4 h-4" aria-hidden="true" />
+            </span>
+            <span className="text-xs font-semibold text-text-main leading-tight">Calendar</span>
+          </Link>
+
+          <Link
+            to="/notices"
+            className="flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 min-h-[68px] rounded-xl hover:bg-surface-bg/70 transition-colors text-center"
+          >
+            <span className="w-9 h-9 rounded-xl bg-brand-light text-brand-green flex items-center justify-center">
+              <Bell className="w-4 h-4" aria-hidden="true" />
+            </span>
+            <span className="text-xs font-semibold text-text-main leading-tight">Notices</span>
+          </Link>
+
+          <Link
+            to="/opportunities"
+            className="flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 min-h-[68px] rounded-xl hover:bg-surface-bg/70 transition-colors text-center"
+          >
+            <span className="w-9 h-9 rounded-xl bg-brand-light text-brand-green flex items-center justify-center">
+              <Sparkles className="w-4 h-4" aria-hidden="true" />
+            </span>
+            <span className="text-xs font-semibold text-text-main leading-tight">Grants</span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={onOpenSubmit}
+            className="flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 min-h-[68px] rounded-xl hover:bg-surface-bg/70 transition-colors text-center cursor-pointer"
+          >
+            <span className="w-9 h-9 rounded-xl bg-brand-green text-white flex items-center justify-center">
+              <PlusCircle className="w-4 h-4" aria-hidden="true" />
+            </span>
+            <span className="text-xs font-semibold text-text-main leading-tight">Submit</span>
+          </button>
+
+          <Link
+            to="/help"
+            className="flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 min-h-[68px] rounded-xl hover:bg-surface-bg/70 transition-colors text-center"
+          >
+            <span className="w-9 h-9 rounded-xl bg-brand-light text-brand-green flex items-center justify-center">
+              <HelpCircle className="w-4 h-4" aria-hidden="true" />
+            </span>
+            <span className="text-xs font-semibold text-text-main leading-tight">Help</span>
+          </Link>
+        </div>
+      </section>
 
       {/* ==================================================================== */}
       {/* ZONE 2: FEATURES BENTO SHOWCASE (1 WIDE CARD + 2 SIDE-BY-SIDE CARDS) */}

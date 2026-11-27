@@ -10,6 +10,7 @@ interface MobileNavProps {
 const MORE_SUBPATHS = new Set([
   '/more',
   '/settings',
+  '/profile',
   '/cgpa-calculator',
   '/help',
   '/faqs',
