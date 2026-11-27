@@ -17,6 +17,8 @@ export interface Course {
   units: number;
 }
 
+export type ResourceFileType = 'PDF' | 'DOCX' | 'PNG' | 'JPG' | 'JPEG' | 'WEBP';
+
 export interface AcademicResource {
   id: string;
   title: string;
@@ -26,7 +28,7 @@ export interface AcademicResource {
   semester: 1 | 2;
   session: string;        // e.g. "2026/2027"
   type: ResourceType;
-  fileType: 'PDF' | 'DOCX';
+  fileType: ResourceFileType;
   fileSizeBytes: number;
   downloadUrl: string;
   filePath?: string;

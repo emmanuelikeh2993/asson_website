@@ -1,7 +1,7 @@
 import { AcademicResource } from '../types';
 import { formatFileSize } from './utils';
 import { incrementResourceDownloads } from './supabase';
-import { sanitizeSafeHttpUrl } from './validation';
+import { resolveResourceFileUrl, buildStorageDownloadUrl } from './resourceUrl';
 import { trackEvent } from './telemetry';
 
 export interface DownloadHistoryEntry {
@@ -65,25 +65,14 @@ export function triggerResourceDownload(
   }
 
   // Check if there is a real, physical file available
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cvhjohbknghlmspoaenr.supabase.co';
-  let verifiedFileUrl: string | null = null;
-
-  // 1. External verified link (strict http/https only, not a Supabase placeholder)
-  const safeExternalUrl = sanitizeSafeHttpUrl(resource.downloadUrl);
-  if (safeExternalUrl && !safeExternalUrl.includes('cvhjohbknghlmspoaenr')) {
-    verifiedFileUrl = safeExternalUrl;
-  }
-  // 2. Real physical file in storage (uploaded papers or submissions)
-  else if (resource.filePath && (resource.filePath.startsWith('submissions/') || resource.filePath.startsWith('papers/') || resource.filePath === 'test.pdf')) {
-    const sanitizedPath = resource.filePath.replace(/^resources\//, '').replace(/[^a-zA-Z0-9._/-]/g, '');
-    verifiedFileUrl = `${supabaseUrl}/storage/v1/object/public/resources/${sanitizedPath}`;
-  }
+  const verifiedFileUrl = resolveResourceFileUrl(resource);
 
   if (verifiedFileUrl) {
-    // Download physical file
+    // Download physical file (append ?download= on Supabase URLs so browser saves instead of navigating)
+    const suggestedFilename = `${resource.courseCode}_${resource.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.${resource.fileType.toLowerCase()}`;
     const link = document.createElement('a');
-    link.href = verifiedFileUrl;
-    link.download = `${resource.courseCode}_${resource.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.${resource.fileType.toLowerCase()}`;
+    link.href = buildStorageDownloadUrl(verifiedFileUrl, suggestedFilename);
+    link.download = suggestedFilename;
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     document.body.appendChild(link);

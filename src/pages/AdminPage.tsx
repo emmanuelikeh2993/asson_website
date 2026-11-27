@@ -49,6 +49,8 @@ import {
   supabase 
 } from '../lib/supabase';
 import { sanitizeSafeHttpUrl } from '../lib/validation';
+import { buildStorageDownloadUrl, detectDocumentKind } from '../lib/resourceUrl';
+import { UnifiedDocumentReader } from '../components/features/resources/UnifiedDocumentReader';
 import { 
   AuditLog, 
   StudentSubmission, 
@@ -172,6 +174,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
   // Modals & Forms
   const [feedbackTarget, setFeedbackTarget] = useState<StudentSubmission | null>(null);
   const [feedbackNote, setFeedbackNote] = useState('');
+  const [submissionPreview, setSubmissionPreview] = useState<{
+    submission: StudentSubmission;
+    url: string;
+  } | null>(null);
+  const [isLoadingSubmissionPreviewId, setIsLoadingSubmissionPreviewId] = useState<string | null>(null);
 
   // Staff Modal State
   const [isCreateStaffOpen, setIsCreateStaffOpen] = useState(false);
@@ -1904,17 +1911,24 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
                                   {sub.filePath && (
                                     <button
                                       type="button"
+                                      disabled={isLoadingSubmissionPreviewId === sub.id}
                                       onClick={async () => {
-                                        const url = await getSubmissionPreviewUrl(sub.filePath);
-                                        if (url) {
-                                          window.open(url, '_blank', 'noopener,noreferrer');
-                                        } else {
-                                          toast.error('Preview Unavailable', 'Could not generate a signed preview link for this file.');
+                                        setIsLoadingSubmissionPreviewId(sub.id);
+                                        try {
+                                          const url = await getSubmissionPreviewUrl(sub.filePath);
+                                          if (url) {
+                                            setSubmissionPreview({ submission: sub, url });
+                                          } else {
+                                            toast.error('Preview Unavailable', 'Could not generate a signed preview link for this file.');
+                                          }
+                                        } finally {
+                                          setIsLoadingSubmissionPreviewId(null);
                                         }
                                       }}
-                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 transition-colors shrink-0 cursor-pointer"
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 transition-colors shrink-0 cursor-pointer disabled:opacity-60"
                                     >
-                                      <Eye className="w-3.5 h-3.5" /> Preview
+                                      <Eye className="w-3.5 h-3.5" />
+                                      {isLoadingSubmissionPreviewId === sub.id ? 'Opening…' : 'Preview'}
                                     </button>
                                   )}
                                   {sub.status === 'Under Review' && (
@@ -3448,6 +3462,44 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenSubmit }) => {
           </div>
         </form>
       </Modal>
+
+      {/* In-Portal Submission Document Reader Modal */}
+      {submissionPreview && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Submission Preview: ${submissionPreview.submission.resourceTitle}`}
+          className="fixed inset-0 z-50 bg-surface-bg flex flex-col animate-in fade-in duration-150"
+        >
+          <UnifiedDocumentReader
+            variant="workspace"
+            title={submissionPreview.submission.resourceTitle}
+            courseCode={submissionPreview.submission.courseCode}
+            subtitle={`${submissionPreview.submission.session} • ${submissionPreview.submission.status}`}
+            fileUrl={submissionPreview.url}
+            fileType={
+              detectDocumentKind(submissionPreview.url, undefined, submissionPreview.submission.filePath).toUpperCase()
+            }
+            filePath={submissionPreview.submission.filePath}
+            fileSizeBytes={submissionPreview.submission.fileSizeBytes}
+            onClose={() => setSubmissionPreview(null)}
+            onDownload={() => {
+              const dlUrl = buildStorageDownloadUrl(
+                submissionPreview.url,
+                submissionPreview.submission.filePath?.split('/').pop() || 'submission'
+              );
+              const link = document.createElement('a');
+              link.href = dlUrl;
+              link.download = submissionPreview.submission.filePath?.split('/').pop() || 'submission';
+              link.target = '_blank';
+              link.rel = 'noopener noreferrer';
+              document.body.appendChild(link);
+              link.click();
+              setTimeout(() => document.body.removeChild(link), 200);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

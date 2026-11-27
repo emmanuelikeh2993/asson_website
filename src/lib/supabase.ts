@@ -14,6 +14,7 @@ import {
 } from './mockData';
 import {
   AcademicResource,
+  ResourceFileType,
   Course,
   Notice,
   Opportunity,
@@ -52,6 +53,7 @@ import {
   AuthorizedExecutiveSchema,
   sanitizeSafeHttpUrl
 } from './validation';
+import { resolveResourceFileUrl } from './resourceUrl';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -274,7 +276,30 @@ interface DbStaffRow {
   imageUrl?: string | null;
 }
 
-function mapDbResourceToModel(row: DbResourceRow): AcademicResource {
+function normalizeDbFileType(rawType?: string | null, rawPath?: string | null): ResourceFileType {
+  const candidate = (rawType || '').trim().toUpperCase();
+  if (candidate === 'DOCX' || candidate === 'PNG' || candidate === 'JPG' || candidate === 'JPEG' || candidate === 'WEBP' || candidate === 'PDF') {
+    return candidate;
+  }
+  const lowerPath = (rawPath || '').toLowerCase();
+  if (lowerPath.endsWith('.docx')) return 'DOCX';
+  if (lowerPath.endsWith('.png')) return 'PNG';
+  if (lowerPath.endsWith('.jpg')) return 'JPG';
+  if (lowerPath.endsWith('.jpeg')) return 'JPEG';
+  if (lowerPath.endsWith('.webp')) return 'WEBP';
+  return 'PDF';
+}
+
+export function mapDbResourceToModel(row: DbResourceRow): AcademicResource {
+  const filePath = row.file_path || undefined;
+  const resolvedUrl = resolveResourceFileUrl(
+    {
+      downloadUrl: filePath && filePath.startsWith('http') ? filePath : '#',
+      filePath,
+    },
+    supabaseUrl || undefined
+  );
+
   return {
     id: row.id,
     title: row.title,
@@ -284,11 +309,10 @@ function mapDbResourceToModel(row: DbResourceRow): AcademicResource {
     semester: (row.semester as 1 | 2) || 1,
     session: row.session || '2026/2027',
     type: row.type || 'Past Question',
-    fileType: (row.file_type as 'PDF' | 'DOCX') || 'PDF',
+    fileType: normalizeDbFileType(row.file_type, row.file_path),
     fileSizeBytes: Number(row.file_size_bytes) || 2048000,
-    downloadUrl: row.file_path && row.file_path.startsWith('http')
-      ? row.file_path
-      : row.file_path ? `${supabaseUrl}/storage/v1/object/public/${row.file_path}` : '#',
+    downloadUrl: resolvedUrl || '#',
+    filePath,
     verificationStatus: row.verification_status || 'Verified',
     lastCheckedDate: row.last_checked_date ? new Date(row.last_checked_date).toISOString().split('T')[0] : '2026-10-24',
     contributorName: row.contributor_name || 'ASSON Academic Committee',

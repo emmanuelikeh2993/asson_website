@@ -5,9 +5,13 @@ import { AcademicResource } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { triggerResourceDownload } from '../lib/download';
+import { resolveResourceFileUrl } from '../lib/resourceUrl';
 import { useToast } from '../components/ui/Toast';
+import { DocumentPreviewModal } from '../components/features/resources/DocumentPreviewModal';
+import { UnifiedDocumentReader } from '../components/features/resources/UnifiedDocumentReader';
 import { 
   Download, 
+  Eye,
   Share2, 
   Bookmark, 
   Check, 
@@ -36,6 +40,7 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({ onOpenSu
   const [isLoading, setIsLoading] = useState(true);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isFullscreenPreviewOpen, setIsFullscreenPreviewOpen] = useState(false);
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -144,6 +149,8 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({ onOpenSu
     );
   }
 
+  const resolvedPreviewUrl = resource ? resolveResourceFileUrl(resource) : null;
+
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6 animate-in fade-in duration-200">
       {/* Calm Top Bar Navigation */}
@@ -243,15 +250,45 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({ onOpenSu
             </div>
           </div>
 
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleDownload}
-            className="w-full sm:w-auto justify-center font-bold text-xs min-h-[44px] px-5 shadow-sm active:scale-98"
-          >
-            <Download className="w-4 h-4 mr-1.5" aria-hidden="true" /> Download Paper ({resource.fileType})
-          </Button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+            {resolvedPreviewUrl && (
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => setIsFullscreenPreviewOpen(true)}
+                className="w-full sm:w-auto justify-center font-bold text-xs min-h-[44px] px-4 border-border-light"
+              >
+                <Eye className="w-4 h-4 mr-1.5" aria-hidden="true" /> Expand Reader
+              </Button>
+            )}
+
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleDownload}
+              className="w-full sm:w-auto justify-center font-bold text-xs min-h-[44px] px-5 shadow-sm active:scale-98"
+            >
+              <Download className="w-4 h-4 mr-1.5" aria-hidden="true" /> Download Paper ({resource.fileType})
+            </Button>
+          </div>
         </div>
+
+        {/* Integrated In-Page Document Reader (PDF / DOCX / Image inside ASSON) */}
+        {resolvedPreviewUrl && (
+          <UnifiedDocumentReader
+            variant="embedded"
+            title={resource.title}
+            courseCode={resource.courseCode}
+            subtitle={`${resource.session} • ${resource.level}L`}
+            fileUrl={resolvedPreviewUrl}
+            fileType={resource.fileType}
+            filePath={resource.filePath}
+            fileSizeBytes={resource.fileSizeBytes}
+            onExpand={() => setIsFullscreenPreviewOpen(true)}
+            onDownload={handleDownload}
+            onShare={handleCopyLink}
+          />
+        )}
 
         {/* Document Specifications & Institutional Verification Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border-light/60 text-xs">
@@ -330,6 +367,15 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({ onOpenSu
             ))}
           </div>
         </div>
+      )}
+
+      {resource && (
+        <DocumentPreviewModal
+          isOpen={isFullscreenPreviewOpen}
+          resource={resource}
+          onClose={() => setIsFullscreenPreviewOpen(false)}
+          onOpenSubmit={onOpenSubmit}
+        />
       )}
     </div>
   );
