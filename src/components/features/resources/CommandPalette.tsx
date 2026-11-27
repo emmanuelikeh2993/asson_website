@@ -40,8 +40,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   const debouncedQuery = useDebounce(query, 120);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Active keyboard navigation index
+  // Active keyboard navigation index & scope filter
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scope, setScope] = useState<'resources' | 'all' | 'people'>('resources');
 
   // Recent Searches persisted in localStorage
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -105,8 +106,17 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     return normalizedQuery.length > 0 && normalizeSearchTerm(value).includes(normalizedQuery);
   };
 
+  // Matched Courses
+  const matchedCourses = useMemo(() => {
+    if (scope === 'people' || !cleanQuery) return [];
+    return courses
+      .filter((c) => matchesTerm(c.code) || matchesTerm(c.title))
+      .slice(0, 3);
+  }, [courses, scope, cleanQuery, normalizedQuery]);
+
   // Matched Resources (Files)
   const matchedResources = useMemo(() => {
+    if (scope === 'people') return [];
     if (!cleanQuery) return resources.slice(0, 3);
     return resources.filter((r) =>
       matchesTerm(r.title) ||
@@ -115,10 +125,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       matchesTerm(r.type) ||
       matchesTerm(r.session)
     ).slice(0, 4);
-  }, [resources, cleanQuery, normalizedQuery]);
+  }, [resources, scope, cleanQuery, normalizedQuery]);
 
   // Matched Staff (Users)
   const matchedStaff = useMemo(() => {
+    if (scope === 'resources') return [];
     if (!cleanQuery) return (MOCK_STAFF as StaffMember[]).slice(0, 2);
     return (MOCK_STAFF as StaffMember[]).filter((s) =>
       matchesTerm(s.name) ||
@@ -126,35 +137,40 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       matchesTerm(s.designation) ||
       s.courses.some((c) => matchesTerm(c))
     ).slice(0, 3);
-  }, [cleanQuery, normalizedQuery]);
+  }, [scope, cleanQuery, normalizedQuery]);
 
   // Matched Enterprises
   const matchedEnterprises = useMemo(() => {
-    if (!cleanQuery) return [];
+    if (scope === 'resources' || !cleanQuery) return [];
     return (MOCK_ENTERPRISES as EnterpriseListing[]).filter((e) =>
       e.businessName.toLowerCase().includes(cleanQuery) ||
       e.category.toLowerCase().includes(cleanQuery) ||
       e.description.toLowerCase().includes(cleanQuery)
     ).slice(0, 2);
-  }, [cleanQuery]);
+  }, [scope, cleanQuery]);
 
   // Flattened array for unified arrow key navigation
-  type SearchResultItem = 
+  type SearchResultItem =
+    | { kind: 'course'; item: Course }
     | { kind: 'file'; item: AcademicResource }
     | { kind: 'staff'; item: StaffMember }
     | { kind: 'enterprise'; item: EnterpriseListing };
 
   const allResults = useMemo<SearchResultItem[]>(() => {
     const list: SearchResultItem[] = [];
+    matchedCourses.forEach((item) => list.push({ kind: 'course', item }));
     matchedResources.forEach((item) => list.push({ kind: 'file', item }));
     matchedStaff.forEach((item) => list.push({ kind: 'staff', item }));
     matchedEnterprises.forEach((item) => list.push({ kind: 'enterprise', item }));
     return list;
-  }, [matchedResources, matchedStaff, matchedEnterprises]);
+  }, [matchedCourses, matchedResources, matchedStaff, matchedEnterprises]);
 
   // Handle Selection
   const handleSelectItem = (entry: SearchResultItem) => {
-    if (entry.kind === 'file') {
+    if (entry.kind === 'course') {
+      recordSearch(entry.item.code);
+      onSelectCourse(entry.item.code);
+    } else if (entry.kind === 'file') {
       recordSearch(entry.item.courseCode);
       onSelectResource(entry.item);
     } else if (entry.kind === 'staff') {
@@ -245,6 +261,39 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               </kbd>
             )}
           </div>
+
+          {/* Search Scope Tabs & Live Count */}
+          <div className="flex items-center justify-between gap-2 pt-2.5 px-1 flex-wrap">
+            <div className="inline-flex items-center gap-1 rounded-xl bg-surface-bg p-1 border border-border-light text-xs">
+              {(
+                [
+                  { id: 'resources', label: 'Materials & Courses' },
+                  { id: 'people', label: 'People & Hub' },
+                  { id: 'all', label: 'All' },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  aria-pressed={scope === tab.id}
+                  onClick={() => {
+                    setScope(tab.id);
+                    setSelectedIndex(0);
+                  }}
+                  className={`px-2.5 py-1 min-h-[36px] rounded-lg font-semibold transition-colors cursor-pointer ${
+                    scope === tab.id
+                      ? 'bg-brand-green text-white shadow-2xs'
+                      : 'text-text-muted hover:text-text-main'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-text-muted font-mono" aria-live="polite">
+              {cleanQuery ? `${allResults.length} result${allResults.length === 1 ? '' : 's'}` : 'Quick jump'}
+            </span>
+          </div>
         </div>
 
         {/* Scrollable Results Body */}
@@ -293,19 +342,60 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             </div>
           )}
 
+          {/* SECTION 1.5: Courses */}
+          {matchedCourses.length > 0 && (
+            <div>
+              <div className="relative my-3 flex items-center justify-center">
+                <div className="border-t border-border-light w-full" />
+                <span className="bg-surface-card px-3 text-xs uppercase font-bold tracking-widest text-text-subtle absolute">
+                  Courses
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                {matchedCourses.map((course, index) => {
+                  const globalIdx = index;
+                  const isSelected = selectedIndex === globalIdx;
+                  return (
+                    <button
+                      key={course.code}
+                      type="button"
+                      onClick={() => handleSelectItem({ kind: 'course', item: course })}
+                      className={`w-full text-left flex items-center justify-between p-2.5 min-h-[44px] rounded-2xl transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-surface-bg ring-1 ring-brand-green/40'
+                          : 'hover:bg-surface-bg/70'
+                      }`}
+                    >
+                      <div className="min-w-0 pr-2">
+                        <p className="text-xs sm:text-sm font-bold text-text-main truncate">
+                          {course.code} — {course.title}
+                        </p>
+                        <span className="text-xs text-text-subtle">
+                          {course.level}L • Sem {course.semester} • {course.units} Units
+                        </span>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-brand-green shrink-0" aria-hidden="true" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* SECTION 2: Files / Academic Past Questions */}
           {matchedResources.length > 0 && (
             <div>
               <div className="relative my-3 flex items-center justify-center">
                 <div className="border-t border-border-light w-full" />
                 <span className="bg-surface-card px-3 text-xs uppercase font-bold tracking-widest text-text-subtle absolute">
-                  File
+                  Materials
                 </span>
               </div>
 
               <div className="space-y-1">
                 {matchedResources.map((res, index) => {
-                  const globalIdx = index;
+                  const globalIdx = matchedCourses.length + index;
                   const isSelected = selectedIndex === globalIdx;
 
                   return (
@@ -369,7 +459,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
               <div className="space-y-1">
                 {matchedStaff.map((staff, index) => {
-                  const globalIdx = matchedResources.length + index;
+                  const globalIdx = matchedCourses.length + matchedResources.length + index;
                   const isSelected = selectedIndex === globalIdx;
 
                   return (
@@ -423,7 +513,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
               <div className="space-y-1">
                 {matchedEnterprises.map((item, index) => {
-                  const globalIdx = matchedResources.length + matchedStaff.length + index;
+                  const globalIdx = matchedCourses.length + matchedResources.length + matchedStaff.length + index;
                   const isSelected = selectedIndex === globalIdx;
 
                   return (

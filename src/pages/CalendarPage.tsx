@@ -238,11 +238,11 @@ export const CalendarPage: React.FC = () => {
                   {/* Right: Action or linked notice */}
                   <div className="self-end sm:self-center shrink-0">
                     <Link
-                      to="/notices"
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-brand-green hover:underline py-1 px-2.5 rounded-lg hover:bg-emerald-50/50"
+                      to={ev.noticeId ? `/notices?id=${encodeURIComponent(ev.noticeId)}` : '/notices'}
+                      className="inline-flex items-center min-h-[44px] sm:min-h-[36px] gap-1 text-xs font-semibold text-brand-green hover:underline py-1 px-2.5 rounded-lg hover:bg-emerald-50/50 dark:hover:bg-emerald-950/40"
                     >
-                      <span>Check Notices</span>
-                      <ArrowRight className="w-3 h-3" />
+                      <span>{ev.noticeId ? 'View Related Notice' : 'Check Notices'}</span>
+                      <ArrowRight className="w-3 h-3" aria-hidden="true" />
                     </Link>
                   </div>
                 </div>
@@ -263,24 +263,26 @@ export const CalendarPage: React.FC = () => {
               <button
                 type="button"
                 onClick={prevMonth}
-                className="p-1.5 rounded-lg border border-border-light bg-surface-bg hover:bg-surface-card text-text-muted hover:text-text-main transition-colors cursor-pointer"
+                aria-label="Previous month"
+                className="min-w-[44px] min-h-[44px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg border border-border-light bg-surface-bg hover:bg-surface-card text-text-muted hover:text-text-main transition-colors cursor-pointer"
                 title="Previous Month"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4" aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={nextMonth}
-                className="p-1.5 rounded-lg border border-border-light bg-surface-bg hover:bg-surface-card text-text-muted hover:text-text-main transition-colors cursor-pointer"
+                aria-label="Next month"
+                className="min-w-[44px] min-h-[44px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg border border-border-light bg-surface-bg hover:bg-surface-card text-text-muted hover:text-text-main transition-colors cursor-pointer"
                 title="Next Month"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           </div>
 
           {/* Days of Week Header */}
-          <div className="grid grid-cols-7 gap-1 text-center font-bold text-[11px] text-text-subtle py-1 border-b border-border-light">
+          <div className="grid grid-cols-7 gap-1 text-center font-bold text-xs text-text-subtle py-1 border-b border-border-light">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
               <div key={d} className="py-1">{d}</div>
             ))}

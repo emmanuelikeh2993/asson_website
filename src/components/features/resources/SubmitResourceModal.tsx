@@ -40,7 +40,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
   onSuccess,
 }) => {
   const [currentStep, setCurrentStep] = useState<Step>(1);
-  const [courseCode, setCourseCode] = useState('STA 211');
+  const [courseCode, setCourseCode] = useState('');
   const [courseSearch, setCourseSearch] = useState('');
   const [selectedLevelFilter, setSelectedLevelFilter] = useState<AcademicLevel | 'All'>('All');
   const [title, setTitle] = useState('');
@@ -243,6 +243,8 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
 
   const forceExit = () => {
     setCurrentStep(1);
+    setCourseCode('');
+    setCourseSearch('');
     setFile(null);
     setTitle('');
     setError(null);
@@ -511,8 +513,11 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                       setCourseCode(e.target.value);
                       setError(null);
                     }}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base font-semibold focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/25"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base font-semibold focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/25"
                   >
+                    <option value="" disabled>
+                      -- Choose exact course code --
+                    </option>
                     {filteredCourses.map((c) => (
                       <option key={c.code} value={c.code}>
                         {c.code} — {c.title} ({c.level}L, {c.units} Units)
@@ -522,22 +527,28 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                 </div>
 
                 {/* Selected Course Card Confirmation */}
-                <div className="mt-4 p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-brand-deep block">
-                      Selected: {selectedCourseMeta.code}
-                    </span>
-                    <span className="text-[11px] text-emerald-800 line-clamp-1">
-                      {selectedCourseMeta.title} • {selectedCourseMeta.level}L ({selectedCourseMeta.units} Units)
-                    </span>
+                {courseCode ? (
+                  <div className="mt-4 p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-800 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-brand-deep dark:text-emerald-300 block">
+                        Selected: {selectedCourseMeta.code}
+                      </span>
+                      <span className="text-xs text-emerald-800 dark:text-emerald-200 line-clamp-1">
+                        {selectedCourseMeta.title} • {selectedCourseMeta.level}L ({selectedCourseMeta.units} Units)
+                      </span>
+                    </div>
+                    <CheckCircle2 className="w-4 h-4 text-brand-green shrink-0 ml-2" aria-hidden="true" />
                   </div>
-                  <CheckCircle2 className="w-4 h-4 text-brand-green shrink-0 ml-2" />
-                </div>
+                ) : (
+                  <div className="mt-4 p-3.5 rounded-xl bg-surface-bg border border-dashed border-border-light text-xs text-text-muted">
+                    Select a course above or tap a quick code chip to tag this document accurately.
+                  </div>
+                )}
               </div>
 
               {error && (
-                <p className="text-xs text-brand-red font-medium flex items-center gap-1.5">
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {error}
+                <p role="alert" className="text-xs text-brand-red font-medium flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> {error}
                 </p>
               )}
 
@@ -545,10 +556,11 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                 <Button
                   type="button"
                   variant="primary"
+                  disabled={!courseCode}
                   onClick={handleNextFromStep1}
-                  className="font-bold text-xs h-10 px-5 active:scale-95"
+                  className="font-bold text-xs min-h-[44px] px-5 active:scale-95"
                 >
-                  Continue to Material Details <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                  Continue to Material Details <ArrowRight className="w-3.5 h-3.5 ml-1.5" aria-hidden="true" />
                 </Button>
               </div>
             </div>
@@ -561,7 +573,7 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
                 <label className="text-xs font-bold text-text-main block mb-1">
                   Step 2: Choose Material Type & Session <span className="text-brand-red">*</span>
                 </label>
-                <p className="text-[11px] text-text-muted mb-3">
+                <p className="text-xs text-text-muted mb-3">
                   Categorize this document so students searching for past questions or notes find it instantly.
                 </p>
 
@@ -697,10 +709,10 @@ export const SubmitResourceModal: React.FC<SubmitResourceModalProps> = ({
           {currentStep === 3 && (
             <form onSubmit={handleSubmit} className="space-y-4 animate-in fade-in duration-150">
               {/* Summary Strip of Step 1 & 2 */}
-              <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200/80 flex items-center justify-between text-xs">
+              <div className="p-3 rounded-xl bg-surface-bg border border-border-light flex items-center justify-between text-xs">
                 <div className="space-y-0.5">
-                  <span className="text-text-muted text-[11px] block">Upload Target:</span>
-                  <span className="font-bold text-brand-deep">
+                  <span className="text-text-muted text-xs block">Upload Summary:</span>
+                  <span className="font-bold text-brand-deep dark:text-emerald-300">
                     {courseCode} • {resourceType} ({session})
                   </span>
                 </div>

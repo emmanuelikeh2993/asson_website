@@ -87,6 +87,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
   const [selectedResource, setSelectedResource] = useState<AcademicResource | null>(null);
   const [isDrivePreviewOpen, setIsDrivePreviewOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState<AcademicResource | null>(null);
+  const [visibleLimit, setVisibleLimit] = useState(40);
   const toast = useToast();
 
   const handleOpenPreview = (res: AcademicResource) => {
@@ -310,14 +311,14 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
           onChange={(e) => setSearchQuery(e.target.value)}
           aria-label="Search resources by course code, title, or topic"
           placeholder="Search by course code (e.g. STA 211, STA111), title, or topic..."
-          className="w-full rounded-2xl border border-border-light bg-surface-card pl-10 pr-10 py-2.5 text-base text-text-main placeholder:text-text-subtle shadow-2xs focus:border-brand-green focus:outline-none transition-all"
+          className="w-full min-h-[44px] rounded-2xl border border-border-light bg-surface-card pl-10 pr-12 py-2.5 text-base text-text-main placeholder:text-text-subtle shadow-2xs focus:border-brand-green focus:ring-2 focus:ring-brand-green/30 focus:outline-none transition-all"
         />
         {searchQuery && (
           <button
             type="button"
             onClick={() => setSearchQuery('')}
             aria-label="Clear search"
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-main transition-transform cursor-pointer"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-text-muted hover:text-text-main transition-transform cursor-pointer"
             title="Clear search"
           >
             <X className="w-4 h-4" aria-hidden="true" />
@@ -402,8 +403,9 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
         </div>
       ) : viewMode === 'list' ? (
         /* VIEW 1: MINIMALIST STRUCTURED LIST (Raycast / Notion Style) */
-        <div className="rounded-2xl border border-border-light bg-surface-card divide-y divide-border-light/60 overflow-hidden shadow-2xs">
-          {filteredResources.map((res) => {
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border-light bg-surface-card divide-y divide-border-light/60 overflow-hidden shadow-2xs">
+            {filteredResources.slice(0, visibleLimit).map((res) => {
             const detailPath = res.type === 'Past Question'
               ? `/past-questions/${res.id}`
               : `/resources/${res.id}`;
@@ -486,6 +488,19 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
               </div>
             );
           })}
+          </div>
+          {filteredResources.length > visibleLimit && (
+            <div className="flex justify-center pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => setVisibleLimit((prev) => prev + 40)}
+              >
+                Load more ({filteredResources.length - visibleLimit} remaining)
+              </Button>
+            </div>
+          )}
         </div>
       ) : viewMode === 'grouped' ? (
         /* VIEW 2: GROUPED BY COURSE (Institutional Catalog Orderliness) */
@@ -573,15 +588,29 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({
         </div>
       ) : (
         /* VIEW 3: CARD GRID VIEW */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {filteredResources.map((res) => (
-            <DownloadCard
-              key={res.id}
-              resource={res}
-              onPreview={(r) => handleOpenPreview(r)}
-              onReport={(r) => setReportTarget(r)}
-            />
-          ))}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {filteredResources.slice(0, visibleLimit).map((res) => (
+              <DownloadCard
+                key={res.id}
+                resource={res}
+                onPreview={(r) => handleOpenPreview(r)}
+                onReport={(r) => setReportTarget(r)}
+              />
+            ))}
+          </div>
+          {filteredResources.length > visibleLimit && (
+            <div className="flex justify-center pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => setVisibleLimit((prev) => prev + 40)}
+              >
+                Load more ({filteredResources.length - visibleLimit} remaining)
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

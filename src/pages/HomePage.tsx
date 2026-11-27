@@ -479,7 +479,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-text-main">Upload Clean PDF or DOCX</div>
-                    <div className="text-xs text-text-muted">Safe file scanning up to 15MB with zero clutter.</div>
+                    <div className="text-xs text-text-muted">Validated PDF &amp; DOCX up to 15MB • Committee-reviewed before listing.</div>
                   </div>
                 </div>
 
@@ -662,10 +662,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenSearch, onOpenSubmit }
           </div>
           <div className="pt-4 sm:pt-0">
             <div className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight">
-              Zero Login
+              Open Access
             </div>
             <div className="text-xs text-text-muted mt-1 font-medium">
-              Instant Public File Downloads
+              Public downloads with zero login • Optional sign-in for Study Locker sync
             </div>
           </div>
         </div>

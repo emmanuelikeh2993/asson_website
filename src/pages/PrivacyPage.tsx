@@ -18,7 +18,7 @@ export const PrivacyPage: React.FC = () => {
       <div>
         <Link
           to="/"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-muted hover:text-brand-green transition-colors"
+          className="inline-flex items-center min-h-[44px] gap-1.5 text-xs font-semibold text-text-muted hover:text-brand-green transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Back to Academic Hub
         </Link>
@@ -40,8 +40,10 @@ export const PrivacyPage: React.FC = () => {
         <p className="text-xs sm:text-sm text-emerald-100/80 mt-2 max-w-2xl leading-relaxed">
           How ASSON UI protects student privacy through zero-login architecture, anonymous peer submissions, confidential feedback channels, and zero commercial tracking.
         </p>
-        <div className="flex flex-wrap items-center gap-4 mt-5 pt-4 border-t border-white/15 text-[11px] text-emerald-200/90 font-mono">
+        <div className="flex flex-wrap items-center gap-4 mt-5 pt-4 border-t border-white/15 text-xs text-emerald-200/90 font-mono">
           <span>Effective: 2026/2027 Session</span>
+          <span>•</span>
+          <span>Last Updated: 27 Nov 2026</span>
           <span>•</span>
           <span>Policy: Privacy by Design & Zero-Surveillance</span>
         </div>

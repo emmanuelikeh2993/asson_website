@@ -23,6 +23,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { formatFileSize, formatDate } from '../lib/utils';
+import { applyRouteMetadata } from '../lib/seo';
 
 interface ResourceDetailPageProps {
   onOpenSubmit?: () => void;
@@ -48,8 +49,19 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({ onOpenSu
         const related = all.filter((r) => r.id !== found.id && r.courseCode === found.courseCode).slice(0, 4);
         setRelatedResources(related);
 
-        // Dynamic Document Meta for WhatsApp and Social Previews
-        document.title = `${found.courseCode} — ${found.title} (${found.session}) | ASSON UI`;
+        // Dynamic Document Meta for WhatsApp, Search Engines & Social Previews
+        applyRouteMetadata({
+          title: `${found.courseCode} — ${found.title} (${found.session}) | ASSON UI`,
+          description: `${found.type} for ${found.courseCode} (${found.courseTitle}) — ${found.level} Level, ${found.session} Academic Session, University of Ibadan Department of Statistics.`,
+          path: window.location.pathname || `/resources/${found.id}`,
+        });
+      } else {
+        applyRouteMetadata({
+          title: 'Resource Not Found — ASSON UI',
+          description: 'Requested academic resource could not be found in the ASSON UI library.',
+          path: window.location.pathname || '/resources',
+          noindex: true,
+        });
       }
       setIsLoading(false);
     });
@@ -149,34 +161,37 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({ onOpenSu
           <button
             type="button"
             onClick={handleToggleBookmark}
-            className={`p-2 rounded-xl border text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+            aria-label={isBookmarked ? 'Saved in Study Locker' : 'Save to Study Locker'}
+            className={`min-w-[44px] min-h-[44px] px-2.5 rounded-xl border text-xs font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               isBookmarked 
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-brand-green border-emerald-300 dark:border-emerald-800' 
                 : 'bg-surface-card text-text-muted border-border-light hover:text-text-main'
             }`}
             title={isBookmarked ? 'Saved in Study Locker' : 'Save to Study Locker'}
           >
-            <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-brand-green' : ''}`} />
-            <span className="hidden sm:inline text-[11px] font-semibold">{isBookmarked ? 'Saved' : 'Save'}</span>
+            <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-brand-green' : ''}`} aria-hidden="true" />
+            <span className="hidden sm:inline text-xs font-semibold">{isBookmarked ? 'Saved' : 'Save'}</span>
           </button>
 
           <button
             type="button"
             onClick={handleWhatsAppShare}
-            className="p-2 rounded-xl border border-border-light bg-surface-card text-text-muted hover:text-emerald-700 hover:bg-emerald-50/50 transition-colors cursor-pointer flex items-center gap-1.5"
+            aria-label="Share on WhatsApp"
+            className="min-w-[44px] min-h-[44px] px-2.5 rounded-xl border border-border-light bg-surface-card text-text-muted hover:text-emerald-700 hover:bg-emerald-50/50 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
             title="Share on WhatsApp"
           >
-            <Share2 className="w-4 h-4" />
-            <span className="hidden sm:inline text-[11px] font-semibold">Share</span>
+            <Share2 className="w-4 h-4" aria-hidden="true" />
+            <span className="hidden sm:inline text-xs font-semibold">Share</span>
           </button>
 
           <button
             type="button"
             onClick={handleCopyLink}
-            className="p-2 rounded-xl border border-border-light bg-surface-card text-text-muted hover:text-text-main transition-colors cursor-pointer"
+            aria-label={copiedLink ? 'Direct link copied' : 'Copy direct link'}
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl border border-border-light bg-surface-card text-text-muted hover:text-text-main transition-colors cursor-pointer"
             title="Copy Direct Link"
           >
-            {copiedLink ? <Check className="w-4 h-4 text-brand-green" /> : <ExternalLink className="w-4 h-4" />}
+            {copiedLink ? <Check className="w-4 h-4 text-brand-green" aria-hidden="true" /> : <ExternalLink className="w-4 h-4" aria-hidden="true" />}
           </button>
         </div>
       </div>
@@ -189,15 +204,18 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({ onOpenSu
             <span className="px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-brand-deep dark:text-emerald-300 text-xs font-mono font-extrabold border border-emerald-200 dark:border-emerald-800">
               {resource.courseCode}
             </span>
-            <span className="px-2.5 py-1 rounded-xl bg-surface-bg text-text-muted text-[11px] font-bold border border-border-light">
+            <span className="px-2.5 py-1 rounded-xl bg-surface-bg text-text-muted text-xs font-bold border border-border-light">
               {resource.level} Level
             </span>
-            <span className="px-2.5 py-1 rounded-xl bg-surface-bg text-text-muted text-[11px] font-bold border border-border-light font-mono">
+            <span className="px-2.5 py-1 rounded-xl bg-surface-bg text-text-muted text-xs font-bold border border-border-light font-mono">
               {resource.session}
             </span>
-            <span className="px-2.5 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[11px] font-bold border border-blue-200 dark:border-blue-800">
+            <span className="px-2.5 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-xs font-bold border border-blue-200 dark:border-blue-800">
               {resource.type}
             </span>
+            <Badge variant={resource.verificationStatus === 'Verified' ? 'verified' : 'neutral'} withIcon>
+              {resource.verificationStatus}
+            </Badge>
           </div>
 
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-text-main tracking-tight leading-snug">
@@ -213,13 +231,13 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({ onOpenSu
         <div className="p-4 rounded-2xl bg-surface-bg border border-border-light flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-brand-green flex items-center justify-center shrink-0">
-              <FileText className="w-6 h-6" />
+              <FileText className="w-6 h-6" aria-hidden="true" />
             </div>
             <div>
               <span className="text-xs font-bold text-text-main block">
-                Official Document ({resource.fileType})
+                Academic Document ({resource.fileType})
               </span>
-              <span className="text-[11px] text-text-muted">
+              <span className="text-xs text-text-muted">
                 {formatFileSize(resource.fileSizeBytes)} • {resource.downloadsCount || 0} downloads
               </span>
             </div>
@@ -229,9 +247,9 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({ onOpenSu
             variant="primary"
             size="md"
             onClick={handleDownload}
-            className="w-full sm:w-auto justify-center font-bold text-xs h-10 px-5 shadow-sm active:scale-98"
+            className="w-full sm:w-auto justify-center font-bold text-xs min-h-[44px] px-5 shadow-sm active:scale-98"
           >
-            <Download className="w-4 h-4 mr-1.5" /> Download Paper ({resource.fileType})
+            <Download className="w-4 h-4 mr-1.5" aria-hidden="true" /> Download Paper ({resource.fileType})
           </Button>
         </div>
 
@@ -239,22 +257,29 @@ export const ResourceDetailPage: React.FC<ResourceDetailPageProps> = ({ onOpenSu
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border-light/60 text-xs">
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-semibold">
-              <ShieldCheck className="w-4 h-4 text-brand-green" />
-              <span>Verified Academic Record</span>
+              <ShieldCheck className="w-4 h-4 text-brand-green" aria-hidden="true" />
+              <span>
+                {resource.verificationStatus === 'Verified'
+                  ? 'Reviewed by ASSON Academic Committee'
+                  : `Catalog Status: ${resource.verificationStatus}`}
+              </span>
             </div>
-            <p className="text-[11px] text-text-muted leading-relaxed">
-              Curated and verified for accuracy by the ASSON Academic Editorial Committee. Formatted for clear mobile viewing and offline study.
+            <p className="text-xs text-text-muted leading-relaxed">
+              Indexed for Department of Statistics study and revision. Report any incorrect syllabus details via{' '}
+              <Link to="/help" className="font-semibold text-brand-green hover:underline">
+                Help &amp; Feedback
+              </Link>.
             </p>
           </div>
 
           <div className="space-y-1.5 text-text-muted">
             <div className="flex justify-between py-1 border-b border-border-light/40">
-              <span>Contributor Credit:</span>
+              <span>Submitted / Source:</span>
               <strong className="text-text-main">{resource.contributorName || 'ASSON Academic Committee'}</strong>
             </div>
             <div className="flex justify-between py-1 border-b border-border-light/40">
-              <span>Catalog Checked:</span>
-              <span className="font-mono text-text-main">{resource.lastCheckedDate}</span>
+              <span>Last Checked:</span>
+              <span className="font-mono text-text-main">{resource.lastCheckedDate || 'Pending review'}</span>
             </div>
             <div className="flex justify-between py-1">
               <span>Access License:</span>

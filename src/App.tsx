@@ -14,6 +14,7 @@ import { MOCK_RESOURCES, COURSES } from './lib/mockData';
 import { AcademicResource } from './types';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import { supabase } from './lib/supabase';
+import { applyRouteMetadata } from './lib/seo';
 import { FileQuestion, Home, BookOpen } from 'lucide-react';
 
 const ResourcesPage = lazy(() => import('./pages/ResourcesPage').then((m) => ({ default: m.ResourcesPage })));
@@ -51,22 +52,90 @@ const PageRouteFallback: React.FC = () => (
   </div>
 );
 
-const ROUTE_TITLES: Record<string, string> = {
-  '/': 'ASSON UI — Together for Academic Excellence',
-  '/resources': 'Academic Resource Library — ASSON UI',
-  '/past-questions': 'Past Examination Questions — ASSON UI',
-  '/calendar': 'Academic Calendar & Timetable — ASSON UI',
-  '/notices': 'Official Notices & Communiques — ASSON UI',
-  '/opportunities': 'Scholarships & Opportunities — ASSON UI',
-  '/enterprise': 'Student Enterprise Hub — ASSON UI',
-  '/cgpa-calculator': 'CGPA Calculator — ASSON UI',
-  '/faqs': 'Frequently Asked Questions — ASSON UI',
-  '/help': 'Study Help & Private Feedback — ASSON UI',
-  '/dashboard': 'Student Dashboard — ASSON UI',
-  '/terms': 'Terms of Service & Honor Code — ASSON UI',
-  '/privacy': 'Privacy Policy & NDPA — ASSON UI',
-  '/more': 'More & Preferences — ASSON UI',
-  '/executive': 'Executive Administration Portal — ASSON UI',
+interface RouteMetaConfig {
+  title: string;
+  description: string;
+  noindex?: boolean;
+}
+
+const ROUTE_META: Record<string, RouteMetaConfig> = {
+  '/': {
+    title: 'ASSON UI — Together for Academic Excellence',
+    description:
+      'Academic Resource Hub, Past Examination Questions, Course Outlines, and Announcements for Statistics Students, University of Ibadan.',
+  },
+  '/resources': {
+    title: 'Academic Resource Library — ASSON UI',
+    description:
+      'Browse 100L–400L and Postgraduate Statistics lecture notes, course outlines, tutorial sheets, and past questions for University of Ibadan.',
+  },
+  '/past-questions': {
+    title: 'Past Examination Questions — ASSON UI',
+    description:
+      'Search and download verified past examination papers across 100L–400L Department of Statistics courses at University of Ibadan.',
+  },
+  '/calendar': {
+    title: 'Academic Calendar & Timetable — ASSON UI',
+    description:
+      'Department of Statistics academic calendar, continuous assessment dates, examination timetables, and registration deadlines.',
+  },
+  '/notices': {
+    title: 'Official Notices & Communiques — ASSON UI',
+    description:
+      'Departmental bulletins, senate circulars, event announcements, and deadlines for Statistics students at University of Ibadan.',
+  },
+  '/opportunities': {
+    title: 'Scholarships & Opportunities — ASSON UI',
+    description:
+      'Scholarships, research grants, and quantitative internships curated for Statistics undergraduates at University of Ibadan.',
+  },
+  '/enterprise': {
+    title: 'Student Enterprise Hub — ASSON UI',
+    description:
+      'Directory of student-owned businesses, data tutoring services, and campus ventures within ASSON University of Ibadan.',
+  },
+  '/cgpa-calculator': {
+    title: 'CGPA Calculator — ASSON UI',
+    description:
+      'Client-side University of Ibadan 5.0 CGPA calculator with Department of Statistics course suggestions and resit support.',
+  },
+  '/faqs': {
+    title: 'Frequently Asked Questions — ASSON UI',
+    description:
+      'Answers on downloading academic resources, contributing past questions, UI grading policy, and using the ASSON UI portal.',
+  },
+  '/help': {
+    title: 'Study Help & Private Feedback — ASSON UI',
+    description:
+      'Departmental contacts, academic advisory offices, and private student feedback center for Statistics students, University of Ibadan.',
+  },
+  '/dashboard': {
+    title: 'Student Dashboard — ASSON UI',
+    description:
+      'Personal Study Locker for bookmarked courses, device download history, and submitted resource tracking.',
+    noindex: true,
+  },
+  '/terms': {
+    title: 'Terms of Service & Honor Code — ASSON UI',
+    description:
+      'Submission guidelines, fair educational use, and academic integrity standards for the ASSON UI repository.',
+  },
+  '/privacy': {
+    title: 'Privacy Policy & NDPA — ASSON UI',
+    description:
+      'Student privacy practices, local device storage, Supabase account handling, and peer submission data minimization.',
+  },
+  '/more': {
+    title: 'More & Preferences — ASSON UI',
+    description:
+      'Theme preferences, academic level focus, data saver, CGPA calculator, staff directory, and executive contacts.',
+    noindex: true,
+  },
+  '/executive': {
+    title: 'Executive Administration Portal — ASSON UI',
+    description: 'Restricted ASSON executive administration portal.',
+    noindex: true,
+  },
 };
 
 function ScrollToTop() {
@@ -79,10 +148,17 @@ function ScrollToTop() {
       behavior: 'instant',
     });
 
-    if (ROUTE_TITLES[pathname]) {
-      document.title = ROUTE_TITLES[pathname];
-    } else if (!pathname.startsWith('/resources/') && !pathname.startsWith('/past-questions/')) {
-      document.title = 'Page Not Found — ASSON UI';
+    const cleanPath = pathname === '/' ? '/' : pathname.replace(/\/+$/, '');
+    const config = ROUTE_META[cleanPath];
+    if (config) {
+      applyRouteMetadata({ ...config, path: cleanPath });
+    } else if (!cleanPath.startsWith('/resources/') && !cleanPath.startsWith('/past-questions/')) {
+      applyRouteMetadata({
+        title: 'Page Not Found — ASSON UI',
+        description: 'The requested page does not exist in the ASSON UI Academic Hub.',
+        path: cleanPath,
+        noindex: true,
+      });
     }
   }, [pathname, search]);
 

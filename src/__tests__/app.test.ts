@@ -81,12 +81,14 @@ describe('Onboarding Browser Persistence', () => {
     (globalThis as any).window = originalWindow;
   });
 
-  it('shows onboarding on first visit and persists completion and skip status', () => {
+  it('shows onboarding only on / on first visit and persists completion and skip status', () => {
     expect(getOnboardingStatus()).toBeNull();
     expect(shouldShowOnboardingOnBoot('/')).toBe(true);
-    expect(shouldShowOnboardingOnBoot('/resources')).toBe(true);
 
-    // Executive/console/admin routes are excluded
+    // Deep links and executive routes never auto-open the homepage tour
+    expect(shouldShowOnboardingOnBoot('/resources')).toBe(false);
+    expect(shouldShowOnboardingOnBoot('/past-questions')).toBe(false);
+    expect(shouldShowOnboardingOnBoot('/notices')).toBe(false);
     expect(shouldShowOnboardingOnBoot('/executive')).toBe(false);
     expect(shouldShowOnboardingOnBoot('/console')).toBe(false);
     expect(shouldShowOnboardingOnBoot('/admin')).toBe(false);

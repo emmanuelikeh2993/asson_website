@@ -1,7 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /dashboard
 Disallow: /console
 Disallow: /admin
 
 Sitemap: https://asson-ui.vercel.app/sitemap.xml
-

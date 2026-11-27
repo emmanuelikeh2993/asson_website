@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MOCK_SUBMISSIONS, MOCK_RESOURCES } from '../lib/mockData';
-import { 
-  fetchStudentSubmissions, 
-  fetchResources, 
-  getCachedStudentProfile, 
-  fetchUserBookmarks 
+import {
+  fetchStudentSubmissions,
+  fetchResources,
+  fetchNotices,
+  getCachedStudentProfile,
+  fetchUserBookmarks
 } from '../lib/supabase';
-import { StudentSubmission, AcademicResource, UserProfile } from '../types';
+import { StudentSubmission, AcademicResource, UserProfile, Notice } from '../types';
 import { 
   User, 
   FileText, 
@@ -33,7 +33,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { formatFileSize, formatDate } from '../lib/utils';
-import { triggerResourceDownload } from '../lib/download';
+import { triggerResourceDownload, type DownloadHistoryEntry } from '../lib/download';
 import { useToast } from '../components/ui/Toast';
 import { StaffDirectoryModal } from '../components/features/department/StaffDirectoryModal';
 import { ExecutiveCouncilModal } from '../components/features/department/ExecutiveCouncilModal';
@@ -51,7 +51,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [profile, setProfile] = useState<UserProfile | null>(() => getCachedStudentProfile());
   const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
   const [bookmarks, setBookmarks] = useState<AcademicResource[]>([]);
-  const [downloadHistory, setDownloadHistory] = useState<any[]>([]);
+  const [downloadHistory, setDownloadHistory] = useState<DownloadHistoryEntry[]>([]);
+  const [latestNotice, setLatestNotice] = useState<Notice | null>(null);
   const [activeTab, setActiveTab] = useState<'bookmarks' | 'submissions' | 'downloads'>('bookmarks');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -65,25 +66,38 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     const cached = getCachedStudentProfile();
     setProfile(cached);
 
-    fetchStudentSubmissions().then((data) => {
-      setSubmissions(data || []);
-    });
+    // Guests only see submissions saved locally on this device (never seeded or other students' rows)
+    if (cached) {
+      fetchStudentSubmissions().then((data) => {
+        setSubmissions(data || []);
+      });
+    } else {
+      try {
+        const localSubs = JSON.parse(localStorage.getItem('asson_submissions') || '[]');
+        setSubmissions(Array.isArray(localSubs) ? (localSubs as StudentSubmission[]) : []);
+      } catch {
+        setSubmissions([]);
+      }
+    }
 
     Promise.all([fetchResources(), fetchUserBookmarks(cached?.id)]).then(([allRes, bmarkIds]) => {
-      if (allRes && allRes.length > 0) {
-        if (bmarkIds && bmarkIds.length > 0) {
-          const userBookmarks = allRes.filter((r) => bmarkIds.includes(r.id));
-          setBookmarks(userBookmarks);
-        } else {
-          setBookmarks(allRes.slice(0, 3));
-        }
+      if (allRes && allRes.length > 0 && bmarkIds && bmarkIds.length > 0) {
+        const userBookmarks = allRes.filter((r) => bmarkIds.includes(r.id));
+        setBookmarks(userBookmarks);
+      } else {
+        setBookmarks([]);
       }
     });
 
-    // Load local zero-login download history
+    fetchNotices().then((notices) => {
+      const active = (notices || []).find((n) => !n.isExpired);
+      setLatestNotice(active || null);
+    });
+
+    // Load local browser download history
     try {
       const history = JSON.parse(localStorage.getItem('asson_downloads') || '[]');
-      setDownloadHistory(history);
+      setDownloadHistory(Array.isArray(history) ? (history as DownloadHistoryEntry[]) : []);
     } catch {
       // ignore
     }
@@ -107,8 +121,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     }
   };
 
-  const studentName = profile?.displayName || 'Statistics Scholar';
-  const studentInitial = studentName.charAt(0).toUpperCase();
+  const studentName = profile?.displayName || 'Guest Study Locker';
+  const studentInitial = profile ? studentName.charAt(0).toUpperCase() : 'G';
 
   const filteredBookmarks = bookmarks.filter((b) => {
     if (!searchQuery.trim()) return true;
@@ -147,10 +161,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
             <div className="min-w-0">
               <h1 className="text-lg sm:text-xl font-extrabold text-text-main truncate">
-                Hello, {studentName}
+                {profile ? `Hello, ${studentName}` : 'Guest Study Locker'}
               </h1>
               <p className="text-xs text-text-muted truncate mt-0.5">
-                Department of Statistics • University of Ibadan
+                {profile
+                  ? 'Department of Statistics • Synced Account'
+                  : 'Saved on this browser only • Optional sign-in syncs across devices'}
               </p>
             </div>
           </div>
@@ -160,31 +176,31 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <button
               type="button"
               onClick={() => navigate('/notices')}
-              className="p-2.5 rounded-full bg-surface-bg hover:bg-surface-card border border-border-light text-text-muted hover:text-text-main transition-colors relative cursor-pointer"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-surface-bg hover:bg-surface-card border border-border-light text-text-muted hover:text-text-main transition-colors relative cursor-pointer"
               title="Notices & Announcements"
               aria-label="Notices and Announcements"
             >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-green" />
+              <Bell className="w-4 h-4" aria-hidden="true" />
+              {latestNotice && <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-brand-green" />}
             </button>
 
             <Link
               to="/more"
-              className="p-2.5 rounded-full bg-surface-bg hover:bg-surface-card border border-border-light text-text-muted hover:text-text-main transition-colors cursor-pointer"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-surface-bg hover:bg-surface-card border border-border-light text-text-muted hover:text-text-main transition-colors cursor-pointer"
               title="Preferences & More"
               aria-label="Preferences and More"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-4 h-4" aria-hidden="true" />
             </Link>
 
             {!profile && onOpenAuth && (
               <button
                 type="button"
                 onClick={onOpenAuth}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-green/10 text-brand-green font-bold text-xs hover:bg-brand-green hover:text-white transition-all cursor-pointer ml-1"
+                className="inline-flex items-center gap-1.5 px-3 min-h-[44px] rounded-xl bg-brand-light text-brand-deep dark:text-emerald-300 font-bold text-xs hover:bg-brand-green hover:text-white transition-all cursor-pointer ml-1"
               >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Sync Account</span>
+                <LogIn className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Sign In to Sync</span>
               </button>
             )}
           </div>
@@ -192,22 +208,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
         {/* Search Pill Input (Image 2 Inspired) */}
         <div className="relative">
-          <Search className="w-4 h-4 text-brand-green absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-brand-green absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search your saved past questions, courses, or notes"
             placeholder="Search your saved past questions, courses, or notes..."
-            className="w-full h-12 rounded-full border border-border-light bg-surface-bg pl-11 pr-4 text-xs sm:text-sm text-text-main placeholder:text-text-subtle focus:border-brand-green focus:outline-none shadow-2xs transition-all"
+            className="w-full h-12 rounded-full border border-border-light bg-surface-bg pl-11 pr-4 text-base sm:text-sm text-text-main placeholder:text-text-subtle focus:border-brand-green focus:ring-2 focus:ring-brand-green/40 focus:outline-none shadow-2xs transition-all"
           />
         </div>
 
         {/* 2 High-Contrast Accent KPI Pills (Image 2 Reference: Lime & Arrow buttons) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           {/* Pill 1: Bookmarks / Saved Resources */}
-          <div 
+          <button
+            type="button"
             onClick={() => setActiveTab('bookmarks')}
-            className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-800/80 cursor-pointer group hover:border-brand-green transition-all shadow-xs"
+            className="w-full text-left flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/80 dark:border-emerald-800/80 cursor-pointer group hover:border-brand-green transition-all shadow-xs min-h-[64px]"
           >
             <div>
               <span className="text-xl sm:text-2xl font-black text-brand-deep dark:text-emerald-300 block">
@@ -217,36 +235,35 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 Bookmarked Resources
               </span>
             </div>
-            <button
-              type="button"
-              className="w-9 h-9 rounded-full bg-brand-green text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs cursor-pointer shrink-0"
-              aria-label="View saved bookmarks"
+            <span
+              className="w-9 h-9 rounded-full bg-brand-green text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs shrink-0"
+              aria-hidden="true"
             >
               <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+            </span>
+          </button>
 
           {/* Pill 2: Submissions & Contributions */}
-          <div 
+          <button
+            type="button"
             onClick={() => setActiveTab('submissions')}
-            className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800/60 border border-border-light cursor-pointer group hover:border-brand-green transition-all shadow-xs"
+            className="w-full text-left flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800/60 border border-border-light cursor-pointer group hover:border-brand-green transition-all shadow-xs min-h-[64px]"
           >
             <div>
               <span className="text-xl sm:text-2xl font-black text-text-main block">
                 {submissions.length.toString().padStart(2, '0')}
               </span>
               <span className="text-xs font-bold text-text-muted group-hover:text-brand-green transition-colors">
-                Peer Submissions Logged
+                {profile ? 'Account Submissions' : 'Device Submissions'}
               </span>
             </div>
-            <button
-              type="button"
-              className="w-9 h-9 rounded-full bg-zinc-800 dark:bg-zinc-700 text-white flex items-center justify-center group-hover:bg-brand-green group-hover:scale-110 transition-all shadow-xs cursor-pointer shrink-0"
-              aria-label="View submitted papers"
+            <span
+              className="w-9 h-9 rounded-full bg-zinc-800 dark:bg-zinc-700 text-white flex items-center justify-center group-hover:bg-brand-green group-hover:scale-110 transition-all shadow-xs shrink-0"
+              aria-hidden="true"
             >
               <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -317,26 +334,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-brand-green" aria-hidden="true" />
             <h2 className="text-sm sm:text-base font-bold text-white">
-              Announcements & Examination Bulletin
+              {latestNotice ? latestNotice.title : 'Departmental Notice Board'}
             </h2>
           </div>
-          <span className="text-xs font-mono text-zinc-300 bg-white/10 px-2 py-0.5 rounded-full">
-            2h ago
+          <span className="text-xs font-mono text-zinc-300 bg-white/10 px-2.5 py-0.5 rounded-full">
+            {latestNotice ? formatDate(latestNotice.publishedDate) : 'Live Board'}
           </span>
         </div>
 
         <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed max-w-xl">
-          Harmattan Semester Past Questions archive for 100L through 400L with model answers has been compiled and indexed. Download your course packs for offline preparation.
+          {latestNotice
+            ? latestNotice.summary
+            : 'Check the Notice Board and Academic Calendar for departmental circulars, examination schedules, and ASSON communiques.'}
         </p>
 
         <div className="pt-1">
           <button
             type="button"
             onClick={() => navigate('/notices')}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white text-zinc-900 hover:bg-zinc-100 font-bold text-xs transition-transform active:scale-95 cursor-pointer shadow-md"
+            className="min-h-[44px] inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white text-zinc-900 hover:bg-zinc-100 font-bold text-xs transition-transform active:scale-95 cursor-pointer shadow-md"
           >
             <span>Read Notice Board</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -346,11 +365,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* ------------------------------------------------------------- */}
       <div className="space-y-4">
         {/* Tab Switcher */}
-        <div className="flex items-center gap-2 border-b border-border-light pb-2 text-xs font-bold">
+        <div className="flex items-center gap-2 border-b border-border-light pb-1 text-xs font-bold overflow-x-auto scrollbar-none">
           <button
             type="button"
             onClick={() => setActiveTab('bookmarks')}
-            className={`pb-2 px-3 border-b-2 cursor-pointer transition-colors ${
+            className={`min-h-[44px] pb-2 px-3 border-b-2 cursor-pointer transition-colors whitespace-nowrap ${
               activeTab === 'bookmarks'
                 ? 'border-brand-green text-brand-green'
                 : 'border-transparent text-text-muted hover:text-text-main'
@@ -362,19 +381,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('submissions')}
-            className={`pb-2 px-3 border-b-2 cursor-pointer transition-colors ${
+            className={`min-h-[44px] pb-2 px-3 border-b-2 cursor-pointer transition-colors whitespace-nowrap ${
               activeTab === 'submissions'
                 ? 'border-brand-green text-brand-green'
                 : 'border-transparent text-text-muted hover:text-text-main'
             }`}
           >
-            My Submissions ({submissions.length})
+            {profile ? `My Submissions (${submissions.length})` : `Device Submissions (${submissions.length})`}
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('downloads')}
-            className={`pb-2 px-3 border-b-2 cursor-pointer transition-colors ${
+            className={`min-h-[44px] pb-2 px-3 border-b-2 cursor-pointer transition-colors whitespace-nowrap ${
               activeTab === 'downloads'
                 ? 'border-brand-green text-brand-green'
                 : 'border-transparent text-text-muted hover:text-text-main'
@@ -389,17 +408,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <div className="space-y-3">
             {filteredBookmarks.length === 0 ? (
               <div className="py-12 text-center rounded-2xl bg-surface-card border border-border-light p-6 space-y-2">
-                <Bookmark className="w-8 h-8 text-text-muted mx-auto opacity-40" />
+                <Bookmark className="w-8 h-8 text-text-muted mx-auto opacity-40" aria-hidden="true" />
                 <p className="text-sm font-bold text-text-main">No bookmarks saved yet</p>
                 <p className="text-xs text-text-muted max-w-sm mx-auto">
-                  Browse the Past Questions library and tap the bookmark icon on any paper to save it to your dashboard.
+                  {profile
+                    ? 'Browse the Academic Library and tap the bookmark icon on any paper to save it here.'
+                    : 'Browse the Library freely and bookmark resources to keep them saved in this browser (or sign in to sync across devices).'}
                 </p>
                 <button
                   type="button"
                   onClick={() => navigate('/resources')}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep cursor-pointer mt-2"
+                  className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep cursor-pointer mt-2"
                 >
-                  <BookOpen className="w-3.5 h-3.5" /> Explore Library
+                  <BookOpen className="w-3.5 h-3.5" aria-hidden="true" /> Explore Library
                 </button>
               </div>
             ) : (
@@ -411,17 +432,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200/80 dark:border-emerald-800/80 font-mono">
+                        <span className="text-xs font-black px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200/80 dark:border-emerald-800/80 font-mono">
                           {res.courseCode}
                         </span>
-                        <span className="text-[10px] text-text-subtle font-mono">
+                        <span className="text-xs text-text-subtle font-mono">
                           {res.session} • {res.type}
                         </span>
                       </div>
                       <h3 className="text-xs sm:text-sm font-bold text-text-main line-clamp-2">
                         {res.title}
                       </h3>
-                      <p className="text-[11px] text-text-muted mt-1 font-mono">
+                      <p className="text-xs text-text-muted mt-1 font-mono">
                         {formatFileSize(res.fileSizeBytes)} • {res.level}L
                       </p>
                     </div>
@@ -430,19 +451,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       <button
                         type="button"
                         onClick={() => handleDownload(res)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep transition-colors cursor-pointer shadow-2xs"
+                        className="min-h-[44px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep transition-colors cursor-pointer shadow-2xs"
                       >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Download PDF</span>
+                        <Download className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>Download</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => handleRemoveBookmark(res.id)}
-                        className="p-1.5 text-text-muted hover:text-red-500 transition-colors cursor-pointer"
+                        aria-label={`Remove ${res.title} from bookmarks`}
+                        className="min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-brand-red transition-colors cursor-pointer rounded-xl"
                         title="Remove Bookmark"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -457,7 +479,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <div className="space-y-3">
             {submissions.length === 0 ? (
               <div className="py-12 text-center rounded-2xl bg-surface-card border border-border-light p-6 space-y-2">
-                <FileText className="w-8 h-8 text-text-muted mx-auto opacity-40" />
+                <FileText className="w-8 h-8 text-text-muted mx-auto opacity-40" aria-hidden="true" />
                 <p className="text-sm font-bold text-text-main">No submissions recorded on this browser</p>
                 <p className="text-xs text-text-muted max-w-sm mx-auto">
                   Have past questions, test papers or departmental lecture notes? Contribute to help fellow statistics scholars.
@@ -465,9 +487,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <button
                   type="button"
                   onClick={onOpenSubmit}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep cursor-pointer mt-2"
+                  className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-green text-white text-xs font-bold hover:bg-brand-deep cursor-pointer mt-2"
                 >
-                  <PlusCircle className="w-3.5 h-3.5" /> Submit Material
+                  <PlusCircle className="w-3.5 h-3.5" aria-hidden="true" /> Submit Material
                 </button>
               </div>
             ) : (
@@ -479,24 +501,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-mono">
+                        <span className="text-xs font-black px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-mono">
                           {sub.courseCode}
                         </span>
                         <span className="text-xs font-bold text-text-main truncate">
                           {sub.resourceTitle}
                         </span>
                       </div>
-                      <p className="text-[11px] text-text-muted mt-1 font-mono">
+                      <p className="text-xs text-text-muted mt-1 font-mono">
                         Tracking Ref: <span className="font-bold text-text-main">{sub.referenceCode || sub.id}</span> • {sub.submittedAt}
                       </p>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
                       <span
-                        className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                        className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                           sub.status === 'Approved'
                             ? 'bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200 dark:border-emerald-800'
-                            : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 border border-amber-200 dark:border-amber-800'
+                            : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
                         }`}
                       >
                         {sub.status}
@@ -514,27 +536,27 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <div className="space-y-3">
             {downloadHistory.length === 0 ? (
               <div className="py-12 text-center rounded-2xl bg-surface-card border border-border-light p-6">
-                <History className="w-8 h-8 text-text-muted mx-auto opacity-40 mb-2" />
+                <History className="w-8 h-8 text-text-muted mx-auto opacity-40 mb-2" aria-hidden="true" />
                 <p className="text-sm font-bold text-text-main">No recent downloads</p>
-                <p className="text-xs text-text-muted">Downloaded past questions will be logged here for offline quick access.</p>
+                <p className="text-xs text-text-muted">Downloaded past questions will be logged here for quick access on this device.</p>
               </div>
             ) : (
               <div className="space-y-2.5">
                 {downloadHistory.map((item, idx) => (
                   <div
-                    key={idx}
+                    key={item.id || idx}
                     className="p-3.5 rounded-2xl border border-border-light bg-surface-card flex items-center justify-between gap-3 text-xs"
                   >
                     <div className="min-w-0">
                       <span className="font-bold text-text-main block truncate">
                         {item.title}
                       </span>
-                      <span className="text-[11px] text-text-muted font-mono">
-                        Downloaded {item.date || 'recently'}
+                      <span className="text-xs text-text-muted font-mono">
+                        {item.courseCode} • Downloaded {item.downloadedAt ? formatDate(item.downloadedAt) : 'recently'}
                       </span>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-brand-green font-mono">
-                      Cached
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-brand-green font-mono shrink-0">
+                      Saved Locally
                     </span>
                   </div>
                 ))}

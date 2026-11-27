@@ -93,10 +93,13 @@ export function clearOnboardingStatus(): void {
 
 /**
  * Evaluates synchronously before initial render whether the first-visit onboarding
- * should appear, preventing any brief flash of the main application.
+ * should appear on `/` only, keeping shared deep links unblocked.
  */
 export function shouldShowOnboardingOnBoot(pathname: string = '/'): boolean {
-  const normalized = pathname.toLowerCase();
+  const normalized = (pathname || '/').trim().toLowerCase().replace(/\/+$/, '') || '/';
+  if (normalized !== '/') {
+    return false;
+  }
   if (EXCLUDED_BOOT_PATHS.some((prefix) => normalized.startsWith(prefix))) {
     return false;
   }

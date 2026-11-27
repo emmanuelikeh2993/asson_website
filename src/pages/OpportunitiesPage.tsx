@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { MOCK_OPPORTUNITIES } from '../lib/mockData';
 import { fetchOpportunities } from '../lib/supabase';
 import { Opportunity, OpportunityCategory } from '../types';
@@ -31,6 +32,7 @@ function getDomainFromUrl(url?: string): string {
 export const OpportunitiesPage: React.FC = () => {
   const [opportunities, setOpportunities] = useState<Opportunity[]>(MOCK_OPPORTUNITIES);
   const [activeCategory, setActiveCategory] = useState<OpportunityCategory | 'All'>('All');
+  const [showExpired, setShowExpired] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const toast = useToast();
 
@@ -53,9 +55,28 @@ export const OpportunitiesPage: React.FC = () => {
     loadOpportunities();
   }, []);
 
-  const filteredOpportunities = opportunities.filter(
-    (o) => activeCategory === 'All' || o.category === activeCategory
-  );
+  const filteredOpportunities = useMemo(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const seen = new Set<string>();
+    return opportunities
+      .map((o) => {
+        const parsedDeadline = o.deadline ? new Date(o.deadline) : null;
+        const pastDeadline = parsedDeadline && !Number.isNaN(parsedDeadline.getTime())
+          ? parsedDeadline < startOfToday
+          : false;
+        return { ...o, isExpired: Boolean(o.isExpired) || pastDeadline };
+      })
+      .filter((o) => {
+        if (!showExpired && o.isExpired) return false;
+        if (activeCategory !== 'All' && o.category !== activeCategory) return false;
+        const dedupeKey = `${o.provider.toLowerCase().trim()}|${o.title.toLowerCase().trim()}`;
+        if (seen.has(dedupeKey)) return false;
+        seen.add(dedupeKey);
+        return true;
+      });
+  }, [opportunities, activeCategory, showExpired]);
 
   const handleShareOpportunity = (opp: Opportunity) => {
     if (navigator.share) {
@@ -83,27 +104,42 @@ export const OpportunitiesPage: React.FC = () => {
               Scholarships & Quantitative Internships
             </h1>
           </div>
-          <p className="text-xs text-text-muted">
-            Verified corporate funding, federal scholarship awards, and quantitative data internships for Statistics scholars.
+          <p className="text-xs sm:text-sm text-text-muted">
+            Curated funding, scholarships, and quantitative internships for Statistics scholars. Always confirm final deadlines on the official source portal.
           </p>
         </div>
 
-        {/* Tab Toggle - Ordered and Clean */}
-        <div className="flex items-center rounded-xl border border-border-light bg-surface-card p-1 text-xs self-start sm:self-auto shadow-xs">
-          {(['All', 'Scholarship', 'Internship'] as const).map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setActiveCategory(cat)}
-              className={`px-3 py-1.5 min-h-[44px] sm:min-h-[36px] rounded-lg font-bold transition-all duration-150 active:scale-95 cursor-pointer ${
-                activeCategory === cat
-                  ? 'bg-brand-green text-white shadow-xs'
-                  : 'text-text-muted hover:text-text-main'
-              }`}
-            >
-              {cat === 'All' ? 'All Opportunities' : `${cat}s`}
-            </button>
-          ))}
+        {/* Tab Toggle & Expired Filter */}
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <div className="flex items-center rounded-xl border border-border-light bg-surface-card p-1 text-xs shadow-xs">
+            {(['All', 'Scholarship', 'Internship'] as const).map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setActiveCategory(cat)}
+                className={`px-3 py-1.5 min-h-[44px] sm:min-h-[36px] rounded-lg font-bold transition-all duration-150 active:scale-95 cursor-pointer ${
+                  activeCategory === cat
+                    ? 'bg-brand-green text-white shadow-xs'
+                    : 'text-text-muted hover:text-text-main'
+                }`}
+              >
+                {cat === 'All' ? 'All Opportunities' : `${cat}s`}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowExpired((prev) => !prev)}
+            aria-pressed={showExpired}
+            className={`px-3 py-1.5 min-h-[44px] sm:min-h-[36px] rounded-xl border text-xs font-semibold transition-colors cursor-pointer ${
+              showExpired
+                ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200'
+                : 'bg-surface-card border-border-light text-text-muted hover:text-text-main'
+            }`}
+          >
+            {showExpired ? 'Showing Expired' : 'Include Expired'}
+          </button>
         </div>
       </div>
 
@@ -141,86 +177,117 @@ export const OpportunitiesPage: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredOpportunities.map((opp) => (
-            <div
-              key={opp.id}
-              className="p-6 rounded-3xl border border-border-light bg-surface-card shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between group"
-            >
-              <div>
-                {/* Provider & Verification Badge */}
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-bold text-brand-deep tracking-wider uppercase">
-                      {opp.provider}
-                    </span>
-                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-brand-green border border-emerald-100">
-                      {getDomainFromUrl(opp.applicationUrl)}
-                    </span>
+          {filteredOpportunities.map((opp) => {
+            const safeApplyUrl = sanitizeSafeHttpUrl(opp.applicationUrl);
+            const sourceDomain = getDomainFromUrl(opp.applicationUrl);
+            return (
+              <div
+                key={opp.id}
+                className={`p-6 rounded-3xl border bg-surface-card shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between group ${
+                  opp.isExpired ? 'border-amber-200 dark:border-amber-800/70 opacity-85' : 'border-border-light'
+                }`}
+              >
+                <div>
+                  {/* Provider & Source Attribution Badge */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-brand-deep dark:text-emerald-300 tracking-wider uppercase">
+                        {opp.provider}
+                      </span>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-brand-green border border-emerald-200 dark:border-emerald-800">
+                        {sourceDomain}
+                      </span>
+                    </div>
+                    {opp.isExpired ? (
+                      <Badge variant="neutral">Expired</Badge>
+                    ) : (
+                      <Badge variant={opp.isVerified ? 'verified' : 'neutral'} withIcon>
+                        {opp.isVerified ? 'Verified Source' : 'Curated Listing'}
+                      </Badge>
+                    )}
                   </div>
-                  <Badge variant={opp.isVerified ? 'verified' : 'neutral'} withIcon>
-                    {opp.isVerified ? 'Verified Grant' : 'Unverified'}
-                  </Badge>
-                </div>
 
-                {/* Title */}
-                <h3 className="text-base font-bold text-text-main mb-2 group-hover:text-brand-green transition-colors leading-snug">
-                  {opp.title}
-                </h3>
+                  {/* Title */}
+                  <h2 className="text-base font-bold text-text-main mb-2 group-hover:text-brand-green transition-colors leading-snug">
+                    {opp.title}
+                  </h2>
 
-                {/* Description */}
-                <p className="text-xs text-text-muted leading-relaxed mb-4">
-                  {opp.description}
-                </p>
-
-                {/* Eligibility Box */}
-                <div className="p-3.5 rounded-xl bg-surface-bg border border-border-light text-xs text-text-main space-y-1 mb-4">
-                  <span className="font-bold text-brand-deep flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-brand-green" /> Candidate Eligibility:
-                  </span>
-                  <p className="text-text-muted text-[11px] leading-relaxed">
-                    {opp.eligibility}
+                  {/* Description */}
+                  <p className="text-xs sm:text-sm text-text-muted leading-relaxed mb-4">
+                    {opp.description}
                   </p>
-                </div>
-              </div>
 
-              {/* Card Footer: Metadata & Buttons */}
-              <div className="pt-4 border-t border-border-light/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs mt-auto">
-                <div className="space-y-1 text-text-muted text-[11px]">
-                  <div className="flex items-center gap-1.5 font-semibold text-brand-red">
-                    <Calendar className="w-3.5 h-3.5" />
-                    Deadline: {formatDate(opp.deadline)}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-text-subtle font-medium">
-                    <MapPin className="w-3.5 h-3.5" />
-                    {opp.location} • {opp.category}
+                  {/* Eligibility Box */}
+                  <div className="p-3.5 rounded-xl bg-surface-bg border border-border-light text-xs text-text-main space-y-1 mb-4">
+                    <span className="font-bold text-brand-deep dark:text-emerald-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-brand-green" aria-hidden="true" /> Candidate Eligibility:
+                    </span>
+                    <p className="text-text-muted text-xs leading-relaxed">
+                      {opp.eligibility}
+                    </p>
                   </div>
                 </div>
 
-                {/* Buttons: Consistent Order -> Share (Secondary) | Apply (Primary) */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleShareOpportunity(opp)}
-                    className="p-2 text-text-subtle hover:text-brand-green hover:bg-emerald-50 rounded-xl border border-border-light transition-colors"
-                    title="Share Opportunity"
-                    aria-label="Share Opportunity"
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </button>
+                {/* Card Footer: Dates, Report Link & Buttons */}
+                <div className="pt-4 border-t border-border-light/60 space-y-3 text-xs mt-auto">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-text-muted text-xs">
+                    <div className="space-y-1">
+                      <div className={`flex items-center gap-1.5 font-semibold ${opp.isExpired ? 'text-amber-800 dark:text-amber-300' : 'text-brand-red'}`}>
+                        <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
+                        {opp.isExpired ? `Expired (${formatDate(opp.deadline)})` : `Deadline: ${formatDate(opp.deadline)}`}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-text-subtle font-medium">
+                        <MapPin className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>{opp.location} • {opp.category}</span>
+                        {opp.postedDate && (
+                          <>
+                            <span aria-hidden="true">•</span>
+                            <span>Checked {formatDate(opp.postedDate)}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
 
-                  <a
-                    href={sanitizeSafeHttpUrl(opp.applicationUrl) || 'https://www.icanstudent.com/opportunities/'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block"
-                  >
-                    <Button size="sm" variant="primary" className="text-xs h-9 font-bold shadow-xs hover:shadow">
-                      Apply on {getDomainFromUrl(opp.applicationUrl)} <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
-                    </Button>
-                  </a>
+                    <Link
+                      to="/help"
+                      className="inline-flex items-center min-h-[44px] sm:min-h-[32px] px-2 text-xs font-semibold text-text-subtle hover:text-brand-green underline-offset-2 hover:underline"
+                    >
+                      Report outdated
+                    </Link>
+                  </div>
+
+                  {/* Action Row */}
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleShareOpportunity(opp)}
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-text-subtle hover:text-brand-green hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-xl border border-border-light transition-colors cursor-pointer"
+                      title="Share Opportunity"
+                      aria-label={`Share ${opp.title}`}
+                    >
+                      <Share2 className="w-4 h-4" aria-hidden="true" />
+                    </button>
+
+                    {safeApplyUrl ? (
+                      <a
+                        href={safeApplyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-1.5 px-4 min-h-[44px] sm:min-h-[38px] rounded-xl bg-brand-green hover:bg-brand-deep text-white text-xs font-bold shadow-xs hover:shadow transition-all"
+                      >
+                        <span>Visit {sourceDomain}</span>
+                        <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+                      </a>
+                    ) : (
+                      <span className="inline-flex items-center px-3 min-h-[38px] rounded-xl bg-surface-bg border border-border-light text-xs font-medium text-text-muted">
+                        Official link pending verification
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

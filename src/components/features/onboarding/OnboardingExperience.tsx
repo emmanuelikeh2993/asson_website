@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -145,6 +145,8 @@ export const OnboardingExperience: React.FC = () => {
 
   const location = useLocation();
   const navigate = useNavigate();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousActiveElementRef = useRef<HTMLElement | null>(null);
 
   const [welcomePillId, setWelcomePillId] = useState<'resources' | 'search' | 'submit'>('resources');
   const [selectedSearchDemo, setSelectedSearchDemo] = useState<string>('STA 211');
@@ -216,20 +218,70 @@ export const OnboardingExperience: React.FC = () => {
     };
   }, [isOpen, isSpotlightStep, currentStep, location.pathname, measureTarget]);
 
-  // Keyboard shortcuts (Escape skips, ArrowRight/ArrowLeft steps)
+  // Keyboard shortcuts & focus management (Escape skips, Tab traps inside dialog, focus restored on close)
   useEffect(() => {
     if (!isOpen) return;
+
+    previousActiveElementRef.current = document.activeElement as HTMLElement | null;
+    const focusTimer = window.setTimeout(() => {
+      const container = dialogRef.current;
+      if (!container) return;
+      const focusable = container.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      } else {
+        container.focus();
+      }
+    }, 0);
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         skipOnboarding();
-      } else if (e.key === 'ArrowRight' && currentStep < totalSteps - 1) {
+        return;
+      }
+      if (e.key === 'ArrowRight' && currentStep < totalSteps - 1) {
         nextStep();
-      } else if (e.key === 'ArrowLeft' && currentStep > 0) {
+        return;
+      }
+      if (e.key === 'ArrowLeft' && currentStep > 0) {
         prevStep();
+        return;
+      }
+      if (e.key === 'Tab' && dialogRef.current) {
+        const focusable = Array.from(
+          dialogRef.current.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => el.offsetParent !== null);
+
+        if (focusable.length === 0) {
+          e.preventDefault();
+          return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first || !dialogRef.current.contains(document.activeElement)) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else if (document.activeElement === last || !dialogRef.current.contains(document.activeElement)) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
+
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener('keydown', onKeyDown);
+      if (previousActiveElementRef.current && document.contains(previousActiveElementRef.current)) {
+        previousActiveElementRef.current.focus();
+      }
+    };
   }, [isOpen, currentStep, totalSteps, skipOnboarding, nextStep, prevStep]);
 
   if (!isOpen) return null;
@@ -291,10 +343,12 @@ export const OnboardingExperience: React.FC = () => {
 
     return (
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={currentStep === 2 ? 'Search Guide' : 'Submission Guide'}
-        className="fixed inset-0 z-[70] animate-in fade-in duration-200"
+        className="fixed inset-0 z-[70] animate-in fade-in duration-200 focus:outline-none"
       >
         {/* SVG Spotlight Cutout Mask */}
         <svg
@@ -347,7 +401,7 @@ export const OnboardingExperience: React.FC = () => {
         >
           {/* Top Bar: Step pill & Skip */}
           <div className="flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-light text-brand-green text-[11px] font-bold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-light text-brand-green text-xs font-bold">
               {currentStep === 2 ? (
                 <>
                   <Search className="w-3 h-3" /> Search Guide • {currentStep + 1} of {totalSteps}
@@ -417,11 +471,11 @@ export const OnboardingExperience: React.FC = () => {
                     <div className="text-xs font-bold text-text-main truncate">
                       {activeSearchSample.code} — {activeSearchSample.title}
                     </div>
-                    <div className="text-[11px] text-text-muted truncate">
+                    <div className="text-xs text-text-muted truncate">
                       {activeSearchSample.meta}
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold text-brand-green bg-brand-light px-2 py-0.5 rounded shrink-0">
+                  <span className="text-xs font-bold text-brand-green bg-brand-light px-2 py-0.5 rounded shrink-0">
                     Match
                   </span>
                 </div>
@@ -439,8 +493,8 @@ export const OnboardingExperience: React.FC = () => {
               </div>
 
               <div className="p-3 rounded-xl bg-surface-bg border border-border-light flex items-start gap-2.5">
-                <ShieldCheck className="w-4 h-4 text-brand-green shrink-0 mt-0.5" />
-                <p className="text-[11px] text-text-muted leading-relaxed">
+                <ShieldCheck className="w-4 h-4 text-brand-green shrink-0 mt-0.5" aria-hidden="true" />
+                <p className="text-xs text-text-muted leading-relaxed">
                   Every contribution is verified by the ASSON Academic Committee before appearing in the public library, keeping materials accurate for every UI Statistics student.
                 </p>
               </div>
@@ -452,19 +506,19 @@ export const OnboardingExperience: React.FC = () => {
             <button
               type="button"
               onClick={prevStep}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border-light bg-surface-bg hover:bg-surface-subtle text-xs font-semibold text-text-main transition-colors cursor-pointer"
+              className="min-h-[44px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border-light bg-surface-bg hover:bg-surface-subtle text-xs font-semibold text-text-main transition-colors cursor-pointer"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Previous</span>
             </button>
 
             <button
               type="button"
               onClick={nextStep}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-brand-green hover:bg-brand-deep text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
+              className="min-h-[44px] inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-brand-green hover:bg-brand-deep text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
             >
               <span>{currentStep === 3 ? 'Finish Tour' : 'Next'}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -477,10 +531,12 @@ export const OnboardingExperience: React.FC = () => {
   // =========================================================================
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-label="ASSON UI Platform Onboarding"
-      className="fixed inset-0 z-[70] bg-surface-card bg-architectural-grid text-text-main overflow-y-auto flex flex-col justify-between animate-in fade-in duration-200"
+      className="fixed inset-0 z-[70] bg-surface-card bg-architectural-grid text-text-main overflow-y-auto flex flex-col justify-between animate-in fade-in duration-200 focus:outline-none"
     >
       {/* Top Minimal Architectural Header */}
       <header className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 flex items-center justify-between gap-3 shrink-0">
@@ -775,7 +831,7 @@ export const OnboardingExperience: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-brand-green">
+                <span className="text-xs font-bold uppercase tracking-wider text-brand-green">
                   Onboarding Complete
                 </span>
                 <h2 className="text-xl sm:text-2xl font-extrabold text-text-main tracking-tight">
@@ -790,18 +846,18 @@ export const OnboardingExperience: React.FC = () => {
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-border-light bg-surface-bg hover:bg-surface-subtle text-xs font-semibold text-text-main transition-colors cursor-pointer"
+                  className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-border-light bg-surface-bg hover:bg-surface-subtle text-xs font-semibold text-text-main transition-colors cursor-pointer"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>Previous</span>
                 </button>
                 <button
                   type="button"
                   onClick={completeOnboarding}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-brand-green hover:bg-brand-deep text-white text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer active:scale-95"
+                  className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-brand-green hover:bg-brand-deep text-white text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer active:scale-95"
                 >
                   <span>Enter ASSON Academic Hub</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -810,7 +866,7 @@ export const OnboardingExperience: React.FC = () => {
       </main>
 
       {/* Subtle Footer Caption */}
-      <footer className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 text-center text-[11px] text-text-subtle shrink-0">
+      <footer className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 text-center text-xs text-text-subtle shrink-0">
         Association of Statistics Students of Nigeria (ASSON) • University of Ibadan Chapter
       </footer>
     </div>

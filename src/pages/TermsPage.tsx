@@ -19,7 +19,7 @@ export const TermsPage: React.FC = () => {
       <div>
         <Link
           to="/"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-muted hover:text-brand-green transition-colors"
+          className="inline-flex items-center min-h-[44px] gap-1.5 text-xs font-semibold text-text-muted hover:text-brand-green transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Back to Academic Hub
         </Link>
@@ -41,8 +41,10 @@ export const TermsPage: React.FC = () => {
         <p className="text-xs sm:text-sm text-emerald-100/80 mt-2 max-w-2xl leading-relaxed">
           Guidelines governing past question archives, student-contributed lecture outlines, non-commercial fair use, and academic integrity for the Department of Statistics, University of Ibadan.
         </p>
-        <div className="flex flex-wrap items-center gap-4 mt-5 pt-4 border-t border-white/15 text-[11px] text-emerald-200/90 font-mono">
+        <div className="flex flex-wrap items-center gap-4 mt-5 pt-4 border-t border-white/15 text-xs text-emerald-200/90 font-mono">
           <span>Effective Date: 2026/2027 Academic Session</span>
+          <span>•</span>
+          <span>Last Updated: 27 Nov 2026</span>
           <span>•</span>
           <span>Version: 2.1 (Open Educational Portal)</span>
         </div>

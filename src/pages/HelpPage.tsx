@@ -20,6 +20,8 @@ export const HelpPage: React.FC = () => {
   const [contactMethod, setContactMethod] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ subject?: string; description?: string }>({});
 
   const toast = useToast();
   const { restartOnboarding } = useOnboarding();
@@ -43,11 +45,18 @@ export const HelpPage: React.FC = () => {
 
   const handleFeedbackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subject.trim() || !description.trim()) {
+    setFeedbackError(null);
+    const nextErrors: { subject?: string; description?: string } = {};
+    if (!subject.trim()) nextErrors.subject = 'Please enter a short subject for your feedback.';
+    if (!description.trim()) nextErrors.description = 'Please describe the issue or suggestion.';
+
+    if (nextErrors.subject || nextErrors.description) {
+      setFieldErrors(nextErrors);
       toast.error('Missing Required Fields', 'Please provide a subject and description for your feedback.');
       return;
     }
 
+    setFieldErrors({});
     setIsSubmitting(true);
     const res = await submitPrivateFeedback({
       category: feedbackCategory,
@@ -66,6 +75,7 @@ export const HelpPage: React.FC = () => {
       setAffectedUrl('');
       setContactMethod('');
     } else {
+      setFeedbackError('Could not record feedback right now. Please check your connection and try again.');
       toast.error('Submission Failed', 'Could not record feedback. Please try again.');
     }
   };
@@ -196,7 +206,11 @@ export const HelpPage: React.FC = () => {
           </div>
 
           {feedbackSubmitted ? (
-            <div className="p-6 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-center space-y-3">
+            <div
+              role="status"
+              aria-live="polite"
+              className="p-6 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-center space-y-3"
+            >
               <CheckCircle2 className="w-10 h-10 text-brand-green mx-auto" aria-hidden="true" />
               <h3 className="text-base font-bold text-text-main">
                 Thank You — Feedback Received
@@ -214,7 +228,13 @@ export const HelpPage: React.FC = () => {
               </Button>
             </div>
           ) : (
-            <form onSubmit={handleFeedbackSubmit} className="space-y-4">
+            <form onSubmit={handleFeedbackSubmit} noValidate className="space-y-4">
+              {feedbackError && (
+                <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-brand-red font-medium">
+                  {feedbackError}
+                </div>
+              )}
+
               <div>
                 <label htmlFor="fb-category" className="text-xs font-bold text-text-main block mb-1">
                   Feedback Category <span className="text-brand-red">*</span>
@@ -223,7 +243,7 @@ export const HelpPage: React.FC = () => {
                   id="fb-category"
                   value={feedbackCategory}
                   onChange={(e) => setFeedbackCategory(e.target.value as FeedbackCategory)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/30"
                 >
                   <option value="General Feedback">General Student Feedback</option>
                   <option value="Broken Link / Missing Material">Broken Link / Missing Course Material</option>
@@ -243,10 +263,20 @@ export const HelpPage: React.FC = () => {
                   type="text"
                   placeholder="e.g. Missing solutions for STA 211 2023 exam, or Timetable clash"
                   value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green"
+                  aria-invalid={Boolean(fieldErrors.subject)}
+                  aria-describedby={fieldErrors.subject ? 'fb-subject-error' : undefined}
+                  onChange={(e) => {
+                    setSubject(e.target.value);
+                    if (fieldErrors.subject) setFieldErrors((prev) => ({ ...prev, subject: undefined }));
+                  }}
+                  className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/30"
                   required
                 />
+                {fieldErrors.subject && (
+                  <p id="fb-subject-error" role="alert" className="text-xs text-brand-red mt-1 font-medium">
+                    {fieldErrors.subject}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -258,10 +288,20 @@ export const HelpPage: React.FC = () => {
                   rows={4}
                   placeholder="Please provide specific details so the committee can investigate and resolve the issue..."
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green"
+                  aria-invalid={Boolean(fieldErrors.description)}
+                  aria-describedby={fieldErrors.description ? 'fb-description-error' : undefined}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    if (fieldErrors.description) setFieldErrors((prev) => ({ ...prev, description: undefined }));
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/30"
                   required
                 />
+                {fieldErrors.description && (
+                  <p id="fb-description-error" role="alert" className="text-xs text-brand-red mt-1 font-medium">
+                    {fieldErrors.description}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -275,7 +315,7 @@ export const HelpPage: React.FC = () => {
                     placeholder="e.g. https://asson-ui.vercel.app/resources?id=res-1"
                     value={affectedUrl}
                     onChange={(e) => setAffectedUrl(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/30"
                   />
                 </div>
                 <div>
@@ -285,10 +325,10 @@ export const HelpPage: React.FC = () => {
                   <input
                     id="fb-contact"
                     type="text"
-                    placeholder="Phone, matric no., or student email (if you want a reply)"
+                    placeholder="Phone or student email (if you want a reply)"
                     value={contactMethod}
                     onChange={(e) => setContactMethod(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl border border-border-light bg-surface-bg text-text-main text-base focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/30"
                   />
                 </div>
               </div>
